@@ -14,7 +14,7 @@ class GeminiEmbeddingFunction(EmbeddingFunction):
 
     def __call__(self, input: Documents) -> Embeddings:
         # Force model name just to be sure
-        model = "models/text-embedding-004"
+        model = "models/gemini-embedding-001"
         title = "Combined Text" 
         embeddings = []
         for text in input:

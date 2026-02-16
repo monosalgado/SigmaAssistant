@@ -16,3 +16,10 @@ venv/
 # OS specific
 .DS_Store
 Thumbs.db
+
+# Project Data (Do not commit large binaries or user data)
+data/chroma_db/
+data/sessions.json
+data/saved_rules.json
+*.sqlite3
+*.bin

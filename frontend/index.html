@@ -18,46 +18,104 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2>🛡️ Sigma Assistant</h2>
-                <button id="new-chat-btn" title="New Chat">+</button>
             </div>
-            <div id="session-list" class="session-list">
-                <!-- Sessions go here -->
+            
+            <!-- Navigation -->
+            <nav class="main-nav">
+                <button id="nav-chat" class="nav-btn active">💬 Chat</button>
+                <button id="nav-library" class="nav-btn">📚 Library</button>
+            </nav>
+
+            <!-- Chat Session List (Visible only in Chat View) -->
+            <div id="chat-sidebar-content">
+                <div class="sidebar-actions">
+                    <button id="new-chat-btn" title="New Chat">+ New Chat</button>
+                </div>
+                <div id="session-list" class="session-list">
+                    <!-- Sessions go here -->
+                </div>
+                <div class="context-panel">
+                    <h3>Knowledge Context</h3>
+                    <p class="empty-state">Context from MITRE & Sysmon will appear here...</p>
+                    <div id="context-content"></div>
+                </div>
             </div>
-            <div class="context-panel">
-                <h3>Knowledge Context</h3>
-                <p class="empty-state">Context from MITRE & Sysmon will appear here...</p>
-                <div id="context-content"></div>
+
+            <!-- Library List (Visible only in Library View) -->
+            <div id="library-sidebar-content" style="display: none;">
+                <div class="sidebar-actions">
+                    <button id="new-rule-btn" title="Create Rule">+ New Rule</button>
+                </div>
+                <div id="rule-list" class="session-list">
+                    <!-- Rules go here -->
+                </div>
             </div>
         </aside>
 
-        <!-- Main Chat Area -->
-        <main class="chat-area">
-            <div class="chat-header">
-                <h1>Detection Engineering Workspace</h1>
+        <!-- Main Content Area -->
+        <main class="main-content">
+            
+            <!-- Chat View -->
+            <div id="view-chat" class="view-panel active">
+                <div class="chat-header">
+                    <h1>Detection Engineering Workspace</h1>
+                </div>
+
+                <div id="chat-history" class="chat-history">
+                    <div class="message assistant">
+                        <div class="avatar">AI</div>
+                        <div class="content">
+                            Hello! I am your Sigma Rule Assistant. Describe an attack technique, and I will help you create
+                            a detection rule for it correctly mapped to MITRE ATT&CK and Sysmon.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-area">
+                    <div id="file-preview" class="file-preview" style="display: none;">
+                        <span id="file-name"></span>
+                        <button id="remove-file">×</button>
+                    </div>
+                    <input type="file" id="file-input" style="display: none;">
+                    <button id="attach-btn" title="Attach Image/Log">📎</button>
+                    <textarea id="user-input"
+                        placeholder="Describe the attack (e.g., 'Attackers are dumping lsass.exe using procdump')..."
+                        rows="3"></textarea>
+                    <button id="send-btn">Generate Rule 🚀</button>
+                </div>
             </div>
 
-            <div id="chat-history" class="chat-history">
-                <div class="message assistant">
-                    <div class="avatar">AI</div>
-                    <div class="content">
-                        Hello! I am your Sigma Rule Assistant. Describe an attack technique, and I will help you create
-                        a detection rule for it correctly mapped to MITRE ATT&CK and Sysmon.
+            <!-- Library View -->
+            <div id="view-library" class="view-panel" style="display: none;">
+                <div class="library-header">
+                    <h1 id="editor-title">Select a Rule</h1>
+                    <div class="library-actions">
+                        <button id="save-rule-btn" class="primary-btn">💾 Save Changes</button>
+                        <button id="delete-rule-btn" class="danger-btn">🗑️ Delete</button>
+                    </div>
+                </div>
+                
+                <div class="library-workspace">
+                    <div class="editor-pane">
+                        <label>Sigma Rule (YAML)</label>
+                        <textarea id="rule-editor" placeholder="Select or create a rule..."></textarea>
+                    </div>
+                    
+                    <div class="translation-pane">
+                        <div class="pane-header">
+                            <label>Translation</label>
+                            <select id="target-lang">
+                                <option value="leql">Rapid7 LEQL</option>
+                                <option value="splunk" disabled>Splunk (Coming Soon)</option>
+                                <option value="elastic" disabled>Elastic (Coming Soon)</option>
+                            </select>
+                            <button id="translate-btn">Translate ➡️</button>
+                        </div>
+                        <textarea id="translation-output" readonly placeholder="Translated query will appear here..."></textarea>
                     </div>
                 </div>
             </div>
 
-            <div class="input-area">
-                <div id="file-preview" class="file-preview" style="display: none;">
-                    <span id="file-name"></span>
-                    <button id="remove-file">×</button>
-                </div>
-                <input type="file" id="file-input" style="display: none;">
-                <button id="attach-btn" title="Attach Image/Log">📎</button>
-                <textarea id="user-input"
-                    placeholder="Describe the attack (e.g., 'Attackers are dumping lsass.exe using procdump')..."
-                    rows="3"></textarea>
-                <button id="send-btn">Generate Rule 🚀</button>
-            </div>
         </main>
     </div>
     <script src="script.js"></script>

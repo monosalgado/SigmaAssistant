@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Body
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
@@ -9,17 +9,19 @@ import uuid
 from typing import List, Dict, Optional
 import json
 
+# New Imports for Rules & Translation
+import backend.saved_rules as saved_rules
+from sigma.collection import SigmaCollection
+from sigma.backends.insight_idr import InsightIDRBackend
+
 SESSIONS_FILE = "data/sessions.json"
 
 app = FastAPI(title="Sigma Assistant API")
 
 # Mount static files
-# We mount it at /static or just serve index at root?
-# Let's serve index at / and assets at /
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
 # In-Memory Session Store
-# Format: { "session_id": [ { "role": "user", "content": "..." }, ... ] }
 sessions: Dict[str, List[Dict]] = {}
 
 def load_sessions():
@@ -54,10 +56,17 @@ class AttackRequest(BaseModel):
     description: str
     session_id: Optional[str] = None
 
-class Session(BaseModel):
-    id: str
-    amount: int
-    preview: str
+class RuleCreateRequest(BaseModel):
+    content: str
+    title: Optional[str] = "Untitled Rule"
+
+class RuleUpdateRequest(BaseModel):
+    content: str
+    title: Optional[str] = None
+
+class TranslateRequest(BaseModel):
+    rule: str
+    target: str = "leql"
 
 @app.get("/")
 def read_root():
@@ -198,6 +207,49 @@ async def analyze_multimodal(
         raise HTTPException(status_code=500, detail=str(e))
         
     # Cleanup file? For now keep it or clean it up later.
+
+# --- Saved Rules Management ---
+
+@app.get("/rules")
+def get_rules():
+    return saved_rules.get_all_rules()
+
+@app.post("/rules")
+def create_rule(req: RuleCreateRequest):
+    return saved_rules.create_rule(req.content, req.title)
+
+@app.put("/rules/{rule_id}")
+def update_rule(rule_id: str, req: RuleUpdateRequest):
+    rule = saved_rules.update_rule(rule_id, req.content, req.title)
+    if not rule:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    return rule
+
+@app.delete("/rules/{rule_id}")
+def delete_rule(rule_id: str):
+    if saved_rules.delete_rule(rule_id):
+        return {"success": True}
+    raise HTTPException(status_code=404, detail="Rule not found")
+
+@app.post("/translate")
+def translate_rule(req: TranslateRequest):
+    try:
+        # 1. Parse Sigma
+        collection = SigmaCollection.from_yaml(req.rule)
+        
+        # 2. Select Backend
+        if req.target.lower() == "leql":
+            backend = InsightIDRBackend()
+            queries = backend.convert(collection)
+            # InsightIDR might return list of strings
+            return {"query": queries[0] if queries else "No query generated"}
+        
+        else:
+            raise HTTPException(status_code=400, detail=f"Target {req.target} not supported yet.")
+            
+    except Exception as e:
+        print(f"Translation error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
