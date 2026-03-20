@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ruleEditor = document.getElementById('rule-editor');
     const editorTitle = document.getElementById('editor-title');
     const saveRuleBtn = document.getElementById('save-rule-btn');
+    const downloadRuleBtn = document.getElementById('download-rule-btn');
     const deleteRuleBtn = document.getElementById('delete-rule-btn');
     const translateBtn = document.getElementById('translate-btn');
     const translationOutput = document.getElementById('translation-output');
@@ -35,6 +36,17 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSessionId = null;
     let selectedFile = null;
     let currentRuleId = null;
+
+    // --- Pipeline Stage Definitions ---
+    const PIPELINE_STAGES = [
+        { id: 'classification', label: 'Intent Classification' },
+        { id: 'preprocessing', label: 'Preprocessing' },
+        { id: 'extraction', label: 'Entity Extraction' },
+        { id: 'ttp_mapping', label: 'TTP Mapping' },
+        { id: 'generation', label: 'Rule Generation' },
+        { id: 'validation', label: 'Validation' },
+        { id: 'optimization', label: 'Optimization' },
+    ];
 
     // --- Navigation Logic ---
     function switchView(view) {
@@ -47,12 +59,12 @@ document.addEventListener('DOMContentLoaded', () => {
             navLibrary.classList.remove('active');
         } else {
             viewChat.style.display = 'none';
-            viewLibrary.style.display = 'grid'; // Grid layout for library
+            viewLibrary.style.display = 'grid';
             chatSidebar.style.display = 'none';
             librarySidebar.style.display = 'flex';
             navChat.classList.remove('active');
             navLibrary.classList.add('active');
-            loadRules(); // Refresh rules when switching
+            loadRules();
         }
     }
 
@@ -157,7 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const msgs = await res.json();
         chatHistory.innerHTML = '';
 
-        // Context reset
         const contextDiv = document.getElementById('context-content');
         if (contextDiv) contextDiv.innerHTML = '<p class="empty-state">No specific context found.</p>';
 
@@ -187,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ruleList.innerHTML = '';
         rules.slice().reverse().forEach(r => {
             const item = document.createElement('div');
-            item.className = `session-item ${r.id === currentRuleId ? 'active' : ''}`; // Reuse session-item style for now
+            item.className = `session-item ${r.id === currentRuleId ? 'active' : ''}`;
             item.innerHTML = `<div class="session-info">${r.title}</div>`;
             item.onclick = () => loadRuleIntoEditor(r);
             ruleList.appendChild(item);
@@ -198,12 +209,9 @@ document.addEventListener('DOMContentLoaded', () => {
         currentRuleId = rule.id;
         editorTitle.innerText = rule.title;
         ruleEditor.value = rule.content;
-        translationOutput.value = ''; // Clear prev translation
+        translationOutput.value = '';
 
-        // Re-render list to show active state
-        // In efficient app we just toggle class, but this is fine
         Array.from(ruleList.children).forEach(child => {
-            // simplified logic: reload list is easiest or manually toggle
             child.classList.remove('active');
             if (child.innerText === rule.title) child.classList.add('active');
         });
@@ -235,7 +243,6 @@ level: medium`;
 
     async function saveCurrentRule() {
         if (!currentRuleId) {
-            // If no rule selected, create new one with editor content
             const content = ruleEditor.value;
             if (!content) return;
             const res = await fetch('/rules', {
@@ -248,14 +255,13 @@ level: medium`;
             loadRuleIntoEditor(rule);
             alert("Created new rule!");
         } else {
-            // Update
             const content = ruleEditor.value;
             await fetch(`/rules/${currentRuleId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content: content })
             });
-            await loadRules(); // Reload to update title if changed
+            await loadRules();
             alert("Saved!");
         }
     }
@@ -302,6 +308,11 @@ level: medium`;
     if (saveRuleBtn) saveRuleBtn.addEventListener('click', saveCurrentRule);
     if (deleteRuleBtn) deleteRuleBtn.addEventListener('click', deleteCurrentRule);
     if (translateBtn) translateBtn.addEventListener('click', translateRule);
+    if (downloadRuleBtn) downloadRuleBtn.addEventListener('click', () => {
+        const content = ruleEditor.value;
+        if (!content) { alert('No rule content to download.'); return; }
+        triggerYmlDownload(content);
+    });
 
     // --- Message Logic ---
     function appendMessage(role, text) {
@@ -315,12 +326,9 @@ level: medium`;
         const content = document.createElement('div');
         content.className = 'content';
 
-        // Check for YAML/Code block to add "Save to Library" button
         if (role === 'assistant' && (text.includes('```yaml') || text.includes('```'))) {
-            // Render text
             content.innerHTML = marked.parse(text);
 
-            // Add Save Button
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'msg-actions';
             const saveBtn = document.createElement('button');
@@ -328,6 +336,12 @@ level: medium`;
             saveBtn.className = 'mini-btn';
             saveBtn.onclick = () => saveRuleFromChat(text);
             actionsDiv.appendChild(saveBtn);
+
+            const downloadBtn = document.createElement('button');
+            downloadBtn.innerText = '⬇️ Download .yml';
+            downloadBtn.className = 'mini-btn';
+            downloadBtn.onclick = () => downloadRuleAsYml(text);
+            actionsDiv.appendChild(downloadBtn);
             content.appendChild(actionsDiv);
 
         } else {
@@ -346,8 +360,37 @@ level: medium`;
         chatHistory.scrollTop = chatHistory.scrollHeight;
     }
 
+    function downloadRuleAsYml(text) {
+        const match = text.match(/```yaml\n([\s\S]*?)\n```/);
+        if (match && match[1]) {
+            triggerYmlDownload(match[1]);
+        } else {
+            alert("No valid YAML rule found in this message.");
+        }
+    }
+
+    function triggerYmlDownload(yamlContent) {
+        const titleMatch = yamlContent.match(/^title:\s*(.+)$/m);
+        let filename = 'sigma_rule.yml';
+        if (titleMatch && titleMatch[1]) {
+            filename = titleMatch[1].trim()
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '_')
+                .replace(/^_|_$/g, '') + '.yml';
+        }
+
+        const blob = new Blob([yamlContent], { type: 'application/x-yaml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
     async function saveRuleFromChat(text) {
-        // Extract YAML block
         const match = text.match(/```yaml\n([\s\S]*?)\n```/);
         if (match && match[1]) {
             const ruleContent = match[1];
@@ -358,8 +401,6 @@ level: medium`;
             });
             const rule = await res.json();
             alert("Rule saved to library!");
-            // Switch to library view and load it?
-            // Optional but good UX:
             if (confirm("Rule saved! Switch to library to view it?")) {
                 switchView('library');
                 await loadRules();
@@ -370,6 +411,65 @@ level: medium`;
         }
     }
 
+    // --- Pipeline Progress UI ---
+    function createPipelineProgress() {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'message assistant';
+
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar';
+        avatar.innerText = 'AI';
+
+        const content = document.createElement('div');
+        content.className = 'content';
+
+        const progressDiv = document.createElement('div');
+        progressDiv.className = 'pipeline-progress';
+        progressDiv.id = 'pipeline-progress';
+
+        PIPELINE_STAGES.forEach(stage => {
+            const stageDiv = document.createElement('div');
+            stageDiv.className = 'pipeline-stage pending';
+            stageDiv.id = `stage-${stage.id}`;
+            stageDiv.innerHTML = `
+                <div class="stage-icon"></div>
+                <span class="stage-label">${stage.label}</span>
+                <span class="stage-detail"></span>
+            `;
+            progressDiv.appendChild(stageDiv);
+        });
+
+        content.appendChild(progressDiv);
+        wrapper.appendChild(avatar);
+        wrapper.appendChild(content);
+        return wrapper;
+    }
+
+    function updatePipelineStage(stageId, status, detail) {
+        const stageDiv = document.getElementById(`stage-${stageId}`);
+        if (!stageDiv) return;
+
+        stageDiv.className = `pipeline-stage ${status}`;
+        const icon = stageDiv.querySelector('.stage-icon');
+        const detailSpan = stageDiv.querySelector('.stage-detail');
+
+        if (status === 'complete') {
+            icon.innerHTML = '&#10003;';
+        } else if (status === 'running') {
+            icon.innerHTML = '';
+        } else if (status === 'error') {
+            icon.innerHTML = '&#10007;';
+        }
+
+        if (detail) {
+            detailSpan.textContent = detail;
+        }
+
+        // Auto-scroll
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+
+    // --- handleSend with SSE Streaming ---
     async function handleSend() {
         const text = userInput.value.trim();
         if (!text && !selectedFile) return;
@@ -381,49 +481,205 @@ level: medium`;
         userInput.value = '';
         if (selectedFile) filePreview.style.display = 'none';
 
-        const loadingDiv = document.createElement('div');
-        loadingDiv.className = 'message assistant loading';
-        loadingDiv.innerHTML = '<div class="avatar">AI</div><div class="content">Analysing... ⏳</div>';
-        chatHistory.appendChild(loadingDiv);
+        // For multimodal, fall back to non-streaming endpoint
+        if (selectedFile) {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message assistant loading';
+            loadingDiv.innerHTML = '<div class="avatar">AI</div><div class="content">Analysing... </div>';
+            chatHistory.appendChild(loadingDiv);
 
-        try {
-            let response;
-            if (selectedFile) {
+            try {
                 const formData = new FormData();
                 formData.append('description', text || "Analyze this file");
                 formData.append('session_id', currentSessionId);
                 formData.append('file', selectedFile);
-                response = await fetch('/analyze_multimodal', { method: 'POST', body: formData });
+                const response = await fetch('/analyze_multimodal', { method: 'POST', body: formData });
                 selectedFile = null;
                 if (fileInput) fileInput.value = '';
-            } else {
-                response = await fetch('/analyze', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ description: text, session_id: currentSessionId })
-                });
+
+                const data = await response.json();
+                chatHistory.removeChild(loadingDiv);
+
+                if (data.rule) {
+                    appendMessage('assistant', data.rule);
+                    if (data.context) renderContext(data.context, data.pipeline_metadata);
+                    loadSessions();
+                } else {
+                    appendMessage('assistant', "I encountered an error analyzing that.");
+                }
+            } catch (error) {
+                chatHistory.removeChild(loadingDiv);
+                appendMessage('assistant', `Error: ${error.message}`);
             }
+            return;
+        }
 
-            const data = await response.json();
-            chatHistory.removeChild(loadingDiv);
+        // Use SSE streaming for text-only requests
+        const pipelineDiv = createPipelineProgress();
+        chatHistory.appendChild(pipelineDiv);
+        chatHistory.scrollTop = chatHistory.scrollHeight;
 
-            if (data.rule) {
-                appendMessage('assistant', data.rule);
-                if (data.context) renderContext(data.context);
-                loadSessions();
-            } else {
-                appendMessage('assistant', "I encountered an error analyzing that.");
+        try {
+            const response = await fetch('/analyze_stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ description: text, session_id: currentSessionId })
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+
+                // Parse SSE events from buffer
+                const lines = buffer.split('\n');
+                buffer = '';
+
+                let currentEvent = null;
+                let currentData = '';
+
+                for (const line of lines) {
+                    if (line.startsWith('event: ')) {
+                        currentEvent = line.substring(7).trim();
+                    } else if (line.startsWith('data: ')) {
+                        currentData = line.substring(6);
+                    } else if (line === '' && currentEvent && currentData) {
+                        // Complete SSE event
+                        try {
+                            const data = JSON.parse(currentData);
+
+                            if (currentEvent === 'stage') {
+                                updatePipelineStage(data.stage, data.status, data.detail);
+                            } else if (currentEvent === 'result') {
+                                // Remove pipeline progress, show final message
+                                chatHistory.removeChild(pipelineDiv);
+
+                                if (data.rule) {
+                                    appendMessage('assistant', data.rule);
+                                    if (data.context) renderContext(data.context, data.pipeline_metadata);
+                                    if (data.session_id) currentSessionId = data.session_id;
+                                    loadSessions();
+                                } else {
+                                    appendMessage('assistant', "I encountered an error analyzing that.");
+                                }
+                            }
+                        } catch (parseErr) {
+                            console.error('SSE parse error:', parseErr);
+                        }
+                        currentEvent = null;
+                        currentData = '';
+                    } else if (line !== '') {
+                        // Partial data, keep in buffer
+                        buffer = line + '\n';
+                    }
+                }
             }
         } catch (error) {
-            chatHistory.removeChild(loadingDiv);
+            // Remove pipeline progress on error
+            if (pipelineDiv.parentNode) {
+                chatHistory.removeChild(pipelineDiv);
+            }
             appendMessage('assistant', `Error: ${error.message}`);
         }
     }
 
-    function renderContext(context) {
+    // --- Context Panel Rendering (Enhanced with Pipeline Metadata) ---
+    function renderContext(context, pipelineMetadata) {
         const contextDiv = document.getElementById('context-content');
         if (!contextDiv) return;
         contextDiv.innerHTML = '';
+
+        // Render pipeline metadata first (if available)
+        if (pipelineMetadata) {
+            // Extracted Indicators
+            const indicators = pipelineMetadata.indicators || [];
+            if (indicators.length > 0) {
+                const section = document.createElement('div');
+                section.className = 'context-section';
+                const header = document.createElement('h4');
+                header.textContent = 'Extracted Indicators';
+                section.appendChild(header);
+
+                const chipsDiv = document.createElement('div');
+                chipsDiv.className = 'indicator-chips';
+                indicators.forEach(ind => {
+                    const chip = document.createElement('span');
+                    chip.className = `indicator-chip ${ind.type}`;
+                    chip.textContent = ind.value;
+                    chip.title = `${ind.type} (${ind.confidence})`;
+                    chipsDiv.appendChild(chip);
+                });
+                section.appendChild(chipsDiv);
+                contextDiv.appendChild(section);
+            }
+
+            // TTP Mappings
+            const ttps = pipelineMetadata.ttp_mappings || [];
+            if (ttps.length > 0) {
+                const section = document.createElement('div');
+                section.className = 'context-section';
+                const header = document.createElement('h4');
+                header.textContent = 'MITRE ATT&CK Mappings';
+                section.appendChild(header);
+
+                ttps.forEach(ttp => {
+                    const card = document.createElement('div');
+                    card.className = 'ttp-card';
+                    card.innerHTML = `
+                        <span class="ttp-id">${ttp.technique_id}</span>
+                        <span class="ttp-name">${ttp.technique_name}</span>
+                        <span class="severity-badge ${ttp.severity || 'medium'}">${ttp.severity || 'medium'}</span>
+                        <br><span class="ttp-tactic">${ttp.tactic}</span>
+                    `;
+                    section.appendChild(card);
+                });
+                contextDiv.appendChild(section);
+            }
+
+            // Validation Issues
+            const issues = pipelineMetadata.validation_issues || [];
+            if (issues.length > 0) {
+                const section = document.createElement('div');
+                section.className = 'context-section';
+                const header = document.createElement('h4');
+                header.textContent = 'Validation';
+                section.appendChild(header);
+
+                issues.forEach(issue => {
+                    const card = document.createElement('div');
+                    card.className = 'context-card';
+                    const color = issue.severity === 'error' ? '#f85149' : issue.severity === 'warning' ? '#d29922' : '#8b949e';
+                    card.innerHTML = `<span style="color:${color};font-weight:600">${issue.severity.toUpperCase()}</span> [${issue.field}]: ${issue.message}`;
+                    section.appendChild(card);
+                });
+                contextDiv.appendChild(section);
+            }
+
+            // Optimization Changes
+            const changes = pipelineMetadata.optimization_changes || [];
+            if (changes.length > 0) {
+                const section = document.createElement('div');
+                section.className = 'context-section';
+                const header = document.createElement('h4');
+                header.textContent = 'Optimizations Applied';
+                section.appendChild(header);
+
+                changes.forEach(change => {
+                    const card = document.createElement('div');
+                    card.className = 'context-card';
+                    card.textContent = change;
+                    section.appendChild(card);
+                });
+                contextDiv.appendChild(section);
+            }
+        }
+
+        // RAG Context (original behavior)
         const addSection = (title, items, icon) => {
             if (!items || items.length === 0) return;
             const section = document.createElement('div');

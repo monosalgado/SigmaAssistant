@@ -7,3 +7,4 @@ chromadb
 pydantic
 requests
 beautifulsoup4
+pyyaml

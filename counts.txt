@@ -1,3 +1,0 @@
-Sigma Rules: 3
-MITRE: 50
-Sysmon: 18

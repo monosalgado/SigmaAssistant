@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Body
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from backend.agent import SigmaAgent
 import uvicorn
@@ -207,6 +207,70 @@ async def analyze_multimodal(
         raise HTTPException(status_code=500, detail=str(e))
         
     # Cleanup file? For now keep it or clean it up later.
+
+# --- Streaming Pipeline Endpoint (SSE) ---
+
+@app.post("/analyze_stream")
+def analyze_stream(request: AttackRequest):
+    """Stream pipeline progress via Server-Sent Events."""
+    if not agent:
+        raise HTTPException(status_code=500, detail="Agent not initialized")
+
+    session_id = request.session_id
+    if not session_id or session_id not in sessions:
+        session_id = str(uuid.uuid4())
+        sessions[session_id] = []
+
+    # Save User Message
+    sessions[session_id].append({"role": "user", "content": request.description})
+    save_sessions()
+
+    history = sessions[session_id][:-1]
+
+    def event_generator():
+        final_data = None
+        for event in agent.analyze_attack_stream(request.description, history=history):
+            event_type = event.get("event", "stage")
+            data = event.get("data", {})
+
+            if event_type == "result":
+                final_data = data
+                # Save AI response to session
+                sessions[session_id].append({
+                    "role": "assistant",
+                    "content": data.get("rule", ""),
+                    "context": data.get("context", {}),
+                })
+                save_sessions()
+                data["session_id"] = session_id
+
+            yield f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
+
+        if final_data is None:
+            # Ensure we always send a result event
+            error_data = {
+                "rule": "Pipeline completed without generating a result.",
+                "context": {"sigma": [], "mitre": [], "sysmon": []},
+                "pipeline_metadata": None,
+                "session_id": session_id,
+            }
+            sessions[session_id].append({
+                "role": "assistant",
+                "content": error_data["rule"],
+                "context": error_data["context"],
+            })
+            save_sessions()
+            yield f"event: result\ndata: {json.dumps(error_data)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 # --- Saved Rules Management ---
 

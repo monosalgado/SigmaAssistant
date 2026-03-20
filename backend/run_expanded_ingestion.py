@@ -24,17 +24,22 @@ def main():
         
     # 3. Ingest Sigma Rules
     print("\n--- Ingesting Sigma Rules ---")
-    rules_path = "data/sigma" 
+    existing_sigma_count = vs.sigma_collection.count()
+    print(f"Existing sigma rules in DB: {existing_sigma_count}")
+    
+    rules_path = "data/sigma/rules"
     if os.path.exists(rules_path):
         rules = load_sigma_rules(rules_path)
-        print(f"Found {len(rules)} Windows/Sysmon rules.")
-        # We can limit to e.g. 100 for speed if needed, but let's try 50 for now to ensure variety
-        # without hitting huge rate limits immediately.
-        limit = 50
-        print(f"Ingesting first {limit} rules for demonstration...")
-        vs.add_rules(rules[:limit])
+        print(f"Found {len(rules)} Windows/Sysmon rules on disk.")
+        
+        if existing_sigma_count >= len(rules):
+            print(f"Sigma collection already has {existing_sigma_count} rules. Skipping ingestion.")
+        else:
+            # Ingest all found rules (upsert handles duplicates)
+            print(f"Ingesting {len(rules)} rules...")
+            vs.add_rules(rules)
     else:
-        print("Sigma rules directory not found.")
+        print(f"Sigma rules directory '{rules_path}' not found. Make sure the SigmaHQ repo is cloned into data/sigma.")
     
     print("\n✅ Knowledge Base Expansion Complete.")
 

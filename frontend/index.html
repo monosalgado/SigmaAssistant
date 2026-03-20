@@ -19,7 +19,7 @@
             <div class="sidebar-header">
                 <h2>🛡️ Sigma Assistant</h2>
             </div>
-            
+
             <!-- Navigation -->
             <nav class="main-nav">
                 <button id="nav-chat" class="nav-btn active">💬 Chat</button>
@@ -54,7 +54,7 @@
 
         <!-- Main Content Area -->
         <main class="main-content">
-            
+
             <!-- Chat View -->
             <div id="view-chat" class="view-panel active">
                 <div class="chat-header">
@@ -65,7 +65,8 @@
                     <div class="message assistant">
                         <div class="avatar">AI</div>
                         <div class="content">
-                            Hello! I am your Sigma Rule Assistant. Describe an attack technique, and I will help you create
+                            Hello! I am your Sigma Rule Assistant. Describe an attack technique, and I will help you
+                            create
                             a detection rule for it correctly mapped to MITRE ATT&CK and Sysmon.
                         </div>
                     </div>
@@ -91,16 +92,17 @@
                     <h1 id="editor-title">Select a Rule</h1>
                     <div class="library-actions">
                         <button id="save-rule-btn" class="primary-btn">💾 Save Changes</button>
+                        <button id="download-rule-btn" class="primary-btn">⬇️ Download .yml</button>
                         <button id="delete-rule-btn" class="danger-btn">🗑️ Delete</button>
                     </div>
                 </div>
-                
+
                 <div class="library-workspace">
                     <div class="editor-pane">
                         <label>Sigma Rule (YAML)</label>
                         <textarea id="rule-editor" placeholder="Select or create a rule..."></textarea>
                     </div>
-                    
+
                     <div class="translation-pane">
                         <div class="pane-header">
                             <label>Translation</label>
@@ -111,7 +113,8 @@
                             </select>
                             <button id="translate-btn">Translate ➡️</button>
                         </div>
-                        <textarea id="translation-output" readonly placeholder="Translated query will appear here..."></textarea>
+                        <textarea id="translation-output" readonly
+                            placeholder="Translated query will appear here..."></textarea>
                     </div>
                 </div>
             </div>

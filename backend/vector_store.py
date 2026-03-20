@@ -141,7 +141,7 @@ class VectorStore:
         print(f"Adding {total} items to {collection.name}...")
         for i in range(0, total, batch_size):
             end = min(i + batch_size, total)
-            collection.add(
+            collection.upsert(
                 ids=ids[i:end],
                 documents=documents[i:end],
                 metadatas=metadatas[i:end]
