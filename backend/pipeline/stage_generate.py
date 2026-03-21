@@ -69,13 +69,35 @@ class GenerateStage(PipelineStage):
         if validation_feedback:
             user_query += f"\n\n### Validation Feedback (fix these issues):\n{validation_feedback}"
 
+        # Include log source suggestions if available
+        logsource_info = context.get("logsource_suggestion", {})
+        logsource_text = ""
+        if logsource_info.get("suggestions"):
+            logsource_text = "\n\n### Recommended Log Sources (from analysis)\n"
+            primary = logsource_info.get("primary_source", "")
+            if logsource_info.get("user_confirmed"):
+                logsource_text += f"**User confirmed primary log source: {primary}** - USE THIS.\n"
+            elif primary:
+                logsource_text += f"Primary recommendation: {primary}\n"
+            for sug in logsource_info["suggestions"][:3]:
+                logsource_text += (
+                    f"- {sug.get('category', '?')}/{sug.get('product', '?')}/{sug.get('service', '?')} "
+                    f"(confidence: {sug.get('confidence', '?')}): {sug.get('reasoning', '')}\n"
+                    f"  Fields: {', '.join(sug.get('relevant_fields', []))}\n"
+                )
+
+        # Include user feedback notes if any
+        user_notes = context.get("user_feedback_notes", "")
+        if user_notes:
+            user_query += f"\n\n### User Instructions:\n{user_notes}"
+
         prompt = prompts.RULE_GENERATION.format(
             current_date=current_date,
             attack_summary=attack_summary,
             indicators=indicators_text,
             ttp_mappings=ttps_text,
             sigma_context=sigma_context,
-            sysmon_context=sysmon_context,
+            sysmon_context=sysmon_context + logsource_text,
             history=history_text,
             user_query=user_query,
         )

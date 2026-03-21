@@ -55,6 +55,7 @@ except Exception as e:
 class AttackRequest(BaseModel):
     description: str
     session_id: Optional[str] = None
+    feedback_data: Optional[Dict] = None  # User corrections from feedback loop
 
 class RuleCreateRequest(BaseModel):
     content: str
@@ -229,7 +230,7 @@ def analyze_stream(request: AttackRequest):
 
     def event_generator():
         final_data = None
-        for event in agent.analyze_attack_stream(request.description, history=history):
+        for event in agent.analyze_attack_stream(request.description, history=history, feedback_data=request.feedback_data):
             event_type = event.get("event", "stage")
             data = event.get("data", {})
 

@@ -10,8 +10,11 @@ from typing import Generator
 
 from backend.pipeline.base_stage import PipelineStage
 from backend.pipeline.stage_preprocess import PreprocessStage
+from backend.pipeline.stage_web_enrich import WebEnrichStage
+from backend.pipeline.stage_poc_analysis import PoCAnalysisStage
 from backend.pipeline.stage_extract import ExtractStage
 from backend.pipeline.stage_ttp_map import TTPMapStage
+from backend.pipeline.stage_logsource import LogSourceStage
 from backend.pipeline.stage_generate import GenerateStage
 from backend.pipeline.stage_validate import ValidateStage
 from backend.pipeline.stage_optimize import OptimizeStage
@@ -28,11 +31,17 @@ class PipelineOrchestrator:
 
         # Initialize stages
         self.preprocess = PreprocessStage(client, model_name)
+        self.web_enrich = WebEnrichStage(client, model_name)
+        self.poc_analysis = PoCAnalysisStage(client, model_name)
         self.extract = ExtractStage(client, model_name)
         self.ttp_map = TTPMapStage(client, model_name, vector_store)
+        self.logsource = LogSourceStage(client, model_name)
         self.generate = GenerateStage(client, model_name, vector_store)
         self.validate = ValidateStage(client, model_name)
         self.optimize = OptimizeStage(client, model_name)
+
+        # Track whether user feedback is pending (for feedback loop)
+        self._pending_feedback = None
 
     def classify_intent(self, message: str, history: list[dict] = None) -> dict:
         """Classify user intent to decide whether to run the full pipeline."""
@@ -137,13 +146,22 @@ class PipelineOrchestrator:
         # Stage 1: Preprocess
         context = self.preprocess.run(context)
 
+        # Stage 1b: Web Search Enrichment
+        context = self.web_enrich.run(context)
+
+        # Stage 1c: PoC Code Analysis
+        context = self.poc_analysis.run(context)
+
         # Stage 2: Extract
         context = self.extract.run(context)
 
         # Stage 3: TTP Map
         context = self.ttp_map.run(context)
 
-        # Stage 4: Generate
+        # Stage 3b: Log Source Suggestion
+        context = self.logsource.run(context)
+
+        # Stage 4: Generate (includes logsource suggestions)
         context = self.generate.run(context)
 
         # Stage 5: Validate
@@ -166,8 +184,13 @@ class PipelineOrchestrator:
         # Format output
         return self._format_output(context)
 
-    def run_stream(self, description: str, history: list[dict] = None, media_file: dict = None) -> Generator[dict, None, None]:
-        """Run pipeline with streaming progress events for SSE."""
+    def run_stream(self, description: str, history: list[dict] = None, media_file: dict = None, feedback_data: dict = None) -> Generator[dict, None, None]:
+        """Run pipeline with streaming progress events for SSE.
+
+        Args:
+            feedback_data: Optional user corrections from the feedback loop.
+                Keys: confirmed_logsource, removed_indicators, added_indicators, notes
+        """
         # Step 0: Intent classification
         yield {"event": "stage", "data": {"stage": "classification", "status": "running", "detail": "Classifying intent..."}}
         intent_result = self.classify_intent(description, history)
@@ -192,31 +215,74 @@ class PipelineOrchestrator:
             "media_file": media_file,
         }
 
-        # Stage 1
+        # Stage 1: Preprocessing
         yield {"event": "stage", "data": {"stage": "preprocessing", "status": "running", "detail": "Parsing input and fetching URLs..."}}
         context = self.preprocess.run(context)
         pp = context["preprocessed"]
         yield {"event": "stage", "data": {"stage": "preprocessing", "status": "complete", "detail": f"{len(pp['segments'])} segments, {len(pp['url_content'])} URLs"}}
 
-        # Stage 2
+        # Stage 1b: Web Search Enrichment
+        yield {"event": "stage", "data": {"stage": "web_enrichment", "status": "running", "detail": "Searching for additional threat intelligence..."}}
+        context = self.web_enrich.run(context)
+        enrich = context.get("enrichment", {})
+        n_sources = len(enrich.get("sources", []))
+        n_queries = len(enrich.get("search_queries", []))
+        yield {"event": "stage", "data": {"stage": "web_enrichment", "status": "complete", "detail": f"{n_sources} sources from {n_queries} queries"}}
+
+        # Stage 1c: PoC Code Analysis
+        yield {"event": "stage", "data": {"stage": "poc_analysis", "status": "running", "detail": "Scanning for code snippets and PoC artifacts..."}}
+        context = self.poc_analysis.run(context)
+        poc = context.get("poc_analysis", {})
+        n_snippets = poc.get("snippets_found", 0)
+        n_behaviors = len(poc.get("behavioral_indicators", []))
+        if n_snippets > 0:
+            yield {"event": "stage", "data": {"stage": "poc_analysis", "status": "complete", "detail": f"{n_snippets} snippets, {n_behaviors} behavioral indicators"}}
+        else:
+            yield {"event": "stage", "data": {"stage": "poc_analysis", "status": "complete", "detail": "No code snippets found"}}
+
+        # Stage 2: Entity Extraction
         yield {"event": "stage", "data": {"stage": "extraction", "status": "running", "detail": "Identifying threat indicators..."}}
         context = self.extract.run(context)
         ext = context["extraction"]
         yield {"event": "stage", "data": {"stage": "extraction", "status": "complete", "detail": f"Found {len(ext['indicators'])} indicators"}}
 
-        # Stage 3
+        # Stage 3: TTP Mapping
         yield {"event": "stage", "data": {"stage": "ttp_mapping", "status": "running", "detail": "Mapping to MITRE ATT&CK..."}}
         context = self.ttp_map.run(context)
         ttps = context["ttp_mapping"]
         yield {"event": "stage", "data": {"stage": "ttp_mapping", "status": "complete", "detail": f"Mapped {len(ttps['mappings'])} techniques"}}
 
-        # Stage 4
+        # Stage 3b: Log Source Suggestion
+        yield {"event": "stage", "data": {"stage": "logsource", "status": "running", "detail": "Analyzing optimal log sources..."}}
+        context = self.logsource.run(context)
+        ls = context.get("logsource_suggestion", {})
+        primary = ls.get("primary_source", "unknown")
+        yield {"event": "stage", "data": {"stage": "logsource", "status": "complete", "detail": f"Primary: {primary}"}}
+
+        # Stage 3c: User Feedback (send preview for confirmation)
+        yield {"event": "feedback_request", "data": {
+            "stage": "feedback",
+            "indicators": ext.get("indicators", []),
+            "ttp_mappings": ttps.get("mappings", []),
+            "logsource_suggestions": ls.get("suggestions", []),
+            "primary_logsource": ls.get("primary_source", ""),
+            "attack_summary": ext.get("attack_summary", ""),
+        }}
+
+        # Check for user feedback from the feedback_data parameter
+        if feedback_data:
+            context = self._apply_user_feedback(context, feedback_data)
+            yield {"event": "stage", "data": {"stage": "feedback", "status": "complete", "detail": "User feedback applied"}}
+        else:
+            yield {"event": "stage", "data": {"stage": "feedback", "status": "complete", "detail": "No corrections needed"}}
+
+        # Stage 4: Rule Generation
         yield {"event": "stage", "data": {"stage": "generation", "status": "running", "detail": "Generating Sigma rules..."}}
         context = self.generate.run(context)
         gen = context["generation"]
         yield {"event": "stage", "data": {"stage": "generation", "status": "complete", "detail": f"Generated {len(gen['rules'])} rule(s)"}}
 
-        # Stage 5
+        # Stage 5: Validation
         yield {"event": "stage", "data": {"stage": "validation", "status": "running", "detail": "Validating rule syntax and logic..."}}
         context = self.validate.run(context)
 
@@ -233,7 +299,7 @@ class PipelineOrchestrator:
         val = context["validation"]
         yield {"event": "stage", "data": {"stage": "validation", "status": "complete", "detail": f"Valid: {val['is_valid']}"}}
 
-        # Stage 6
+        # Stage 6: Optimization
         yield {"event": "stage", "data": {"stage": "optimization", "status": "running", "detail": "Optimizing rules and enriching with IoCs..."}}
         context = self.optimize.run(context)
         opt = context["optimization"]
@@ -241,6 +307,53 @@ class PipelineOrchestrator:
 
         # Final result
         yield {"event": "result", "data": self._format_output(context)}
+
+    def _apply_user_feedback(self, context: dict, feedback: dict) -> dict:
+        """Apply user corrections from the feedback loop to the pipeline context."""
+        # Apply log source override
+        confirmed_logsource = feedback.get("confirmed_logsource")
+        if confirmed_logsource:
+            ls = context.get("logsource_suggestion", {})
+            ls["primary_source"] = confirmed_logsource
+            ls["user_confirmed"] = True
+            context["logsource_suggestion"] = ls
+            print(f"[orchestrator] User confirmed logsource: {confirmed_logsource}")
+
+        # Remove indicators the user flagged as incorrect
+        removed = feedback.get("removed_indicators", [])
+        if removed:
+            extraction = context.get("extraction", {})
+            indicators = extraction.get("indicators", [])
+            extraction["indicators"] = [
+                ind for ind in indicators
+                if ind.get("value") not in removed
+            ]
+            context["extraction"] = extraction
+            print(f"[orchestrator] User removed {len(removed)} indicators: {removed}")
+
+        # Add indicators the user wants included
+        added = feedback.get("added_indicators", [])
+        if added:
+            extraction = context.get("extraction", {})
+            indicators = extraction.get("indicators", [])
+            for item in added:
+                indicators.append({
+                    "value": item.get("value", ""),
+                    "type": item.get("type", "other"),
+                    "context": "Added by user",
+                    "confidence": "high",
+                })
+            extraction["indicators"] = indicators
+            context["extraction"] = extraction
+            print(f"[orchestrator] User added {len(added)} indicators")
+
+        # Append user notes to context for generation
+        notes = feedback.get("notes", "")
+        if notes:
+            context["user_feedback_notes"] = notes
+            print(f"[orchestrator] User notes: {notes}")
+
+        return context
 
     def _format_output(self, context: dict) -> dict:
         """Format pipeline context into the response structure."""
@@ -276,6 +389,9 @@ class PipelineOrchestrator:
         extraction = context.get("extraction", {})
         ttp_mapping = context.get("ttp_mapping", {})
         validation = context.get("validation", {})
+        enrichment = context.get("enrichment", {})
+        poc_analysis = context.get("poc_analysis", {})
+        logsource_suggestion = context.get("logsource_suggestion", {})
 
         pipeline_metadata = {
             "indicators": extraction.get("indicators", []),
@@ -284,6 +400,13 @@ class PipelineOrchestrator:
             "validation_issues": validation.get("issues", []),
             "optimization_changes": optimization.get("all_changes", []),
             "suggested_log_sources": extraction.get("suggested_log_sources", []),
+            "enrichment_sources": enrichment.get("sources", []),
+            "enrichment_queries": enrichment.get("search_queries", []),
+            "poc_snippets_found": poc_analysis.get("snippets_found", 0),
+            "poc_behavioral_indicators": poc_analysis.get("behavioral_indicators", []),
+            "poc_attack_flow": poc_analysis.get("attack_flow", ""),
+            "logsource_suggestions": logsource_suggestion.get("suggestions", []),
+            "logsource_primary": logsource_suggestion.get("primary_source", ""),
         }
 
         # Build context for sidebar (backward compatible)

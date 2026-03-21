@@ -48,10 +48,13 @@ class SigmaAgent:
                 "pipeline_metadata": None,
             }
 
-    def analyze_attack_stream(self, attack_description, history=None, media_file=None):
+    def analyze_attack_stream(self, attack_description, history=None, media_file=None, feedback_data=None):
         """
         Streaming version - yields SSE events for real-time pipeline progress.
         Each event is a dict with 'event' and 'data' keys.
+
+        Args:
+            feedback_data: Optional user corrections from the feedback loop.
         """
         print(f"Analyzing (stream): {attack_description}")
 
@@ -60,6 +63,7 @@ class SigmaAgent:
                 description=attack_description,
                 history=history,
                 media_file=media_file,
+                feedback_data=feedback_data,
             )
         except Exception as e:
             print(f"Pipeline stream error: {e}")

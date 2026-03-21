@@ -41,8 +41,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const PIPELINE_STAGES = [
         { id: 'classification', label: 'Intent Classification' },
         { id: 'preprocessing', label: 'Preprocessing' },
+        { id: 'web_enrichment', label: 'Web Enrichment' },
+        { id: 'poc_analysis', label: 'PoC Analysis' },
         { id: 'extraction', label: 'Entity Extraction' },
         { id: 'ttp_mapping', label: 'TTP Mapping' },
+        { id: 'logsource', label: 'Log Source Analysis' },
+        { id: 'feedback', label: 'Review & Confirm' },
         { id: 'generation', label: 'Rule Generation' },
         { id: 'validation', label: 'Validation' },
         { id: 'optimization', label: 'Optimization' },
@@ -469,6 +473,63 @@ level: medium`;
         chatHistory.scrollTop = chatHistory.scrollHeight;
     }
 
+    // --- Feedback Preview Panel ---
+    function showFeedbackPreview(data, pipelineDiv) {
+        const feedbackDiv = document.createElement('div');
+        feedbackDiv.className = 'feedback-preview';
+        feedbackDiv.id = 'feedback-preview';
+
+        let html = '<h4>Pipeline Preview — Review Before Generation</h4>';
+
+        // Attack Summary
+        if (data.attack_summary) {
+            html += `<div class="feedback-section"><strong>Attack Summary:</strong> ${data.attack_summary}</div>`;
+        }
+
+        // Indicators
+        const indicators = data.indicators || [];
+        if (indicators.length > 0) {
+            html += '<div class="feedback-section"><strong>Extracted Indicators:</strong><div class="indicator-chips">';
+            indicators.forEach(ind => {
+                html += `<span class="indicator-chip ${ind.type}" title="${ind.context || ''}">${ind.value}</span>`;
+            });
+            html += '</div></div>';
+        }
+
+        // TTP Mappings
+        const ttps = data.ttp_mappings || [];
+        if (ttps.length > 0) {
+            html += '<div class="feedback-section"><strong>MITRE ATT&CK:</strong>';
+            ttps.forEach(ttp => {
+                html += `<div class="ttp-card-mini"><span class="ttp-id">${ttp.technique_id}</span> ${ttp.technique_name} <span class="severity-badge ${ttp.severity}">${ttp.severity}</span></div>`;
+            });
+            html += '</div>';
+        }
+
+        // Log Source Suggestions
+        const logsources = data.logsource_suggestions || [];
+        if (logsources.length > 0) {
+            html += '<div class="feedback-section"><strong>Suggested Log Sources:</strong>';
+            html += `<div class="logsource-primary">Primary: ${data.primary_logsource || 'N/A'}</div>`;
+            logsources.forEach(ls => {
+                const pct = Math.round((ls.confidence || 0) * 100);
+                html += `<div class="logsource-item"><span class="logsource-cat">${ls.category}/${ls.product}</span> <span class="logsource-conf">${pct}%</span> — ${ls.reasoning || ''}</div>`;
+            });
+            html += '</div>';
+        }
+
+        html += '<div class="feedback-note">This preview is informational. The pipeline will continue automatically.</div>';
+
+        feedbackDiv.innerHTML = html;
+
+        // Insert after the pipeline progress inside the same wrapper
+        const contentDiv = pipelineDiv.querySelector('.content');
+        if (contentDiv) {
+            contentDiv.appendChild(feedbackDiv);
+        }
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+
     // --- handleSend with SSE Streaming ---
     async function handleSend() {
         const text = userInput.value.trim();
@@ -555,6 +616,10 @@ level: medium`;
 
                             if (currentEvent === 'stage') {
                                 updatePipelineStage(data.stage, data.status, data.detail);
+                            } else if (currentEvent === 'feedback_request') {
+                                // Show feedback preview in the pipeline progress
+                                updatePipelineStage('feedback', 'running', 'Review extracted data...');
+                                showFeedbackPreview(data, pipelineDiv);
                             } else if (currentEvent === 'result') {
                                 // Remove pipeline progress, show final message
                                 chatHistory.removeChild(pipelineDiv);
@@ -655,6 +720,88 @@ level: medium`;
                     card.className = 'context-card';
                     const color = issue.severity === 'error' ? '#f85149' : issue.severity === 'warning' ? '#d29922' : '#8b949e';
                     card.innerHTML = `<span style="color:${color};font-weight:600">${issue.severity.toUpperCase()}</span> [${issue.field}]: ${issue.message}`;
+                    section.appendChild(card);
+                });
+                contextDiv.appendChild(section);
+            }
+
+            // Enrichment Sources
+            const enrichSources = pipelineMetadata.enrichment_sources || [];
+            if (enrichSources.length > 0) {
+                const section = document.createElement('div');
+                section.className = 'context-section';
+                const header = document.createElement('h4');
+                header.textContent = 'Web Enrichment Sources';
+                section.appendChild(header);
+
+                enrichSources.forEach(src => {
+                    const card = document.createElement('div');
+                    card.className = 'context-card enrichment-source';
+                    card.innerHTML = `<a href="${src.url}" target="_blank" class="enrich-link">${src.title || src.url}</a><p class="enrich-snippet">${src.snippet || ''}</p>`;
+                    section.appendChild(card);
+                });
+                contextDiv.appendChild(section);
+            }
+
+            // PoC Analysis
+            const pocFlow = pipelineMetadata.poc_attack_flow || '';
+            const pocIndicators = pipelineMetadata.poc_behavioral_indicators || [];
+            if (pocFlow || pocIndicators.length > 0) {
+                const section = document.createElement('div');
+                section.className = 'context-section';
+                const header = document.createElement('h4');
+                header.textContent = `PoC Analysis (${pipelineMetadata.poc_snippets_found || 0} snippets)`;
+                section.appendChild(header);
+
+                if (pocFlow) {
+                    const flowCard = document.createElement('div');
+                    flowCard.className = 'context-card';
+                    flowCard.textContent = pocFlow;
+                    section.appendChild(flowCard);
+                }
+                if (pocIndicators.length > 0) {
+                    const chipsDiv = document.createElement('div');
+                    chipsDiv.className = 'indicator-chips';
+                    pocIndicators.forEach(ind => {
+                        const chip = document.createElement('span');
+                        chip.className = `indicator-chip ${ind.type || 'other'}`;
+                        chip.textContent = ind.value;
+                        chip.title = ind.context || '';
+                        chipsDiv.appendChild(chip);
+                    });
+                    section.appendChild(chipsDiv);
+                }
+                contextDiv.appendChild(section);
+            }
+
+            // Log Source Suggestions
+            const logsourceSugs = pipelineMetadata.logsource_suggestions || [];
+            if (logsourceSugs.length > 0) {
+                const section = document.createElement('div');
+                section.className = 'context-section';
+                const header = document.createElement('h4');
+                header.textContent = 'Log Source Analysis';
+                section.appendChild(header);
+
+                if (pipelineMetadata.logsource_primary) {
+                    const primaryDiv = document.createElement('div');
+                    primaryDiv.className = 'logsource-primary-badge';
+                    primaryDiv.textContent = `Primary: ${pipelineMetadata.logsource_primary}`;
+                    section.appendChild(primaryDiv);
+                }
+
+                logsourceSugs.forEach(ls => {
+                    const card = document.createElement('div');
+                    card.className = 'context-card logsource-card';
+                    const pct = Math.round((ls.confidence || 0) * 100);
+                    card.innerHTML = `
+                        <div class="logsource-header">
+                            <strong>${ls.category || '?'}/${ls.product || '?'}</strong>
+                            <span class="logsource-conf">${pct}%</span>
+                        </div>
+                        <div class="logsource-reason">${ls.reasoning || ''}</div>
+                        <div class="logsource-fields">${(ls.relevant_fields || []).join(', ')}</div>
+                    `;
                     section.appendChild(card);
                 });
                 contextDiv.appendChild(section);
