@@ -57,16 +57,8 @@ class PipelineOrchestrator:
         )
 
         try:
-            from google.genai import types
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=[prompt],
-                config=types.GenerateContentConfig(
-                    temperature=0.0,
-                    response_mime_type="application/json",
-                ),
-            )
-            result = json.loads(response.text)
+            response_text = self.client.generate(prompt, temperature=0.0, json_mode=True)
+            result = json.loads(response_text)
             return result
         except Exception as e:
             print(f"[orchestrator] Intent classification failed: {e}")
@@ -113,11 +105,7 @@ class PipelineOrchestrator:
         )
 
         try:
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=[prompt],
-            )
-            return response.text
+            return self.client.generate(prompt, temperature=0.7, json_mode=False)
         except Exception as e:
             return f"I apologize, I encountered an error: {e}"
 

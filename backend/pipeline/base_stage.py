@@ -12,9 +12,9 @@ class PipelineStage(ABC):
     name: str = "base"
     description: str = "Base stage"
 
-    def __init__(self, client, model_name: str):
+    def __init__(self, client, model_name: str = ""):
         self.client = client
-        self.model_name = model_name
+        self.model_name = model_name or getattr(client, "model_name", "")
 
     @abstractmethod
     def run(self, context: dict) -> dict:
@@ -30,26 +30,14 @@ class PipelineStage(ABC):
         max_retries: int = 2,
     ) -> str:
         """Make an LLM call with retry logic and optional JSON mode."""
-        from google.genai import types
-
-        config = types.GenerateContentConfig(
-            temperature=temperature,
-        )
-        if json_mode:
-            config.response_mime_type = "application/json"
-
-        contents = [prompt]
-        if media_parts:
-            contents.extend(media_parts)
-
         for attempt in range(max_retries + 1):
             try:
-                response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=contents,
-                    config=config,
+                return self.client.generate(
+                    prompt=prompt,
+                    temperature=temperature,
+                    json_mode=json_mode,
+                    media_parts=media_parts,
                 )
-                return response.text
             except Exception as e:
                 err_str = str(e)
                 if ("429" in err_str or "RESOURCE_EXHAUSTED" in err_str) and attempt < max_retries:

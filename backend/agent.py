@@ -1,23 +1,16 @@
-import os
-from google import genai
-from dotenv import load_dotenv
 from backend.vector_store import VectorStore
 from backend.pipeline.orchestrator import PipelineOrchestrator
+from backend.llm_client import create_llm_client
 
-load_dotenv()
 
 class SigmaAgent:
     def __init__(self):
         # Initialize Vector Store (loads existing DB)
         self.vector_store = VectorStore()
 
-        # Initialize Gemini with new SDK
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY not found")
-
-        self.client = genai.Client(api_key=api_key)
-        self.model_name = 'gemini-2.5-flash'
+        # Initialize LLM client (Gemini or Ollama based on LLM_PROVIDER env var)
+        self.client = create_llm_client()
+        self.model_name = self.client.model_name  # kept for backward compat
 
         # Initialize multi-stage pipeline orchestrator
         self.orchestrator = PipelineOrchestrator(
@@ -27,7 +20,7 @@ class SigmaAgent:
     def analyze_attack(self, attack_description, history=None, media_file=None):
         """
         Main method to process a user's attack description and generate a Sigma rule.
-        Uses the multi-stage pipeline (inspired by LLMCloudHunter).
+        Uses the multi-stage pipeline.
 
         Returns: {"rule": str, "context": dict, "pipeline_metadata": dict|None}
         """

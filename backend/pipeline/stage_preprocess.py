@@ -83,26 +83,18 @@ class PreprocessStage(PipelineStage):
         return context
 
     def _transcribe_image(self, media_file: dict, context_text: str) -> str | None:
-        """Use Gemini multimodal to transcribe technical content from image."""
+        """Transcribe technical content from an image using the active LLM backend."""
         try:
-            from google.genai import types
+            part = self.client.make_image_part(media_file["path"], media_file["mime"])
+            if part is None:
+                print(f"[{self.name}] Image transcription not supported by current LLM backend — skipping")
+                return None
 
-            with open(media_file["path"], "rb") as f:
-                file_data = f.read()
-
-            part = types.Part.from_bytes(data=file_data, mime_type=media_file["mime"])
             prompt = prompts.IMAGE_TRANSCRIPTION.format(context=context_text[:500])
-
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=[prompt, part],
-                config=types.GenerateContentConfig(
-                    temperature=0.0,
-                    response_mime_type="application/json",
-                ),
+            response_text = self.llm_call(
+                prompt, temperature=0.0, json_mode=True, media_parts=[part]
             )
-
-            result = self.parse_json(response.text)
+            result = self.parse_json(response_text)
             if result.get("is_technical"):
                 transcription = result.get("transcription", "")
                 print(f"[{self.name}] Image transcribed: {len(transcription)} chars")
