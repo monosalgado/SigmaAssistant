@@ -177,13 +177,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (contextDiv) contextDiv.innerHTML = '<p class="empty-state">No specific context found.</p>';
 
         let lastContext = null;
+        let lastPipelineMeta = null;
         msgs.forEach(m => {
             appendMessage(m.role, m.content);
             if (m.role === 'assistant' && m.context && Object.keys(m.context).length > 0) {
                 lastContext = m.context;
+                lastPipelineMeta = m.pipeline_metadata || null;
             }
         });
-        if (lastContext) renderContext(lastContext);
+        if (lastContext) renderContext(lastContext, lastPipelineMeta);
         loadSessions();
     }
 

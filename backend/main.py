@@ -157,12 +157,13 @@ def analyze_attack(request: AttackRequest):
         
         # Save AI Response
         sessions[session_id].append({
-            "role": "assistant", 
+            "role": "assistant",
             "content": response_data["rule"],
-            "context": response_data["context"]
+            "context": response_data["context"],
+            "pipeline_metadata": response_data.get("pipeline_metadata"),
         })
         save_sessions()
-        
+
         # wrapper to include current session_id if it was new
         response_data["session_id"] = session_id
         
@@ -206,12 +207,13 @@ async def analyze_multimodal(
         
         # Save AI Response
         sessions[session_id].append({
-            "role": "assistant", 
+            "role": "assistant",
             "content": response_data["rule"],
-            "context": response_data["context"]
+            "context": response_data["context"],
+            "pipeline_metadata": response_data.get("pipeline_metadata"),
         })
         save_sessions()
-        
+
         response_data["session_id"] = session_id
         return response_data
     except Exception as e:
@@ -246,11 +248,12 @@ def analyze_stream(request: AttackRequest):
 
             if event_type == "result":
                 final_data = data
-                # Save AI response to session
+                # Save AI response to session (including pipeline_metadata for context panel persistence)
                 sessions[session_id].append({
                     "role": "assistant",
                     "content": data.get("rule", ""),
                     "context": data.get("context", {}),
+                    "pipeline_metadata": data.get("pipeline_metadata"),
                 })
                 save_sessions()
                 data["session_id"] = session_id
