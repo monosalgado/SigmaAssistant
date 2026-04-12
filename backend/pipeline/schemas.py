@@ -160,3 +160,13 @@ class PipelineMetadata(BaseModel):
     log_source_suggestions: list[LogSourceSuggestion] = Field(default_factory=list)
     code_snippets_analyzed: int = 0
     feedback_applied: bool = False
+
+
+# --- Translation ---
+
+class TranslationResult(BaseModel):
+    query: str = ""
+    log_set: str = ""
+    explanation: str = ""
+    warnings: list[str] = Field(default_factory=list)
+    confidence: Literal["high", "medium", "low"] = "medium"

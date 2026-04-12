@@ -11,6 +11,7 @@ import json
 
 # New Imports for Rules & Translation
 import backend.saved_rules as saved_rules
+from backend.translation import LLMTranslator
 from sigma.collection import SigmaCollection
 from sigma.backends.insight_idr import InsightIDRBackend
 
@@ -51,6 +52,15 @@ try:
 except Exception as e:
     print(f"Failed to initialize Agent: {e}")
     agent = None
+
+# Initialize LLM Translator
+try:
+    translator = LLMTranslator(agent.client, agent.model_name) if agent else None
+    if translator:
+        print("LLM Translator Initialized")
+except Exception as e:
+    print(f"Failed to initialize Translator: {e}")
+    translator = None
 
 class AttackRequest(BaseModel):
     description: str
@@ -298,23 +308,16 @@ def delete_rule(rule_id: str):
 
 @app.post("/translate")
 def translate_rule(req: TranslateRequest):
+    if not translator:
+        raise HTTPException(status_code=500, detail="Translator not initialized")
     try:
-        # 1. Parse Sigma
-        collection = SigmaCollection.from_yaml(req.rule)
-        
-        # 2. Select Backend
-        if req.target.lower() == "leql":
-            backend = InsightIDRBackend()
-            queries = backend.convert(collection)
-            # InsightIDR might return list of strings
-            return {"query": queries[0] if queries else "No query generated"}
-        
-        else:
-            raise HTTPException(status_code=400, detail=f"Target {req.target} not supported yet.")
-            
+        result = translator.translate(req.rule, target=req.target)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         print(f"Translation error: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Translation failed: {e}")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

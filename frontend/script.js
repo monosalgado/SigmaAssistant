@@ -286,7 +286,7 @@ level: medium`;
         if (!content) return;
         const target = targetLangSelect.value;
 
-        translationOutput.value = "Translating...";
+        translationOutput.value = "Translating with AI...";
 
         try {
             const res = await fetch('/translate', {
@@ -297,7 +297,22 @@ level: medium`;
 
             if (res.ok) {
                 const data = await res.json();
-                translationOutput.value = data.query;
+                let output = data.query || "No query generated";
+
+                if (data.log_set) {
+                    output += `\n\n/* Log Set: ${data.log_set} */`;
+                }
+                if (data.confidence) {
+                    output += `\n/* Confidence: ${data.confidence} */`;
+                }
+                if (data.explanation) {
+                    output += `\n\n/* ${data.explanation} */`;
+                }
+                if (data.warnings && data.warnings.length > 0) {
+                    output += `\n\n/* Warnings:\n${data.warnings.map(w => '   - ' + w).join('\n')}\n*/`;
+                }
+
+                translationOutput.value = output;
             } else {
                 const err = await res.json();
                 translationOutput.value = `Error: ${err.detail}`;
