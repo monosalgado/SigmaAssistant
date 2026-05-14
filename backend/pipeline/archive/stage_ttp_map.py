@@ -52,7 +52,8 @@ class TTPMapStage(PipelineStage):
         )
 
         try:
-            response_text = self.llm_call(prompt, temperature=0.0, json_mode=True)
+            # economy=True → Spark/Ollama (MITRE mapping with RAG context — local model + good RAG > Gemini)
+            response_text = self.llm_call(prompt, temperature=0.0, json_mode=True, economy=True)
             result = self.parse_json(response_text)
         except Exception as e:
             print(f"[{self.name}] TTP mapping failed: {e}")

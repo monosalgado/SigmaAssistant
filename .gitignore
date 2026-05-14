@@ -21,5 +21,24 @@ Thumbs.db
 data/chroma_db/
 data/sessions.json
 data/saved_rules.json
+data/sigma/
 *.sqlite3
 *.bin
+
+# User-uploaded files (folder kept via .gitkeep)
+uploads/*
+!uploads/.gitkeep
+
+# Local dev artifacts
+.claude/worktrees/
+*.bak
+*.old
+*.orig
+*.swp
+*~
+
+# Python build/test cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/

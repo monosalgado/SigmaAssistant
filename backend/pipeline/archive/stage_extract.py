@@ -15,7 +15,8 @@ class ExtractStage(PipelineStage):
         prompt = prompts.ENTITY_EXTRACTION.format(text=combined_text[:6000])
 
         try:
-            response_text = self.llm_call(prompt, temperature=0.0, json_mode=True)
+            # economy=True → Spark/Ollama (IoC/entity extraction — pattern-matching task)
+            response_text = self.llm_call(prompt, temperature=0.0, json_mode=True, economy=True)
             result = self.parse_json(response_text)
         except Exception as e:
             print(f"[{self.name}] Extraction failed: {e}")

@@ -160,7 +160,8 @@ class ValidateStage(PipelineStage):
             indicators=indicators_text,
         )
 
-        response_text = self.llm_call(prompt, temperature=0.0, json_mode=True)
+        # economy=True → Spark/Ollama (validation is checking against spec — structured task)
+        response_text = self.llm_call(prompt, temperature=0.0, json_mode=True, economy=True)
         result = self.parse_json(response_text)
 
         issues = result.get("issues", [])

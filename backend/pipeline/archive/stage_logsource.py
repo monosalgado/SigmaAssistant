@@ -28,7 +28,8 @@ class LogSourceStage(PipelineStage):
         )
 
         try:
-            response_text = self.llm_call(prompt, temperature=0.0, json_mode=True)
+            # economy=True → Spark/Ollama (structured JSON task, no rule-quality risk)
+            response_text = self.llm_call(prompt, temperature=0.0, json_mode=True, economy=True)
             result = self.parse_json(response_text)
         except Exception as e:
             print(f"[{self.name}] Log source suggestion failed: {e}")
