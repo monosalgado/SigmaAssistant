@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from backend.agent import SigmaAgent
+from backend.tunnel import tunnel_manager
 import uvicorn
 import os
 import uuid
@@ -21,6 +22,18 @@ app = FastAPI(title="Sigma Assistant API")
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Open SSH tunnel to Spark on app start (only if ECONOMY_PROVIDER=ollama)."""
+    tunnel_manager.start()
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Close SSH tunnel cleanly when app stops."""
+    tunnel_manager.stop()
 
 # In-Memory Session Store
 sessions: Dict[str, List[Dict]] = {}

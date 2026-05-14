@@ -17,10 +17,10 @@ def main():
     print("\n--- Ingesting MITRE ATT&CK Data ---")
     mitre_data = download_and_parse_mitre()
     if mitre_data:
-        # Limit to 50 for speed during demo/dev (full ingestion takes ~10 mins)
-        limit_mitre = 50
-        print(f"Adding first {limit_mitre} MITRE techniques (of {len(mitre_data)})...")
-        vs.add_mitre_techniques(mitre_data[:limit_mitre])
+        # Full ingestion — no cap. Required for accurate TTP mapping in the pipeline.
+        # With local embeddings this takes a few minutes (no API latency/quota).
+        print(f"Adding all {len(mitre_data)} MITRE techniques...")
+        vs.add_mitre_techniques(mitre_data)
         
     # 3. Ingest Sigma Rules
     print("\n--- Ingesting Sigma Rules ---")

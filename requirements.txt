@@ -8,5 +8,6 @@ pydantic
 requests
 beautifulsoup4
 pyyaml
-googlesearch-python
+duckduckgo_search
 openai
+sentence-transformers

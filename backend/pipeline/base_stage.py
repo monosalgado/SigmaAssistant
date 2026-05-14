@@ -27,9 +27,23 @@ class PipelineStage(ABC):
         temperature: float = 0.0,
         json_mode: bool = True,
         media_parts: list = None,
-        max_retries: int = 2,
+        max_retries: int = 3,
+        fast: bool = False,
+        economy: bool = False,
     ) -> str:
-        """Make an LLM call with retry logic and optional JSON mode."""
+        """Make an LLM call with retry logic and optional JSON mode.
+
+        Routing (Hybrid mode — ECONOMY_PROVIDER=ollama):
+            economy=True  → Spark / Ollama (qwen3-coder:30b)
+                            classify, conversational, poc, analysis, attack_vector,
+                            review, logsource, extract, ttp_map, validate, translator
+            fast=True     → Gemini fast (gemini-2.5-flash-lite)  — web search only
+            default       → Gemini primary (gemini-2.5-flash)
+                            rule generation, optimization, image transcription
+
+        Pure Gemini mode (no ECONOMY_PROVIDER): economy/fast/default all go
+        through Gemini at the corresponding tier.
+        """
         for attempt in range(max_retries + 1):
             try:
                 return self.client.generate(
@@ -37,12 +51,22 @@ class PipelineStage(ABC):
                     temperature=temperature,
                     json_mode=json_mode,
                     media_parts=media_parts,
+                    fast=fast,
+                    economy=economy,
                 )
             except Exception as e:
                 err_str = str(e)
-                if ("429" in err_str or "RESOURCE_EXHAUSTED" in err_str) and attempt < max_retries:
-                    wait_time = (2 ** attempt) * 2
-                    print(f"[{self.name}] Rate limit hit. Retrying in {wait_time}s (attempt {attempt + 1})")
+                is_retryable = (
+                    "429" in err_str
+                    or "RESOURCE_EXHAUSTED" in err_str
+                    or "503" in err_str
+                    or "UNAVAILABLE" in err_str
+                    or "high demand" in err_str.lower()
+                    or "overloaded" in err_str.lower()
+                )
+                if is_retryable and attempt < max_retries:
+                    wait_time = (2 ** attempt) * 5  # 5s, 10s — give Gemini time to recover
+                    print(f"[{self.name}] Gemini unavailable (attempt {attempt + 1}/{max_retries + 1}). Retrying in {wait_time}s...")
                     time.sleep(wait_time)
                 else:
                     raise

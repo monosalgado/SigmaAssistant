@@ -51,7 +51,8 @@ class LLMTranslator(PipelineStage):
         )
 
         try:
-            response_text = self.llm_call(prompt, temperature=0.1, json_mode=True)
+            # economy=True → Spark/Ollama (qwen-coder is trained for syntax translation)
+            response_text = self.llm_call(prompt, temperature=0.1, json_mode=True, economy=True)
             result = self.parse_json(response_text)
         except Exception as e:
             print(f"[{self.name}] LLM translation failed: {e}")

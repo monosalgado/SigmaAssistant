@@ -19,14 +19,31 @@ def download_and_parse_mitre():
     
     for obj in data.get("objects", []):
         if obj.get("type") == "attack-pattern":
-            # Check if it's for Windows
-            platforms = obj.get("x_mitre_platforms", [])
-            if "Windows" not in platforms:
+            # Skip revoked / deprecated techniques — they pollute the RAG and the
+            # validator's tactic lookup with stale IDs (e.g. T1065).
+            if obj.get("revoked") or obj.get("x_mitre_deprecated"):
                 continue
+
+            # No platform filter — the full Enterprise ATT&CK matrix is needed
+            # for webserver / Linux / Network / Cloud CVE detection work.
 
             external_references = obj.get("external_references", [])
             mitre_id = next((ref["external_id"] for ref in external_references if ref["source_name"] == "mitre-attack"), None)
             url = next((ref["url"] for ref in external_references if ref["source_name"] == "mitre-attack"), "")
+
+            # Preserve tactics from STIX kill_chain_phases so downstream consumers
+            # can validate that a declared tactic tag matches the technique's
+            # legitimate tactic(s). ChromaDB metadata values must be primitives,
+            # so we join as a comma-separated string.
+            tactics = [
+                phase.get("phase_name", "")
+                for phase in obj.get("kill_chain_phases", [])
+                if phase.get("kill_chain_name") == "mitre-attack" and phase.get("phase_name")
+            ]
+            tactics_str = ",".join(sorted(set(tactics)))
+
+            platforms = obj.get("x_mitre_platforms", []) or []
+            platforms_str = ",".join(sorted(set(p for p in platforms if p)))
 
             if mitre_id:
                 techniques.append({
@@ -35,10 +52,12 @@ def download_and_parse_mitre():
                     "name": obj.get("name"),
                     "description": obj.get("description", ""),
                     "external_id": mitre_id,
-                    "url": url
+                    "url": url,
+                    "tactics": tactics_str,
+                    "platforms": platforms_str,
                 })
-    
-    print(f"Found {len(techniques)} Windows techniques.")
+
+    print(f"Found {len(techniques)} Enterprise ATT&CK techniques (all platforms, non-deprecated).")
     return techniques
 
 if __name__ == "__main__":

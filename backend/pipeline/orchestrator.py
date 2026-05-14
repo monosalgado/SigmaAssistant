@@ -1,6 +1,12 @@
 """
 Pipeline Orchestrator - Runs stages in sequence, handles intent classification,
 validation retries, and formats output for the frontend.
+
+Optimized for Gemini free tier:
+  - 5-6 total LLM calls (down from 9-10)
+  - Dual-model: primary (gemini-2.5-flash) for critical stages,
+    fast (gemini-2.0-flash) for lightweight stages
+  - 2 calls to primary model, 3-4 calls to fast model
 """
 
 from __future__ import annotations
@@ -12,12 +18,10 @@ from backend.pipeline.base_stage import PipelineStage
 from backend.pipeline.stage_preprocess import PreprocessStage
 from backend.pipeline.stage_web_enrich import WebEnrichStage
 from backend.pipeline.stage_poc_analysis import PoCAnalysisStage
-from backend.pipeline.stage_extract import ExtractStage
-from backend.pipeline.stage_ttp_map import TTPMapStage
-from backend.pipeline.stage_logsource import LogSourceStage
+from backend.pipeline.stage_attack_vector import AttackVectorStage
+from backend.pipeline.stage_analysis import AnalysisStage
 from backend.pipeline.stage_generate import GenerateStage
-from backend.pipeline.stage_validate import ValidateStage
-from backend.pipeline.stage_optimize import OptimizeStage
+from backend.pipeline.stage_review import ReviewStage
 from backend.pipeline import prompts
 
 
@@ -33,18 +37,18 @@ class PipelineOrchestrator:
         self.preprocess = PreprocessStage(client, model_name)
         self.web_enrich = WebEnrichStage(client, model_name)
         self.poc_analysis = PoCAnalysisStage(client, model_name)
-        self.extract = ExtractStage(client, model_name)
-        self.ttp_map = TTPMapStage(client, model_name, vector_store)
-        self.logsource = LogSourceStage(client, model_name)
+        self.attack_vector = AttackVectorStage(client, model_name)
+        self.analysis = AnalysisStage(client, model_name, vector_store)
         self.generate = GenerateStage(client, model_name, vector_store)
-        self.validate = ValidateStage(client, model_name)
-        self.optimize = OptimizeStage(client, model_name)
+        self.review = ReviewStage(client, model_name, vector_store)
 
         # Track whether user feedback is pending (for feedback loop)
         self._pending_feedback = None
 
     def classify_intent(self, message: str, history: list[dict] = None) -> dict:
-        """Classify user intent to decide whether to run the full pipeline."""
+        """Classify user intent to decide whether to run the full pipeline.
+        Uses FAST model - simple classification task.
+        """
         history_text = ""
         if history:
             for msg in history[-6:]:
@@ -57,7 +61,9 @@ class PipelineOrchestrator:
         )
 
         try:
-            response_text = self.client.generate(prompt, temperature=0.0, json_mode=True)
+            response_text = self.client.generate(
+                prompt, temperature=0.0, json_mode=True, economy=True
+            )
             result = json.loads(response_text)
             return result
         except Exception as e:
@@ -66,7 +72,9 @@ class PipelineOrchestrator:
             return {"intent": "generate_rule", "reasoning": "Classification failed, defaulting to rule generation"}
 
     def handle_conversational(self, message: str, history: list[dict] = None) -> str:
-        """Handle chat/question intents with a simple conversational response."""
+        """Handle chat/question intents with a simple conversational response.
+        Uses FAST model - lightweight conversational task.
+        """
         current_date = datetime.date.today().strftime("%Y-%m-%d")
 
         history_text = ""
@@ -105,13 +113,15 @@ class PipelineOrchestrator:
         )
 
         try:
-            return self.client.generate(prompt, temperature=0.7, json_mode=False)
+            return self.client.generate(
+                prompt, temperature=0.7, json_mode=False, economy=True
+            )
         except Exception as e:
             return f"I apologize, I encountered an error: {e}"
 
     def run_sync(self, description: str, history: list[dict] = None, media_file: dict = None) -> dict:
         """Run the full pipeline synchronously. Returns same format as old analyze_attack."""
-        # Step 0: Intent classification
+        # Step 0: Intent classification (FAST)
         intent_result = self.classify_intent(description, history)
         intent = intent_result.get("intent", "generate_rule")
         print(f"[orchestrator] Intent: {intent} ({intent_result.get('reasoning', '')})")
@@ -131,43 +141,58 @@ class PipelineOrchestrator:
             "media_file": media_file,
         }
 
-        # Stage 1: Preprocess
+        # Stage 1: Preprocess (no LLM unless image)
         context = self.preprocess.run(context)
 
-        # Stage 1b: Web Search Enrichment
+        # Stage 2: Web Search Enrichment (FAST)
         context = self.web_enrich.run(context)
 
-        # Stage 1c: PoC Code Analysis
+        # Stage 3: PoC Code Analysis (FAST, only if code found)
         context = self.poc_analysis.run(context)
 
-        # Stage 2: Extract
-        context = self.extract.run(context)
+        # Stage 3b: Attack Vector Extraction (PRIMARY) - anchors downstream stages
+        context = self.attack_vector.run(context)
 
-        # Stage 3: TTP Map
-        context = self.ttp_map.run(context)
+        # Stage 4: Combined Analysis - extraction + TTP + logsource (PRIMARY)
+        context = self.analysis.run(context)
 
-        # Stage 3b: Log Source Suggestion
-        context = self.logsource.run(context)
-
-        # Stage 4: Generate (includes logsource suggestions)
+        # Stage 5: Rule Generation (PRIMARY)
         context = self.generate.run(context)
 
-        # Stage 5: Validate
-        context = self.validate.run(context)
+        # Stage 6: Combined Review - validation + optimization (FAST)
+        context = self.review.run(context)
 
-        # Retry generation once if validation has errors
-        if not context["validation"]["is_valid"]:
+        # Retry generation once if review found errors.
+        # Sets `generation_retried` so the coverage-retry below can't fire
+        # too — total regenerations per request are capped at 1.
+        if not context["validation"]["is_valid"] and not context.get("generation_retried"):
             issues = context["validation"]["issues"]
             error_msgs = [i["message"] for i in issues if i["severity"] == "error"]
             if error_msgs:
-                print(f"[orchestrator] Validation failed, retrying generation with feedback")
+                print(f"[orchestrator] Review found errors, retrying generation")
                 context["validation_feedback"] = "\n".join(error_msgs)
+                context["generation_retried"] = True
                 context = self.generate.run(context)
                 context.pop("validation_feedback", None)
-                context = self.validate.run(context)
+                context = self.review.run(context)
 
-        # Stage 6: Optimize
-        context = self.optimize.run(context)
+        # Coverage-gap check (deterministic, no LLM call)
+        self._run_coverage_check(context)
+
+        # Coverage-directed regeneration: only runs if we haven't already
+        # regenerated for validation errors. Bounded by `generation_retried`
+        # to cap total regenerations at 1 per request (quota-safe).
+        if (
+            not context.get("generation_retried")
+            and self._should_regenerate_for_coverage(context)
+        ):
+            print("[orchestrator] Coverage gaps detected, regenerating rules with feedback")
+            context["coverage_feedback_for_retry"] = context.get("coverage_check", {})
+            context["generation_retried"] = True
+            context = self.generate.run(context)
+            context.pop("coverage_feedback_for_retry", None)
+            context = self.review.run(context)
+            self._run_coverage_check(context)
 
         # Format output
         return self._format_output(context)
@@ -179,7 +204,7 @@ class PipelineOrchestrator:
             feedback_data: Optional user corrections from the feedback loop.
                 Keys: confirmed_logsource, removed_indicators, added_indicators, notes
         """
-        # Step 0: Intent classification
+        # Step 0: Intent classification (FAST)
         yield {"event": "stage", "data": {"stage": "classification", "status": "running", "detail": "Classifying intent..."}}
         intent_result = self.classify_intent(description, history)
         intent = intent_result.get("intent", "generate_rule")
@@ -203,13 +228,13 @@ class PipelineOrchestrator:
             "media_file": media_file,
         }
 
-        # Stage 1: Preprocessing
+        # Stage 1: Preprocessing (no LLM unless image)
         yield {"event": "stage", "data": {"stage": "preprocessing", "status": "running", "detail": "Parsing input and fetching URLs..."}}
         context = self.preprocess.run(context)
         pp = context["preprocessed"]
         yield {"event": "stage", "data": {"stage": "preprocessing", "status": "complete", "detail": f"{len(pp['segments'])} segments, {len(pp['url_content'])} URLs"}}
 
-        # Stage 1b: Web Search Enrichment
+        # Stage 2: Web Search Enrichment (FAST)
         yield {"event": "stage", "data": {"stage": "web_enrichment", "status": "running", "detail": "Searching for additional threat intelligence..."}}
         context = self.web_enrich.run(context)
         enrich = context.get("enrichment", {})
@@ -217,7 +242,7 @@ class PipelineOrchestrator:
         n_queries = len(enrich.get("search_queries", []))
         yield {"event": "stage", "data": {"stage": "web_enrichment", "status": "complete", "detail": f"{n_sources} sources from {n_queries} queries"}}
 
-        # Stage 1c: PoC Code Analysis
+        # Stage 3: PoC Code Analysis (FAST, only if code found)
         yield {"event": "stage", "data": {"stage": "poc_analysis", "status": "running", "detail": "Scanning for code snippets and PoC artifacts..."}}
         context = self.poc_analysis.run(context)
         poc = context.get("poc_analysis", {})
@@ -228,26 +253,38 @@ class PipelineOrchestrator:
         else:
             yield {"event": "stage", "data": {"stage": "poc_analysis", "status": "complete", "detail": "No code snippets found"}}
 
-        # Stage 2: Entity Extraction
-        yield {"event": "stage", "data": {"stage": "extraction", "status": "running", "detail": "Identifying threat indicators..."}}
-        context = self.extract.run(context)
+        # Stage 3b: Attack Vector Extraction (PRIMARY model) - anchors the rest of the pipeline
+        yield {"event": "stage", "data": {"stage": "attack_vector", "status": "running", "detail": "Identifying the primary attack vector..."}}
+        context = self.attack_vector.run(context)
+        av = context.get("attack_vector", {})
+        vuln_class = av.get("vuln_class", "unknown")
+        proto = av.get("protocol", "unknown")
+        n_sigs = len(av.get("payload_signatures", []))
+        n_incidental = len(av.get("incidental_artifacts", []))
+        conf = av.get("confidence", 0.0)
+        if av.get("initial_access_vector"):
+            detail = (
+                f"{vuln_class} via {proto} · "
+                f"{n_sigs} payload signatures · "
+                f"{n_incidental} incidental strings blacklisted · "
+                f"confidence {conf:.0%}"
+            )
+        else:
+            detail = "No clear attack vector identified"
+        yield {"event": "stage", "data": {"stage": "attack_vector", "status": "complete", "detail": detail}}
+
+        # Stage 4: Combined Analysis (PRIMARY model)
+        yield {"event": "stage", "data": {"stage": "analysis", "status": "running", "detail": "Extracting indicators, mapping TTPs, analyzing log sources..."}}
+        context = self.analysis.run(context)
         ext = context["extraction"]
-        yield {"event": "stage", "data": {"stage": "extraction", "status": "complete", "detail": f"Found {len(ext['indicators'])} indicators"}}
-
-        # Stage 3: TTP Mapping
-        yield {"event": "stage", "data": {"stage": "ttp_mapping", "status": "running", "detail": "Mapping to MITRE ATT&CK..."}}
-        context = self.ttp_map.run(context)
         ttps = context["ttp_mapping"]
-        yield {"event": "stage", "data": {"stage": "ttp_mapping", "status": "complete", "detail": f"Mapped {len(ttps['mappings'])} techniques"}}
-
-        # Stage 3b: Log Source Suggestion
-        yield {"event": "stage", "data": {"stage": "logsource", "status": "running", "detail": "Analyzing optimal log sources..."}}
-        context = self.logsource.run(context)
         ls = context.get("logsource_suggestion", {})
-        primary = ls.get("primary_source", "unknown")
-        yield {"event": "stage", "data": {"stage": "logsource", "status": "complete", "detail": f"Primary: {primary}"}}
+        yield {"event": "stage", "data": {
+            "stage": "analysis", "status": "complete",
+            "detail": f"{len(ext['indicators'])} indicators, {len(ttps['mappings'])} TTPs, logsource: {ls.get('primary_source', 'unknown')}"
+        }}
 
-        # Stage 3c: User Feedback (send preview for confirmation)
+        # Stage 4b: User Feedback (send preview for confirmation)
         yield {"event": "feedback_request", "data": {
             "stage": "feedback",
             "indicators": ext.get("indicators", []),
@@ -264,37 +301,143 @@ class PipelineOrchestrator:
         else:
             yield {"event": "stage", "data": {"stage": "feedback", "status": "complete", "detail": "No corrections needed"}}
 
-        # Stage 4: Rule Generation
+        # Stage 5: Rule Generation (PRIMARY model)
         yield {"event": "stage", "data": {"stage": "generation", "status": "running", "detail": "Generating Sigma rules..."}}
         context = self.generate.run(context)
         gen = context["generation"]
         yield {"event": "stage", "data": {"stage": "generation", "status": "complete", "detail": f"Generated {len(gen['rules'])} rule(s)"}}
 
-        # Stage 5: Validation
-        yield {"event": "stage", "data": {"stage": "validation", "status": "running", "detail": "Validating rule syntax and logic..."}}
-        context = self.validate.run(context)
+        # Stage 6: Combined Review (FAST model)
+        yield {"event": "stage", "data": {"stage": "review", "status": "running", "detail": "Validating and optimizing rules..."}}
+        context = self.review.run(context)
 
-        if not context["validation"]["is_valid"]:
+        if not context["validation"]["is_valid"] and not context.get("generation_retried"):
             issues = context["validation"]["issues"]
             error_msgs = [i["message"] for i in issues if i["severity"] == "error"]
             if error_msgs:
-                yield {"event": "stage", "data": {"stage": "validation", "status": "running", "detail": "Issues found, regenerating..."}}
+                yield {"event": "stage", "data": {"stage": "review", "status": "running", "detail": "Issues found, regenerating..."}}
                 context["validation_feedback"] = "\n".join(error_msgs)
+                context["generation_retried"] = True
                 context = self.generate.run(context)
                 context.pop("validation_feedback", None)
-                context = self.validate.run(context)
+                context = self.review.run(context)
 
         val = context["validation"]
-        yield {"event": "stage", "data": {"stage": "validation", "status": "complete", "detail": f"Valid: {val['is_valid']}"}}
-
-        # Stage 6: Optimization
-        yield {"event": "stage", "data": {"stage": "optimization", "status": "running", "detail": "Optimizing rules and enriching with IoCs..."}}
-        context = self.optimize.run(context)
         opt = context["optimization"]
-        yield {"event": "stage", "data": {"stage": "optimization", "status": "complete", "detail": opt.get("summary", "Done")}}
+        yield {"event": "stage", "data": {
+            "stage": "review", "status": "complete",
+            "detail": f"Valid: {val['is_valid']}, {len(opt.get('all_changes', []))} optimizations"
+        }}
+
+        # Coverage-gap check (deterministic, no LLM call)
+        self._run_coverage_check(context)
+        coverage = context.get("coverage_check", {})
+        n_warnings = len(coverage.get("warnings", []))
+        yield {"event": "stage", "data": {
+            "stage": "coverage_check", "status": "complete",
+            "detail": (
+                "No gaps detected" if n_warnings == 0
+                else f"{n_warnings} coverage gap(s) — regenerating with feedback..."
+                if self._should_regenerate_for_coverage(context)
+                else f"{n_warnings} coverage gap(s) — see notes below"
+            ),
+        }}
+
+        # Coverage-directed regeneration pass.
+        # Skipped if a validation-driven regeneration already ran — at most
+        # 1 regeneration per request total (quota-safe).
+        if (
+            not context.get("generation_retried")
+            and self._should_regenerate_for_coverage(context)
+        ):
+            yield {"event": "stage", "data": {
+                "stage": "generation", "status": "running",
+                "detail": "Regenerating to close coverage gaps...",
+            }}
+            context["coverage_feedback_for_retry"] = context.get("coverage_check", {})
+            context["generation_retried"] = True
+            context = self.generate.run(context)
+            context.pop("coverage_feedback_for_retry", None)
+            context = self.review.run(context)
+            self._run_coverage_check(context)
+            coverage2 = context.get("coverage_check", {})
+            n_w2 = len(coverage2.get("warnings", []))
+            yield {"event": "stage", "data": {
+                "stage": "coverage_check", "status": "complete",
+                "detail": (
+                    "Gaps resolved" if n_w2 == 0
+                    else f"{n_w2} gap(s) remain after retry — see notes below"
+                ),
+            }}
 
         # Final result
         yield {"event": "result", "data": self._format_output(context)}
+
+    def _should_regenerate_for_coverage(self, context: dict) -> bool:
+        """Decide whether to run a single coverage-directed regeneration pass.
+
+        Trigger conditions (any one is enough):
+          - No rule detects the primary attack vector (initial_access_covered = False).
+          - >= 50% of payload signatures went unreferenced.
+          - Any blacklist violation (researcher/patch-workflow artifact used as detection).
+
+        Guards:
+          - Only retry once per request (`coverage_retried` sentinel in context).
+          - Skip if the attack-vector extractor itself had low confidence (<0.4) —
+            in that case the "gaps" are likely analyst noise, not a real miss.
+          - Skip if there are no rules to improve (nothing to regenerate from).
+        """
+        if context.get("coverage_retried"):
+            return False
+        av = context.get("attack_vector") or {}
+        if float(av.get("confidence") or 0.0) < 0.4:
+            return False
+        gen = (context.get("generation") or {}).get("rules") or []
+        if not gen:
+            return False
+        coverage = context.get("coverage_check") or {}
+        if not coverage.get("warnings"):
+            return False
+
+        should_retry = False
+        if not coverage.get("initial_access_covered", True):
+            should_retry = True
+        sigs = av.get("payload_signatures") or []
+        missed = coverage.get("payload_signatures_missed") or []
+        if sigs and len(missed) / max(len(sigs), 1) >= 0.5:
+            should_retry = True
+        if coverage.get("blacklist_violations"):
+            should_retry = True
+
+        if should_retry:
+            context["coverage_retried"] = True
+        return should_retry
+
+    def _run_coverage_check(self, context: dict) -> None:
+        """Run the deterministic coverage-gap check and stash results in context.
+        This compares the generated rules against the primary attack vector to
+        detect when the pipeline has drifted into post-exploitation-only rules
+        or picked up researcher-workflow artifacts as detection criteria."""
+        attack_vector = context.get("attack_vector", {})
+        # Use the final (post-review) rules if available, else the raw generation
+        optimized = context.get("optimization", {}).get("rules", [])
+        generated = context.get("generation", {}).get("rules", [])
+        rules_to_check = optimized if optimized else generated
+
+        try:
+            coverage = AttackVectorStage.coverage_gap_check(attack_vector, rules_to_check)
+        except Exception as e:
+            print(f"[orchestrator] Coverage check failed: {e}")
+            coverage = {
+                "initial_access_covered": True,  # don't scare users on errors
+                "payload_signatures_covered": [],
+                "payload_signatures_missed": [],
+                "blacklist_violations": [],
+                "warnings": [],
+            }
+        context["coverage_check"] = coverage
+        if coverage.get("warnings"):
+            print(f"[orchestrator] Coverage warnings: {coverage['warnings']}")
 
     def _apply_user_feedback(self, context: dict, feedback: dict) -> dict:
         """Apply user corrections from the feedback loop to the pipeline context."""
@@ -371,6 +514,19 @@ class PipelineOrchestrator:
         if notes:
             parts.append(f"\n{notes}")
 
+        # Surface coverage warnings (deterministic post-generation check)
+        coverage = context.get("coverage_check", {})
+        warnings = coverage.get("warnings", []) if coverage else []
+        if warnings:
+            warning_block = ["\n---", "**⚠️ Coverage gaps detected:**"]
+            for w in warnings:
+                warning_block.append(f"- {w}")
+            warning_block.append(
+                "_These are heuristic warnings from the post-generation coverage check. "
+                "Review the rules against the primary attack vector and consider refining._"
+            )
+            parts.append("\n".join(warning_block))
+
         response_text = "\n\n".join(parts) if parts else "I was unable to generate a rule. Please provide more details about the attack technique."
 
         # Build pipeline metadata for enhanced context panel
@@ -380,6 +536,7 @@ class PipelineOrchestrator:
         enrichment = context.get("enrichment", {})
         poc_analysis = context.get("poc_analysis", {})
         logsource_suggestion = context.get("logsource_suggestion", {})
+        attack_vector = context.get("attack_vector", {})
 
         pipeline_metadata = {
             "indicators": extraction.get("indicators", []),
@@ -395,6 +552,8 @@ class PipelineOrchestrator:
             "poc_attack_flow": poc_analysis.get("attack_flow", ""),
             "logsource_suggestions": logsource_suggestion.get("suggestions", []),
             "logsource_primary": logsource_suggestion.get("primary_source", ""),
+            "attack_vector": attack_vector,
+            "coverage_check": coverage,
         }
 
         # Build context for sidebar (backward compatible)
