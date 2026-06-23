@@ -1,11 +1,13 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Body
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from backend.agent import SigmaAgent
 from backend.tunnel import tunnel_manager
 import uvicorn
 import os
+import re
 import uuid
 from typing import List, Dict, Optional
 import json
@@ -18,7 +20,38 @@ from sigma.backends.insight_idr import InsightIDRBackend
 
 SESSIONS_FILE = "data/sessions.json"
 
+# Upload constraints
+UPLOAD_DIR = "uploads"
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+ALLOWED_UPLOAD_TYPES = {
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
+    "application/pdf",
+}
+
 app = FastAPI(title="Sigma Assistant API")
+
+# CORS — restrict to configured origins. Defaults to local-only access.
+# Override with ALLOWED_ORIGINS (comma-separated) when hosting elsewhere.
+_origins_env = os.getenv("ALLOWED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000")
+ALLOWED_ORIGINS = [o.strip() for o in _origins_env.split(",") if o.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+)
+
+
+def _safe_upload_path(session_id: str, filename: Optional[str]) -> str:
+    """Build a sanitized upload path, preventing path traversal."""
+    base = os.path.basename(filename or "upload")
+    base = re.sub(r"[^A-Za-z0-9._-]", "_", base)[:100] or "upload"
+    return os.path.join(UPLOAD_DIR, f"{session_id}_{uuid.uuid4().hex}_{base}")
+
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
@@ -202,12 +235,22 @@ async def analyze_multimodal(
     user_msg_content = description
     
     if file:
-        file_path = f"uploads/{session_id}_{file.filename}"
+        if file.content_type not in ALLOWED_UPLOAD_TYPES:
+            raise HTTPException(
+                status_code=415,
+                detail=f"Unsupported file type: {file.content_type}. Allowed: images and PDF.",
+            )
+        contents = await file.read()
+        if len(contents) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail="File too large (max 10 MB).")
+
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+        file_path = _safe_upload_path(session_id, file.filename)
         with open(file_path, "wb") as buffer:
-            buffer.write(await file.read())
-        
+            buffer.write(contents)
+
         media_info = {"path": file_path, "mime": file.content_type}
-        user_msg_content += f"\n[Attached: {file.filename}]"
+        user_msg_content += f"\n[Attached: {os.path.basename(file.filename or 'file')}]"
 
     # Save User Message
     sessions[session_id].append({"role": "user", "content": user_msg_content})

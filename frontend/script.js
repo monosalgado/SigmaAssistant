@@ -1,4 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- XSS-safe rendering helpers ---
+    // Sanitize any HTML before assigning to innerHTML. Content may originate
+    // from the LLM, web enrichment, or user input, so it is never trusted.
+    function safeHTML(html) {
+        return DOMPurify.sanitize(html);
+    }
+    // Render untrusted markdown (LLM/user text) to sanitized HTML.
+    function renderMarkdown(text) {
+        return DOMPurify.sanitize(marked.parse(text || ""));
+    }
+
     // --- Elements ---
     // Navigation
     const navChat = document.getElementById('nav-chat');
@@ -130,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
             item.className = `session-item ${s.id === currentSessionId ? 'active' : ''}`;
             const infoDiv = document.createElement('div');
             infoDiv.className = 'session-info';
-            infoDiv.innerHTML = `<div class="session-preview">${s.preview || 'New Chat'}</div>`;
+            infoDiv.innerHTML = safeHTML(`<div class="session-preview">${s.preview || 'New Chat'}</div>`);
             infoDiv.onclick = () => switchSession(s.id);
 
             const delBtn = document.createElement('button');
@@ -204,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
         rules.slice().reverse().forEach(r => {
             const item = document.createElement('div');
             item.className = `session-item ${r.id === currentRuleId ? 'active' : ''}`;
-            item.innerHTML = `<div class="session-info">${r.title}</div>`;
+            item.innerHTML = safeHTML(`<div class="session-info">${r.title}</div>`);
             item.onclick = () => loadRuleIntoEditor(r);
             ruleList.appendChild(item);
         });
@@ -347,7 +358,7 @@ level: medium`;
         content.className = 'content';
 
         if (role === 'assistant' && (text.includes('```yaml') || text.includes('```'))) {
-            content.innerHTML = marked.parse(text);
+            content.innerHTML = renderMarkdown(text);
 
             // Extract all YAML blocks from the message
             const yamlBlocks = extractAllYamlBlocks(text);
@@ -416,7 +427,7 @@ level: medium`;
             }
 
         } else {
-            content.innerHTML = marked.parse(text || "");
+            content.innerHTML = renderMarkdown(text);
         }
 
         if (role === 'user') {
@@ -624,7 +635,7 @@ level: medium`;
 
         html += '<div class="feedback-note">This preview is informational. The pipeline will continue automatically.</div>';
 
-        feedbackDiv.innerHTML = html;
+        feedbackDiv.innerHTML = safeHTML(html);
 
         // Insert after the pipeline progress inside the same wrapper
         const contentDiv = pipelineDiv.querySelector('.content');
@@ -799,12 +810,12 @@ level: medium`;
                 ttps.forEach(ttp => {
                     const card = document.createElement('div');
                     card.className = 'ttp-card';
-                    card.innerHTML = `
+                    card.innerHTML = safeHTML(`
                         <span class="ttp-id">${ttp.technique_id}</span>
                         <span class="ttp-name">${ttp.technique_name}</span>
                         <span class="severity-badge ${ttp.severity || 'medium'}">${ttp.severity || 'medium'}</span>
                         <br><span class="ttp-tactic">${ttp.tactic}</span>
-                    `;
+                    `);
                     section.appendChild(card);
                 });
                 contextDiv.appendChild(section);
@@ -823,7 +834,7 @@ level: medium`;
                     const card = document.createElement('div');
                     card.className = 'context-card';
                     const color = issue.severity === 'error' ? '#f85149' : issue.severity === 'warning' ? '#d29922' : '#8b949e';
-                    card.innerHTML = `<span style="color:${color};font-weight:600">${issue.severity.toUpperCase()}</span> [${issue.field}]: ${issue.message}`;
+                    card.innerHTML = safeHTML(`<span style="color:${color};font-weight:600">${issue.severity.toUpperCase()}</span> [${issue.field}]: ${issue.message}`);
                     section.appendChild(card);
                 });
                 contextDiv.appendChild(section);
@@ -841,7 +852,7 @@ level: medium`;
                 enrichSources.forEach(src => {
                     const card = document.createElement('div');
                     card.className = 'context-card enrichment-source';
-                    card.innerHTML = `<a href="${src.url}" target="_blank" class="enrich-link">${src.title || src.url}</a><p class="enrich-snippet">${src.snippet || ''}</p>`;
+                    card.innerHTML = safeHTML(`<a href="${src.url}" target="_blank" rel="noopener noreferrer" class="enrich-link">${src.title || src.url}</a><p class="enrich-snippet">${src.snippet || ''}</p>`);
                     section.appendChild(card);
                 });
                 contextDiv.appendChild(section);
@@ -898,14 +909,14 @@ level: medium`;
                     const card = document.createElement('div');
                     card.className = 'context-card logsource-card';
                     const pct = Math.round((ls.confidence || 0) * 100);
-                    card.innerHTML = `
+                    card.innerHTML = safeHTML(`
                         <div class="logsource-header">
                             <strong>${ls.category || '?'}/${ls.product || '?'}</strong>
                             <span class="logsource-conf">${pct}%</span>
                         </div>
                         <div class="logsource-reason">${ls.reasoning || ''}</div>
                         <div class="logsource-fields">${(ls.relevant_fields || []).join(', ')}</div>
-                    `;
+                    `);
                     section.appendChild(card);
                 });
                 contextDiv.appendChild(section);

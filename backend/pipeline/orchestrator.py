@@ -100,8 +100,8 @@ class PipelineOrchestrator:
                 mitre_context = "\n".join(mitre_docs)
             if sysmon_docs:
                 sysmon_context = "\n".join(sysmon_docs)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[orchestrator] Conversational RAG search failed, continuing without context: {e}")
 
         prompt = prompts.CONVERSATIONAL.format(
             current_date=current_date,
