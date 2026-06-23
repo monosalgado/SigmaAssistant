@@ -143,16 +143,47 @@ You can switch to the Spark/Ollama economy backend later — see section 3.
 
 > `.env` is gitignored. **Never commit it.** Each person uses their own key.
 
-### 2.5 Build the knowledge base (one-time, a few minutes)
+### 2.5 Build the knowledge base / vector database (one-time, a few minutes)
+
+The vector database lives in `data/chroma_db/` and is **not** committed to
+git (it's a ~64 MB binary store that's fully reproducible). You build it once
+with three idempotent scripts — safe to re-run anytime:
 
 ```bash
 source .venv/bin/activate
-python -m backend.run_expanded_ingestion    # Sysmon + MITRE + SigmaHQ rules
-python -m scripts.ingest_sigma_taxonomy      # Sigma spec + logsource taxonomy
+python -m backend.run_expanded_ingestion    # Sysmon + MITRE ATT&CK + SigmaHQ rules
+python -m scripts.ingest_sigma_taxonomy      # Sigma spec + logsource/field taxonomy
 python -m scripts.ingest_cwe                 # MITRE CWE catalogue
 ```
 
-The first run also downloads the ~80 MB embedding model.
+What each script needs and produces:
+
+| Script | Data source | Network? | Builds collection(s) |
+|--------|-------------|----------|----------------------|
+| `run_expanded_ingestion` | Sysmon (bundled), MITRE ATT&CK (downloaded), SigmaHQ rules (`data/sigma/`) | yes (MITRE) | `sysmon_info`, `mitre_attack`, `sigma_rules` |
+| `ingest_sigma_taxonomy` | The cloned `data/sigma/` tree | no | `sigma_taxonomy` |
+| `ingest_cwe` | MITRE CWE catalogue (downloaded) | yes | `cwe_kb` |
+
+> **No Gemini API key is required to build the database.** Embeddings are
+> computed locally with `sentence-transformers/all-MiniLM-L6-v2`. The first run
+> downloads that ~80 MB model once. You only need internet access (for the
+> MITRE/CWE downloads) and the SigmaHQ corpus cloned in step 2.2.
+
+If `data/sigma/` is missing you'll see *"Sigma rules directory not found"* —
+re-run step 2.2 first.
+
+#### Optional: skip the build with a prebuilt database
+
+For a zero-setup demo, a prebuilt `data/chroma_db/` can be shipped as a
+**GitHub Release asset** (a `.zip`) rather than committed to the repo. To use it:
+
+```bash
+# download chroma_db.zip from the repo's Releases page, then:
+unzip chroma_db.zip -d data/
+```
+
+This is preferred over committing the database to git, which would bloat the
+repository history with binary files.
 
 ### 2.6 Run the server
 
