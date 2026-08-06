@@ -1,0 +1,4 @@
+# Development-only dependencies.
+# Kept separate from requirements.txt, which is deliberately pinned for sharing.
+# Install with:  .venv/bin/pip install -r requirements-dev.txt
+pytest==8.4.2
