@@ -113,3 +113,101 @@ uses the *primary* model and limiter. The `fast` tier is unreachable from any st
 Not fixed yet — logged as part of defect 6.
 
 ---
+
+## 2026-08-06 — Change 1: replace hand-rolled validation with pySigma
+
+Addresses baseline defect 1. **Zero API cost** — the validation path is deterministic;
+all verification ran offline with VPN disconnected.
+
+### Prior state
+`ReviewStage._validate_syntax` performed ~5 checks over a `yaml.safe_load` dict:
+required-field presence, a logsource sanity check, a detection/condition check, a
+`level` allow-list, and a tag prefix check. pySigma was pinned in `requirements.txt`
+but used nowhere in the validation path.
+
+### API investigation (read-only, pySigma 0.11.23)
+Registry `sigma.validators.core.validators` contains **31** concrete validator classes.
+*(An earlier estimate of 33 counted abstract base classes — corrected.)*
+
+pySigma separates two phases the previous code conflated:
+- **parse time** — `SigmaCollection.from_yaml()` raises on spec violations
+- **validate time** — `SigmaValidator.validate_rules()` returns advisory issues graded
+  `LOW` / `MEDIUM` / `HIGH`
+
+Three traps identified before writing any code:
+1. `SigmaValidator` **retains state across `validate_rules()` calls.** Reusing one
+   instance made `DuplicateTitleIssue` and `IdentifierCollisionIssue` fire as false
+   positives on unrelated rules. A fresh validator is constructed per call.
+2. **The exception surface is not unified.** Malformed YAML raises `yaml.ParserError`;
+   a non-mapping document leaks a bare `AttributeError` from inside pySigma; rule
+   problems raise `SigmaError` (a `ValueError` subclass). `yaml.YAMLError` is *not* a
+   `SigmaError`. All three paths are caught.
+3. **Dangling condition references are caught by nothing.**
+   `condition: selection and nonexistent` parses cleanly and passes all 31 validators.
+   Only forcing `rule.detection.parsed_condition[i].parse()` raises
+   `SigmaConditionError: Detection 'nonexistent' not defined in detections`.
+
+### Measured behavioural delta
+Both validators were run over identical fixtures. 7 of the 11 characterization tests
+changed behaviour:
+
+| Fixture | Hand-rolled | pySigma | Direction |
+|---|---|---|---|
+| valid rule | clean | clean | unchanged |
+| malformed YAML | error | error (`ParserError`) | unchanged |
+| non-mapping document | error | error (`AttributeError`) | unchanged outcome |
+| no `condition` | error | error (`SigmaConditionError`) | unchanged |
+| no selections | error | error (`SigmaDetectionError`) | unchanged |
+| missing `level` | **error** | accepted — `level` is optional in the Sigma spec | **old code was wrong** |
+| `level: catastrophic` | warning | **error** (`SigmaLevelError`) | stricter |
+| empty `logsource` | warning | **error** (`SigmaLogsourceError`) | stricter |
+| non-`attack.*` tag | info | **warning** (`InvalidPatternTagIssue`, MEDIUM) | stricter |
+| missing `id` (UUID) | not checked | warning (`IdentifierExistenceIssue`, MEDIUM) | new check |
+| dangling condition ref | not caught | **error** | new check |
+
+`REQUIRED_FIELDS` at the old `stage_review.py:17` listed `level`, but the Sigma
+specification makes it optional — the system was rejecting valid rules. This was found
+only by differential testing, not by reading the code.
+
+### Changes
+| File | Change |
+|---|---|
+| `backend/pipeline/stage_review.py` | `_validate_syntax` → `_validate_rule`, reimplemented on pySigma; `REQUIRED_FIELDS` / `VALID_LEVELS` removed; `_SEVERITY_MAP` and `_render_issue` added |
+| `tests/test_review_validation.py` | expectations updated to the measured delta; 2 tests added (dangling condition, missing UUID) |
+
+Severity mapping: parse failure → `error`; `HIGH` → `error`; `MEDIUM` → `warning`;
+`LOW` → `info`. Only `error` blocks a rule and triggers regeneration
+(`orchestrator.py:185`). The issue-dict shape (`severity` / `field` / `message`) is
+unchanged, so the orchestrator, SSE stream and frontend required no modification.
+
+**`_validate_mitre_tactics` was deliberately retained.** pySigma's `ATTACKTagValidator`
+only tests membership of a tag in a static allow-list; it does not check that a declared
+tactic and technique are consistent with one another. The existing method does, using the
+live ATT&CK graph from the RAG collection. The two are complementary, and the pySigma
+list is a bundled snapshot whereas ours refreshes on re-ingestion.
+
+### Known limitation accepted
+`run()` validates rules one at a time, so each rule forms a single-rule collection. The
+cross-rule validators (`DuplicateTitleIssue`, `IdentifierCollisionIssue`) can therefore
+never fire. This is not a regression — no such check existed before — but validating the
+batch as one collection would add it. Deferred.
+
+### Verification
+```
+.venv/bin/python -m pytest tests/ -q          → 13 passed in 0.11s
+.venv/bin/python -c "import backend.main"     → imports cleanly
+```
+Both run with VPN disconnected and no API calls. Remaining pytest warnings are
+pyparsing deprecations raised inside pySigma itself (upstream, not actionable here).
+
+### Thesis relevance
+- Supplies the E1/E2 oracle for the evaluation harness (Chapter 5): rules can now be
+  scored by *violations per validator class* rather than a binary valid/invalid.
+- The `level` defect is a concrete instance of the Chapter 6.4 argument — an error
+  invisible to code review and to output inspection, surfaced only by differential
+  measurement.
+- Expect the regeneration rate to rise, since three former warnings are now fatal.
+  This changes cost and latency per request and must be quantified once the harness
+  exists; it is a candidate ablation arm.
+
+---

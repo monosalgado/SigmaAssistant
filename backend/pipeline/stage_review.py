@@ -1,21 +1,35 @@
 """
 Combined Review Stage: Validation + Optimization in a single LLM call.
 
-First does deterministic YAML syntax validation (no LLM needed),
+First does deterministic rule validation via pySigma (no LLM needed),
 then a single LLM call for semantic review AND optimization.
-Uses the FAST model (gemini-2.0-flash) since this is a lighter task.
+Runs on the ECONOMY tier since this is a lighter task.
 """
 
 from __future__ import annotations
 import json
 import re
+from dataclasses import fields as dataclass_fields
+
 import yaml
+from sigma.collection import SigmaCollection
+from sigma.exceptions import SigmaError
+from sigma.validation import SigmaValidator
+from sigma.validators.base import SigmaValidationIssueSeverity
+from sigma.validators.core import validators as CORE_VALIDATORS
+
 from backend.pipeline.base_stage import PipelineStage
 from backend.pipeline import prompts
 
 
-REQUIRED_FIELDS = {"title", "logsource", "detection", "level"}
-VALID_LEVELS = {"informational", "low", "medium", "high", "critical"}
+# pySigma grades issues LOW / MEDIUM / HIGH; the pipeline speaks
+# info / warning / error. Only "error" blocks the rule and triggers
+# regeneration in orchestrator.py.
+_SEVERITY_MAP = {
+    SigmaValidationIssueSeverity.HIGH: "error",
+    SigmaValidationIssueSeverity.MEDIUM: "warning",
+    SigmaValidationIssueSeverity.LOW: "info",
+}
 
 # attack.<tactic_name> — normalize Sigma tag form (underscores) to MITRE
 # phase_name form (dashes). Example: attack.initial_access -> initial-access.
@@ -144,7 +158,7 @@ class ReviewStage(PipelineStage):
         all_syntax_issues = []
         for i, rule_data in enumerate(rules):
             yaml_content = rule_data.get("yaml_content", "")
-            issues = self._validate_syntax(yaml_content, i)
+            issues = self._validate_rule(yaml_content, i)
             all_syntax_issues.extend(issues)
 
         has_syntax_errors = any(i["severity"] == "error" for i in all_syntax_issues)
@@ -242,85 +256,94 @@ class ReviewStage(PipelineStage):
               f"{warning_count} warnings, {len(all_changes)} optimizations")
         return context
 
-    def _validate_syntax(self, yaml_content: str, rule_index: int) -> list:
-        """Deterministic YAML and Sigma structure validation (no LLM)."""
-        issues = []
+    def _validate_rule(self, yaml_content: str, rule_index: int) -> list:
+        """Deterministic Sigma validation via pySigma (no LLM).
+
+        Three phases:
+          1. Parse — structural violations of the Sigma spec raise here.
+          2. Condition resolution — catches identifiers referenced in
+             `condition:` that were never defined in `detection:`. This is
+             NOT caught by parsing or by any of the 31 validators.
+          3. Validator suite — the 31 pySigma core validators.
+        """
         prefix = f"rule[{rule_index}]"
 
-        # 1. YAML parse
+        # --- 1. Parse -------------------------------------------------------
+        # The exception surface is not unified: malformed YAML raises
+        # yaml.YAMLError, rule problems raise SigmaError, and a non-mapping
+        # document leaks a bare AttributeError from inside pySigma.
         try:
-            parsed = yaml.safe_load(yaml_content)
-            if not isinstance(parsed, dict):
-                issues.append({
-                    "severity": "error",
-                    "field": prefix,
-                    "message": "YAML did not parse to a dictionary",
-                })
-                return issues
+            collection = SigmaCollection.from_yaml(yaml_content)
         except yaml.YAMLError as e:
-            issues.append({
+            return [{
                 "severity": "error",
                 "field": prefix,
                 "message": f"Invalid YAML syntax: {e}",
-            })
-            return issues
+            }]
+        except SigmaError as e:
+            return [{
+                "severity": "error",
+                "field": prefix,
+                "message": f"Invalid Sigma rule: {e}",
+            }]
+        except Exception as e:
+            return [{
+                "severity": "error",
+                "field": prefix,
+                "message": f"Could not parse as a Sigma rule: {e}",
+            }]
 
-        # 2. Required fields
-        for field in REQUIRED_FIELDS:
-            if field not in parsed:
-                issues.append({
-                    "severity": "error",
-                    "field": f"{prefix}.{field}",
-                    "message": f"Missing required field: {field}",
-                })
+        if not collection.rules:
+            return [{
+                "severity": "error",
+                "field": prefix,
+                "message": "Document contains no Sigma rule",
+            }]
 
-        # 3. Logsource check
-        logsource = parsed.get("logsource", {})
-        if isinstance(logsource, dict):
-            if not logsource.get("category") and not logsource.get("product"):
-                issues.append({
-                    "severity": "warning",
-                    "field": f"{prefix}.logsource",
-                    "message": "Logsource should have at least 'category' or 'product'",
-                })
+        issues = []
 
-        # 4. Detection check
-        detection = parsed.get("detection", {})
-        if isinstance(detection, dict):
-            if "condition" not in detection:
-                issues.append({
-                    "severity": "error",
-                    "field": f"{prefix}.detection.condition",
-                    "message": "Detection missing 'condition' field",
-                })
-            selection_keys = [k for k in detection if k != "condition"]
-            if not selection_keys:
-                issues.append({
-                    "severity": "error",
-                    "field": f"{prefix}.detection",
-                    "message": "Detection has no selection fields",
-                })
-
-        # 5. Level check
-        level = parsed.get("level", "")
-        if level and level.lower() not in VALID_LEVELS:
-            issues.append({
-                "severity": "warning",
-                "field": f"{prefix}.level",
-                "message": f"Level '{level}' is not standard. Use: {', '.join(VALID_LEVELS)}",
-            })
-
-        # 6. Tags format check
-        tags = parsed.get("tags", [])
-        if isinstance(tags, list):
-            for tag in tags:
-                if isinstance(tag, str) and tag.startswith("attack."):
-                    continue
-                elif isinstance(tag, str):
+        # --- 2. Condition resolution ----------------------------------------
+        for rule in collection.rules:
+            for condition in getattr(rule.detection, "parsed_condition", []):
+                try:
+                    condition.parse()
+                except SigmaError as e:
                     issues.append({
-                        "severity": "info",
-                        "field": f"{prefix}.tags",
-                        "message": f"Tag '{tag}' doesn't follow 'attack.*' convention",
+                        "severity": "error",
+                        "field": f"{prefix}.detection.condition",
+                        "message": f"Condition could not be resolved: {e}",
+                    })
+                except Exception as e:
+                    issues.append({
+                        "severity": "error",
+                        "field": f"{prefix}.detection.condition",
+                        "message": f"Condition could not be resolved: {e}",
                     })
 
+        # --- 3. Validator suite ---------------------------------------------
+        # A fresh SigmaValidator per call: instances keep state across
+        # validate_rules(), and reuse makes the cross-rule validators
+        # (duplicate title, identifier collision) fire as false positives.
+        validator = SigmaValidator(CORE_VALIDATORS.values())
+        for issue in validator.validate_rules(collection.rules):
+            issues.append({
+                "severity": _SEVERITY_MAP.get(issue.severity, "warning"),
+                "field": f"{prefix}.{type(issue).__name__}",
+                "message": self._render_issue(issue),
+            })
+
         return issues
+
+    @staticmethod
+    def _render_issue(issue) -> str:
+        """Human-readable message for a pySigma validation issue.
+
+        `severity` and `description` are ClassVars so dataclass_fields()
+        returns only `rules` plus any issue-specific detail fields.
+        """
+        details = " ".join(
+            f"{f.name}={getattr(issue, f.name)}"
+            for f in dataclass_fields(issue)
+            if f.name != "rules"
+        )
+        return f"{issue.description} ({details})" if details else issue.description
