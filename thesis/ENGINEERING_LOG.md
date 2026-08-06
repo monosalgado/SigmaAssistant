@@ -211,3 +211,86 @@ pyparsing deprecations raised inside pySigma itself (upstream, not actionable he
   exists; it is a candidate ablation arm.
 
 ---
+
+## 2026-08-06 — Change 2: fix RAG exemplar format and corpus coverage
+
+Addresses baseline defects 2 and 3 together, because both require the same single
+re-ingestion. **Zero API cost** — embeddings are local (`all-MiniLM-L6-v2`); no VPN
+and no Gemini calls were involved.
+
+### Correction to the baseline entry
+Baseline defect 3 was recorded as "2382 of 4099 rules indexed". That denominator was
+wrong: 4099 counts every `.yml` file under `data/sigma`, including deprecated rules,
+tests and non-rule YAML. Measured properly, **3104 files parse as Sigma rules**, of
+which 2382 were indexed — the filter excluded **722 rules (23.3%)**, not 42% as
+stated verbally at the time.
+
+### Prior state, verified by dumping the live collection
+`vector_store.add_rules` interpolated Python dicts into an f-string, so every stored
+exemplar read:
+
+```
+Log Source: {'category': 'process_creation', 'product': 'windows'}
+Detection: {'selection': {'Image|endswith': '\powershell.exe'}, 'condition': 'selection'}
+```
+
+`stage_generate.py:55` joins these documents straight into the generation prompt.
+The system therefore asked the model to emit YAML while every few-shot example it
+saw was Python `repr` output.
+
+**Unplanned finding.** 3103 of 3104 rules carry `tags:` with MITRE technique IDs,
+but `ingest_rules.py` never extracted the field, so it appeared in neither document
+nor metadata. `prompts.py` instructs the model to produce MITRE tags — no retrieved
+exemplar had ever demonstrated one.
+
+**Second unplanned finding.** `run_expanded_ingestion.py:35` skipped ingestion when
+`existing_count >= len(rules)`. A change to document *format* leaves the rule count
+unchanged, so this guard would have silently discarded the fix while printing a
+success message.
+
+### Changes
+| File | Change |
+|---|---|
+| `backend/ingest_rules.py` | platform filter removed; `tags` and `level` now extracted |
+| `backend/vector_store.py` | `add_rules` renders each rule with `yaml.safe_dump` (`sort_keys=False` to preserve Sigma field order) and includes `level`/`tags`; `category` added to metadata, since with the filter gone `product` is `unknown` for 60 rules and `category` becomes the discriminating logsource axis |
+| `backend/run_expanded_ingestion.py` | count-based skip removed; `add_rules` upserts on rule UUID, so re-ingestion is idempotent |
+
+### Verification (each step run before the next)
+1. **Loader dry run, no DB writes** — 3104 rules; 3103 with tags; 3104 with level;
+   **3104 unique ids of 3104**, confirming upsert cannot collide.
+2. **Dump safety over the whole corpus** — `yaml.safe_dump` on all 3104 rules:
+   **0 failures**. Run before writing, so a mid-ingestion crash could not leave the
+   collection half-migrated.
+3. **Semantic check with pySigma** — 300 rendered documents sampled (seed 0) and fed
+   to `SigmaCollection.from_yaml`: **300/300 parse as valid Sigma rules.** Under the
+   old format this would have been 0/300. This reuses the Change 1 validator as a
+   measurement instrument, not just a runtime check.
+4. **Re-ingestion** — 2382 → **3104** documents.
+5. **Post-state audit** — `Log Source:` prefix (old format) present in **0** documents;
+   `tags:` present in 3103; products now windows 2382, linux 207, azure 130, macos 69,
+   unknown 60, aws 55, gcp 23, okta 21, zeek 21. Four documents still contain `{'`;
+   each was inspected and is a legitimate GUID or command-line fragment inside a
+   detection value, correctly quoted by the dumper — not residual dict repr.
+6. **Retrieval smoke test** — query *"suspicious outbound network connection to a rare
+   external domain"* now returns a `category=dns` rule that the previous filter
+   excluded from the index entirely.
+7. `.venv/bin/python -m pytest tests/ -q` → **13 passed**;
+   `.venv/bin/python -c "import backend.main"` → clean.
+
+### Thesis relevance
+- Supplies ablation arms **A2** (dict-repr vs. YAML exemplars) and **A3** (Windows-only
+  vs. full corpus). Both arms are now switchable by re-running ingestion.
+- A2 and A3 are the clearest evidence for the Chapter 6.4 argument: neither defect was
+  visible in the system's output. The pipeline produced plausible, well-formed Sigma
+  rules throughout, because a capable model can recover from malformed exemplars. Only
+  inspecting the retrieval store revealed them.
+- **A3 is a hypothesis, not a known improvement.** Adding 722 non-Windows exemplars
+  enlarges the retrieval pool; for predominantly Windows queries this is neutral at
+  best and mild noise at worst. It must be measured, not assumed. The retrieval smoke
+  test shows behaviour changed, which is not the same as improved.
+- The `run_expanded_ingestion` skip guard is a methodological warning worth reporting:
+  a cache keyed on the wrong invariant (count rather than content) can silently
+  invalidate an experimental condition and produce a null result for an ablation that
+  was never actually applied.
+
+---

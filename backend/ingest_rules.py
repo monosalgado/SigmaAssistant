@@ -5,7 +5,11 @@ from pathlib import Path
 def load_sigma_rules(rules_path):
     """
     Recursively load Sigma rules from a directory.
-    Filters for rules targeting 'windows' and 'sysmon'.
+
+    Every parseable rule is loaded regardless of platform. An earlier version
+    kept only `product == 'windows' or service == 'sysmon'`, which excluded 722
+    of 3104 rules (cloud, linux, macos, network, web, application, identity)
+    while prompts.py asks the model to cover network-based initial access.
     """
     rules = []
     path = Path(rules_path)
@@ -29,22 +33,17 @@ def load_sigma_rules(rules_path):
                 if 'title' not in content or 'logsource' not in content:
                     continue
 
-                logsource = content.get('logsource', {})
-                product = logsource.get('product', '').lower()
-                service = logsource.get('service', '').lower()
+                rules.append({
+                    'id': content.get('id', str(file_path)),
+                    'title': content.get('title'),
+                    'description': content.get('description', ''),
+                    'logsource': content.get('logsource', {}),
+                    'detection': content.get('detection', {}),
+                    'level': content.get('level', ''),
+                    'tags': content.get('tags', []) or [],
+                    'path': str(file_path)
+                })
 
-                # Filter for Windows and Sysmon 
-                # (You asked for Windows logs and Sysmon specifically)
-                if product == 'windows' or service == 'sysmon':
-                     rules.append({
-                         'id': content.get('id', str(file_path)),
-                         'title': content.get('title'),
-                         'description': content.get('description', ''),
-                         'logsource': logsource,
-                         'detection': content.get('detection', {}),
-                         'path': str(file_path)
-                     })
-                     
         except Exception as e:
             # Skip files that fail to load
             print(f"Skipping {file_path}: {e}")
@@ -58,7 +57,7 @@ if __name__ == "__main__":
     if os.path.exists(rules_dir):
         print("Loading rules...")
         rules = load_sigma_rules(rules_dir)
-        print(f"Found {len(rules)} Windows/Sysmon rules.")
+        print(f"Found {len(rules)} rules.")
         # Print a sample
         if rules:
             print("\nSample Rule:")

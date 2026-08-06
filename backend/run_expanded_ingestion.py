@@ -30,14 +30,14 @@ def main():
     rules_path = "data/sigma/rules"
     if os.path.exists(rules_path):
         rules = load_sigma_rules(rules_path)
-        print(f"Found {len(rules)} Windows/Sysmon rules on disk.")
-        
-        if existing_sigma_count >= len(rules):
-            print(f"Sigma collection already has {existing_sigma_count} rules. Skipping ingestion.")
-        else:
-            # Ingest all found rules (upsert handles duplicates)
-            print(f"Ingesting {len(rules)} rules...")
-            vs.add_rules(rules)
+        print(f"Found {len(rules)} rules on disk.")
+
+        # Always re-ingest. `add_rules` upserts by rule UUID, so this is
+        # idempotent. A previous count-based skip meant that changes to the
+        # *document format* were silently never applied, because the rule count
+        # was unchanged.
+        print(f"Ingesting {len(rules)} rules...")
+        vs.add_rules(rules)
     else:
         print(f"Sigma rules directory '{rules_path}' not found. Make sure the SigmaHQ repo is cloned into data/sigma.")
     

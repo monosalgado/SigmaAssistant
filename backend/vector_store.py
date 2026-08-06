@@ -29,6 +29,7 @@ import os
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 import time
+import yaml
 import chromadb
 from chromadb import Documents, EmbeddingFunction, Embeddings
 from dotenv import load_dotenv
@@ -154,25 +155,43 @@ class VectorStore:
     # --- Add methods (existing + new) ---
 
     def add_rules(self, rules):
+        """Index Sigma rules as YAML.
+
+        These documents are retrieved and pasted verbatim into the generation
+        prompt as few-shot exemplars, so they must be valid Sigma YAML. An
+        earlier version interpolated the `logsource` and `detection` dicts into
+        an f-string, which embedded Python dict reprs and taught the model the
+        wrong output syntax. `tags` were not indexed at all, even though the
+        model is asked to emit MITRE tags.
+        """
         if not rules:
             return
         ids = [r["id"] for r in rules]
         documents = []
         metadatas = []
         for r in rules:
-            doc_text = (
-                f"Title: {r['title']}\n"
-                f"Description: {r['description']}\n"
-                f"Log Source: {r['logsource']}\n"
-                f"Detection: {r['detection']}"
-            )
-            documents.append(doc_text)
+            body = {"title": r["title"]}
+            if r.get("description"):
+                body["description"] = r["description"]
+            body["logsource"] = r.get("logsource", {})
+            body["detection"] = r.get("detection", {})
+            if r.get("level"):
+                body["level"] = r["level"]
+            if r.get("tags"):
+                body["tags"] = r["tags"]
+            documents.append(yaml.safe_dump(
+                body, sort_keys=False, default_flow_style=False,
+                allow_unicode=True,
+            ))
+
+            logsource = r.get("logsource", {})
             metadatas.append({
                 "type": "sigma_rule",
                 "title": r["title"],
                 "path": r["path"],
-                "product": r["logsource"].get("product", "unknown"),
-                "service": r["logsource"].get("service", "unknown"),
+                "product": logsource.get("product") or "unknown",
+                "service": logsource.get("service") or "unknown",
+                "category": logsource.get("category") or "unknown",
             })
         self._batch_add(self.sigma_collection, ids, documents, metadatas)
 
