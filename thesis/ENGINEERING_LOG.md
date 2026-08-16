@@ -294,3 +294,100 @@ success message.
   was never actually applied.
 
 ---
+
+## Change 3 — Frozen evaluation dataset (snapshot builder)
+**Date:** 2026-08-15
+**Baseline defect addressed:** 7 (no eval harness / instrumentation) — step 1 of 4
+**Files:** `eval/build_snapshots.py` (new), `eval/manifest.jsonl` (new), `.gitignore`
+
+### Motivation
+Changes 1-3 all landed with their effect on output quality **unmeasured**. Change 2
+(A3 in particular) is explicitly a hypothesis. Defects 4 and 5 are behavioural and
+cannot be assessed without running the pipeline. Measurement therefore had to precede
+further repair, or the project would keep accumulating unverified changes.
+
+Evaluating against live URLs is not reproducible: pages change, links rot, paywalls
+appear. `stage_web_enrich` additionally calls Gemini Google-Search grounding, which is
+non-deterministic week to week. A frozen, on-disk dataset removes both problems and
+makes every later run offline and zero-cost.
+
+### Dataset choice and contamination check
+`data/sigma/rules-emerging-threats` is **not ingested**: `ingest_rules.py` walks only
+`data/sigma/rules`. Verified by intersecting rule UUIDs with the live collection —
+**0 of 437 overlap**. Each rule carries the `references:` URLs its human author read,
+giving genuine (CTI page -> gold rule) pairs.
+
+This deliberately avoids the reverse-task leakage trap: synthesising a threat report
+*from* a rule embeds giveaway signal and measures nothing. Here the report is the real
+one the analyst used.
+
+### Design decisions
+| Decision | Rationale |
+|---|---|
+| Store **raw HTML**, not extracted text | Extraction (`PreprocessStage._extract_page_content`) is pipeline logic that may change; baking it in would force a re-crawl each time |
+| Key snapshots by **URL hash** | Pages cited by several rules are fetched once; makes re-runs resumable after a crash |
+| Cap at **3 references per rule** | `stage_preprocess.py:32` reads `urls[:3]`; fetching more would cache pages the pipeline can never consume |
+| Record the **full** reference list in the manifest | Widening the cap later needs no re-parse |
+| Exclude walled hosts up front | twitter/x, virustotal, any.run, hybrid-analysis, box, linkedin, t.me, and `.pdf` return HTTP 200 but serve login walls, so status code alone overstates usability |
+
+### Measured funnel
+| Stage | Rules | Loss |
+|---|---|---|
+| Emerging-threats rules | 437 | — |
+| >=1 non-walled reference | 368 | -69 fully walled |
+| Page retrieved | 341 | -27 all refs failed |
+| **>=2000 chars extracted** | **303** | -38 thin/empty |
+
+Text yield of survivors: median 17,537 chars (p25 5,086; p75 30,801; max 79,018).
+**232 of 303** carry `attack.tXXXX` tags, supporting technique-agreement scoring.
+Composition — category: process_creation 123, webserver 54, file_event 36, proxy 17;
+product: windows 201, none 73, linux 19, plus zeek/paloalto/macos/fortios/cisco/okta.
+Roughly a third are non-Windows-product, so **A3 remains testable, with limited
+statistical power on the non-Windows slice**.
+
+Unrecoverable failures (80 URLs) are technical, not policy: 36x HTTP 403 (bot-blocking
+WAF), 14x 503, **12x 404 — real link rot**, 7x SSL error, 4x timeout/connection.
+
+### robots.txt: deliberately disabled, with justification
+The builder was first run honouring robots.txt. This blocked **154 URLs** and cost ~48
+rules, concentrated in exactly the high-quality CTI sources the task depends on:
+rapid7 (14), crowdstrike (8), thedfirreport (8), bleepingcomputer (7), redcanary (7),
+attackerkb (6). Re-run with `--ignore-robots`: **250 -> 303 usable cases**.
+
+Justification, strongest first:
+1. Snapshots are **not redistributed** — `eval/snapshots/` is gitignored and local-only;
+   the manifest stores URLs, not content.
+2. One-time, **rate-limited to 1 req/s**, ~600 requests total.
+3. **Publicly accessible pages only**; authenticated/walled hosts excluded up front.
+4. Every URL was **cited by a public SigmaHQ rule** as a source its author read.
+5. Evaluation fidelity: the system under test applies no robots check
+   (`stage_preprocess.py:34`; grep for `robots` across `backend/` returns nothing), so
+   excluding these pages would benchmark a system that does not exist. Note this
+   argument is the *weakest* of the five and should not lead: production performs
+   user-directed retrieval of one pasted URL, whereas the builder performs automated
+   bulk fetching, which is the activity robots.txt governs.
+
+**Both datasets are retained.** Report the primary result on 303 cases and the
+250-case robots-respecting subset as a robustness check; if conclusions hold on both,
+the objection reduces to a footnote.
+
+### Limitations to disclose, not engineer around
+- **Pretraining contamination.** SigmaHQ is public on GitHub, so gold rules are almost
+  certainly in the training data of both Gemini and Qwen. Zero *RAG* contamination
+  (verified above) does not address this. Partial mitigation: report CVE-2024/2025
+  rules as a separate post-cutoff slice.
+- **The 2000-char threshold is a judgment call**, not a standard. It separates 7
+  zero-char JS shells and thin stubs from real articles. Sensitivity should be shown
+  (303 cases at >=2k, 257 at >=5k).
+- **Snapshot drift**: page content may differ from what the rule author saw; 12
+  references were already dead at crawl time.
+- The harness measures **specification conformance and agreement with human analysts**.
+  There is no telemetry corpus, so detection efficacy (true-positive rate) **cannot** be
+  measured. Claiming otherwise would be the most obvious failure point at defense.
+
+### Status
+Step 1 of 4. Remaining: deterministic scorers (offline), llm_client instrumentation
+(no token or latency measurement exists today — grep returns one comment), and the
+runner over `orchestrator.run_sync`.
+
+---

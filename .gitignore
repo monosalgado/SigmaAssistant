@@ -29,6 +29,9 @@ data/sigma/
 uploads/*
 !uploads/.gitkeep
 
+# Evaluation snapshots (large cached HTML; rebuild with eval/build_snapshots.py)
+eval/snapshots/
+
 # Local dev artifacts
 .claude/worktrees/
 *.bak
