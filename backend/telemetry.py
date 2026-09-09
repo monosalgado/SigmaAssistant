@@ -3,10 +3,11 @@
 Why this exists
 ---------------
 Before this module the system had no measurement of cost or latency at all, so
-E6 (cost) and E7 (latency) were unmeasurable and tier-routing claims were
-unverifiable. Both backends discarded their usage metadata: Gemini returned
-`response.text` and Ollama returned `response.choices[0].message.content`, so the
-token counts were gone before any caller could see them.
+C1 (tokens/cost per rule) and C2 (latency per rule per tier) were unmeasurable and
+tier-routing claims were unverifiable. Both backends discarded their usage metadata:
+Gemini returned `response.text` and Ollama returned
+`response.choices[0].message.content`, so the token counts were gone before any
+caller could see them.
 
 Why the counts are captured, not estimated
 ------------------------------------------

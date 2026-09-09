@@ -65,7 +65,7 @@ def test_unfenced_text_is_unchanged():
 
 
 # --------------------------------------------------------------------------
-# E1 / E2
+# S1 / S2
 # --------------------------------------------------------------------------
 
 def test_valid_rule_parses_with_no_errors():
@@ -108,7 +108,7 @@ def test_validator_state_does_not_leak_between_calls():
 
 
 # --------------------------------------------------------------------------
-# E3
+# S3
 # --------------------------------------------------------------------------
 
 def test_identical_logsource_matches_exactly():
@@ -145,7 +145,7 @@ def test_extra_service_breaks_exact_match():
 
 
 # --------------------------------------------------------------------------
-# E4
+# S4
 # --------------------------------------------------------------------------
 
 def test_only_technique_tags_are_extracted():
@@ -183,7 +183,7 @@ def test_no_gold_techniques_gives_undefined_recall():
 
 
 # --------------------------------------------------------------------------
-# E5
+# S5
 # --------------------------------------------------------------------------
 
 def test_modifiers_are_stripped_from_field_names():
@@ -222,7 +222,7 @@ def test_partial_field_overlap_is_scored_proportionally():
 
 def test_keyword_only_rule_yields_undefined_not_zero():
     """Real case from the dataset: 8 of 341 emerging-threats rules (log4shell,
-    FortiOS) detect via a bare keyword list with no field names. E5 does not
+    FortiOS) detect via a bare keyword list with no field names. S5 does not
     apply to them, so it must report None and be excluded from aggregates
     rather than scored as a zero the model did not earn."""
     keyword_detection = {
@@ -241,7 +241,7 @@ def test_modifier_only_key_is_not_a_field():
 
 
 def test_field_names_match_even_when_values_differ():
-    """Documents a real limitation: E5 is structural and ignores values, so an
+    """Documents a real limitation: S5 is structural and ignores values, so an
     inverted detection scores identically to the correct one."""
     predicted = yaml.safe_load(GOLD_RULE_TEXT.replace("powershell.exe", "notepad.exe"))
     result = score_detection_fields(predicted["detection"], GOLD_RULE["detection"])

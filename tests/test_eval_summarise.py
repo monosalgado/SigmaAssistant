@@ -9,7 +9,7 @@ than visibly broken. Three specific ways that could happen:
   * averaging an undefined metric as 0.0, which drags the mean down with cases
     that had nothing to measure;
   * reporting one denominator for all metrics, when content scores exist only
-    for rules that parsed and E4/E5 are undefined for some of those;
+    for rules that parsed and S4/S5 are undefined for some of those;
   * summing missing token counts as zero, producing a cost figure that looks
     precise and is not.
 
@@ -51,7 +51,7 @@ def _row(*, parses=True, issues=0, logsource=None, attack=None,
 # --------------------------------------------------------------------------
 
 def test_each_metric_reports_its_own_n():
-    """Content scores exist only for rules that parsed, and E4 is undefined for
+    """Content scores exist only for rules that parsed, and S4 is undefined for
     rules with no ATT&CK tags. A single shared n would misreport all three."""
     rows = [
         _row(logsource=True, attack=0.8, detection=0.5),
@@ -68,7 +68,7 @@ def test_each_metric_reports_its_own_n():
 
 def test_unparsed_rules_are_excluded_from_content_scores():
     """A rule that did not parse has no logsource to compare. Counting it as a
-    miss would conflate E1 failure with E3 failure."""
+    miss would conflate S1 failure with S3 failure."""
     rows = [_row(logsource=True), _row(parses=False)]
     s = summarise(rows)
     assert s["validity_rate"] == 0.5

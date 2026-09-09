@@ -15,40 +15,56 @@ Last updated 2026-09-09.
 
 ---
 
-## 5.0 BLOCKER: the outline's metric IDs conflict with the implemented ones
+## 5.0 Metric numbering — RESOLVED 2026-09-09
 
-`OUTLINE.md` §5 defines E0–E7 one way; `eval/scorers.py` implements them another way.
-**Two IDs collide with different meanings.** This must be resolved before writing, or
-the thesis will contradict its own code.
+### The problem that existed
+Three files numbered the same metrics differently. Not two — **three**:
 
-| ID | `OUTLINE.md` says | `eval/scorers.py` implements | Conflict? |
+| ID | `OUTLINE.md` said | `eval/scorers.py` did | `backend/telemetry.py` did |
 |---|---|---|---|
-| E0 | generation succeeded (non-empty YAML) | (folded into E1) | minor |
-| E1 | syntactic validity — `SigmaCollection.from_yaml` | same | no |
-| E2 | semantic validity by validator class | same (count + by-class) | no |
-| E3 | **backend compilability** | **logsource exact match** | **YES** |
-| E4 | MITRE mapping accuracy | same (technique P/R/F1) | no |
-| E5 | **detection efficacy (TPR, Zircolite/EVTX)** | **detection field-name overlap** | **YES** |
-| E6 | false-positive rate on benign telemetry | not implemented | not built |
-| E7 | cost & latency per tier | implemented as `backend/telemetry.py` | naming only |
+| E3 | backend compilability | **logsource match** | — |
+| E5 | detection efficacy (Zircolite) | **detection field overlap** | — |
+| E6 | false-positive rate | — | **cost** |
+| E7 | cost **and** latency | — | **latency** |
 
-### Recommended resolution `[DESIGN]`
-Renumber into two families and say so explicitly in the text:
+Four IDs meant different things depending on which file you read. Left alone, the
+thesis would have contradicted its own source code in a way an examiner can grep for.
 
-- **Static metrics (S1–S5)** — computable offline from rule text alone. These are
-  what is built and what will produce results first.
-  - S1 syntactic validity · S2 semantic validity (by validator class) ·
-    S3 logsource accuracy · S4 ATT&CK technique accuracy · S5 detection-field overlap
-- **Dynamic metrics (D1–D2)** — require detonated telemetry. Not built.
-  - D1 detection efficacy (TPR) · D2 false-positive rate
-- **Cost metrics (C1–C2)** — C1 tokens/cost per rule · C2 latency per rule per tier
+### The resolution `[DESIGN]` — applied
+Three families, replacing E0–E7 entirely:
 
-Reason this is better than patching the old numbering: it makes the
-**static/dynamic split** visible, and that split *is* the thesis's honest position —
-the static half is done, the dynamic half is the novelty claim and is still ahead.
+- **S — Static.** Offline, from rule text alone. *Built (S1–S5).*
+  S1 validity · S2 validator issues · S3 logsource · S4 ATT&CK · S5 detection fields ·
+  S6 backend compilability *(not built)*
+- **R — Runtime.** Needs detonated telemetry. *Not built — novelty claim 1.*
+  R1 detection efficacy (TPR) · R2 false-positive rate
+- **C — Cost.** *Built.* C1 tokens/cost per rule · C2 latency per rule per tier
 
-Also fix in `OUTLINE.md`: it says pySigma has **33 validator classes** in two places
-(lines 41, 93). `[MEASURED] 2026-09-09` the real count is **31**:
+**Why `R` and not `D`:** the first draft of these notes proposed D1–D2 for the dynamic
+family. That was wrong — `OUTLINE.md` already uses **D1–D4 for the datasets**
+(D1 Holdout, D2 Temporal, D3 Detonation, D4 Benign). Using D for metrics as well would
+have replaced one collision with another. Caught before it was applied.
+
+**Why families beat patched numbers:** the S/R split *is* the honest status of the
+project — the static half is finished, the runtime half is the headline claim and is
+unbuilt. A reader sees that from the IDs alone, and the obvious defense question
+("why are there no numbers for E5?") is answered structurally: R1 requires the
+detonation lab.
+
+**Cost of the change `[MEASURED]`:** near zero. The E-numbers appeared only in
+comments, docstrings and print labels — the data keys were already semantic
+(`validity`, `logsource`, `attack`, `detection_fields`; `validity_rate`,
+`logsource_exact`, `attack_f1`, `detection_f1`). No JSONL schema change, no test logic
+change, 85 tests still pass.
+
+Applied to: `OUTLINE.md` §5 and §6.1, `eval/scorers.py`, `eval/summarise.py`,
+`backend/telemetry.py`, `tests/test_eval_scorers.py`, `tests/test_eval_summarise.py`.
+`ENGINEERING_LOG.md` entries were **deliberately not rewritten** — a dated log that is
+edited retroactively stops being evidence. A new entry records the change instead.
+
+### Separate correction, also applied
+`OUTLINE.md` said pySigma has **33 validator classes** in two places. `[MEASURED]
+2026-09-09` the real count is **31**:
 ```
 .venv/bin/python -c "from sigma.validators.core import validators; print(len(validators))"
 # 31        (pySigma 0.11.23)
@@ -390,7 +406,8 @@ will not survive reconnects.
 
 ## 5.8 Open items for Chapter 5
 
-- [ ] Decide and apply the S/D/C renumbering; fix `OUTLINE.md` §5 and the two `33`→`31`
+- [x] ~~Decide and apply the renumbering~~ DONE 2026-09-09 — S/R/C applied across
+      outline, scorers, summariser, telemetry and tests. `33`→`31` also fixed.
 - [ ] Build a **naive baseline arm** (most-common logsource, no LLM) — a stronger
       comparator than the null control alone
 - [ ] Decide per-category vs. weighted reporting given the process_creation skew
@@ -398,4 +415,5 @@ will not survive reconnects.
       and say so
 - [ ] Ablations A1–A7 from `OUTLINE.md` are **not** yet wired to the runner (`--arm` is
       currently only a label written into the output rows)
-- [ ] Dynamic metrics (detonation, Zircolite/EVTX) — novelty claim 1, entirely unbuilt
+- [ ] Runtime metrics R1/R2 (detonation, Zircolite/EVTX) — novelty claim 1, unbuilt
+- [ ] S6 backend compilability — automatable and cheap, but not implemented

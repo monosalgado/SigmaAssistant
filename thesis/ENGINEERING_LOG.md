@@ -670,3 +670,57 @@ tested and reproducible; producing results is now blocked only on economy-tier
 access.
 
 ---
+
+## 2026-09-09 — Change 7: retire the E0–E7 metric numbering for S/R/C
+
+### Motivation
+Writing the Chapter 5 notes surfaced a documentation defect that would have been
+visible to an examiner with `grep`: **three files numbered the same metrics
+differently, and four IDs were ambiguous.**
+
+| ID | `OUTLINE.md` | `eval/scorers.py` | `backend/telemetry.py` |
+|---|---|---|---|
+| E3 | backend compilability | logsource match | — |
+| E5 | detection efficacy (Zircolite) | detection field overlap | — |
+| E6 | false-positive rate | — | cost |
+| E7 | cost *and* latency | — | latency |
+
+This is a thesis-integrity problem rather than a code problem: the artefact would
+have contradicted its own written methodology.
+
+### Design decisions
+| Decision | Rationale |
+|---|---|
+| Three families S / R / C rather than patched E-numbers | The static/runtime split *is* the honest project status — static is built, runtime is the unbuilt novelty claim. A reader infers it from the IDs alone |
+| `R` (runtime) not `D` (dynamic) | `D1`–`D4` already name the **datasets**. The first draft proposed D1–D2 for metrics, which would have replaced one collision with another. Caught before application |
+| `S6` backend compilability retained as an ID despite being unbuilt | It was a real metric in the original outline and is cheaply automatable; dropping the ID would quietly lose a planned contribution |
+| `S0` folded into `S1` | Non-empty output and parseable output are near-identical in practice; kept as an ID so refusal-vs-malformed can be split later if needed |
+| `ENGINEERING_LOG.md` history **not** rewritten | A dated log edited retroactively stops being evidence. Earlier entries keep their original E-numbers; this entry records the mapping |
+
+### Verification
+- Confirmed the numbering was cosmetic before touching anything: the E-numbers
+  appeared only in comments, docstrings and print labels. Data keys were already
+  semantic (`validity`, `logsource`, `attack`, `detection_fields`;
+  `validity_rate`, `logsource_exact`, `attack_f1`, `detection_f1`). No JSONL
+  schema change and no test-logic change were required.
+- Applied across `thesis/OUTLINE.md` (§5, §6.1), `eval/scorers.py`,
+  `eval/summarise.py`, `backend/telemetry.py`, `tests/test_eval_scorers.py`,
+  `tests/test_eval_summarise.py`.
+- `.venv/bin/python -m pytest tests/ -q` -> **85 passed**, unchanged.
+- Rendered `eval/summarise.py` against a synthetic two-arm fixture to confirm the
+  new labels print and that differing denominators still surface (n=20 vs n=16).
+
+### Separate correction in the same change
+`OUTLINE.md` claimed pySigma exposes **33 validator classes** in two places. The
+measured count is **31** (`sigma.validators.core.validators`, pySigma 0.11.23).
+Both occurrences corrected. The figure had been asserted, never checked.
+
+### Limitations to disclose
+- The renumbering is documentation-only. It improves nothing about the system and
+  produces no results; it prevents a defensible-methodology failure, no more.
+- Earlier log entries still use E-numbers by design. Anyone reading the log
+  chronologically needs the mapping in this entry.
+
+### Status
+Metric IDs are now consistent across outline, code and tests. Chapter 5 can be
+written without contradicting the artefact.

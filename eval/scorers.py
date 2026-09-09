@@ -6,25 +6,33 @@ Changes 1-3 all landed with their effect on rule quality unmeasured. These score
 turn "does the output look better?" into numbers that can be compared across
 ablation arms.
 
-What is measured
-----------------
-E1  parse validity      - does the output parse as a Sigma rule at all?
-E2  validator issues    - how many pySigma core-validator issues, by severity?
-E3  logsource match     - does logsource agree with the human-authored rule?
-E4  ATT&CK agreement    - do the attack.tXXXX tags agree?
-E5  detection fields    - do the detection field names agree?
+What is measured — the S (static) metric family
+-----------------------------------------------
+S1  parse validity      - does the output parse as a Sigma rule at all?
+S2  validator issues    - how many pySigma core-validator issues, by severity?
+S3  logsource match     - does logsource agree with the human-authored rule?
+S4  ATT&CK agreement    - do the attack.tXXXX tags agree?
+S5  detection fields    - do the detection field names agree?
 
-E1 and E2 are absolute (a rule is valid or it is not). E3-E5 are *agreement with a
+S1 and S2 are absolute (a rule is valid or it is not). S3-S5 are *agreement with a
 human analyst*, not correctness: a rule that differs from the gold rule may still be
 a good detection.
 
+Metric families (see thesis/OUTLINE.md section 5):
+    S1-S6  static  - offline, from rule text alone. S1-S5 are implemented here;
+                     S6 (backend compilability) is not built.
+    R1-R2  runtime - detection efficacy / false-positive rate. Require detonated
+                     telemetry; not built.
+    C1-C2  cost    - tokens and latency. See backend/telemetry.py.
+Do not reuse the old E0-E7 numbering: it collided across files and is retired.
+
 What is NOT measured, and cannot be
 -----------------------------------
-Detection efficacy. There is no telemetry corpus here, so true-positive and
-false-positive rates are out of reach. E5 in particular compares field *names* and
-ignores their values, so `Image|endswith: \\evil.exe` and `Image|endswith: \\good.exe`
-score identically. These are structural agreement metrics. Claiming they measure
-whether a rule catches attacks would be indefensible.
+Detection efficacy (R1) and false-positive rate (R2). There is no telemetry corpus
+here, so true-positive and false-positive rates are out of reach. S5 in particular
+compares field *names* and ignores their values, so `Image|endswith: \\evil.exe` and
+`Image|endswith: \\good.exe` score identically. These are structural agreement
+metrics. Claiming they measure whether a rule catches attacks would be indefensible.
 
 Everything runs offline against local files. No LLM, no network, no API budget.
 """
@@ -93,11 +101,11 @@ def _prf(predicted: set, gold: set) -> dict:
 
 
 # --------------------------------------------------------------------------
-# E1 + E2: validity and validator issues
+# S1 + S2: validity and validator issues
 # --------------------------------------------------------------------------
 
 def score_validity(rule_text: str) -> dict:
-    """E1/E2. Parse with pySigma and run the core validators.
+    """S1/S2. Parse with pySigma and run the core validators.
 
     A fresh SigmaValidator is constructed per call. Several core validators keep
     state across rules (duplicate title, identifier collision); reusing one
@@ -147,7 +155,7 @@ def score_validity(rule_text: str) -> dict:
 
 
 # --------------------------------------------------------------------------
-# E3: logsource agreement
+# S3: logsource agreement
 # --------------------------------------------------------------------------
 
 def _norm(value: Any) -> Optional[str]:
@@ -158,7 +166,7 @@ def _norm(value: Any) -> Optional[str]:
 
 
 def score_logsource(predicted: dict, gold: dict) -> dict:
-    """E3. Per-field logsource agreement.
+    """S3. Per-field logsource agreement.
 
     Fields absent from both rules count as agreeing: omitting `service` when the
     gold rule also omits it is correct, not a miss.
@@ -185,7 +193,7 @@ def score_logsource(predicted: dict, gold: dict) -> dict:
 
 
 # --------------------------------------------------------------------------
-# E4: ATT&CK technique agreement
+# S4: ATT&CK technique agreement
 # --------------------------------------------------------------------------
 
 def extract_techniques(tags: Iterable) -> set:
@@ -203,7 +211,7 @@ def extract_techniques(tags: Iterable) -> set:
 
 
 def score_attack_tags(predicted_tags: Iterable, gold_tags: Iterable) -> dict:
-    """E4. Technique agreement, reported at two granularities.
+    """S4. Technique agreement, reported at two granularities.
 
     `exact` treats t1059.001 and t1059 as different. `parent` collapses
     sub-techniques onto their parent, which credits a prediction that identifies
@@ -222,7 +230,7 @@ def score_attack_tags(predicted_tags: Iterable, gold_tags: Iterable) -> dict:
 
 
 # --------------------------------------------------------------------------
-# E5: detection field agreement
+# S5: detection field agreement
 # --------------------------------------------------------------------------
 
 def extract_detection_fields(detection: Any) -> set:
@@ -255,7 +263,7 @@ def extract_detection_fields(detection: Any) -> set:
 
 
 def score_detection_fields(predicted: Any, gold: Any) -> dict:
-    """E5. Overlap of detection field names.
+    """S5. Overlap of detection field names.
 
     Structural only: values are ignored, so this cannot distinguish a rule that
     matches the right process from one that matches the wrong process using the
@@ -275,7 +283,7 @@ def score_case(generated_rule_text: str, gold_rule: dict) -> dict:
     """Score one generated rule against its human-authored counterpart.
 
     `gold_rule` is the parsed YAML of the emerging-threats rule. Content metrics
-    (E3-E5) are only computed when the generated rule parses; scoring an
+    (S3-S5) are only computed when the generated rule parses; scoring an
     unparseable rule's fields would compare against nothing meaningful.
     """
     scores = {"validity": score_validity(generated_rule_text)}

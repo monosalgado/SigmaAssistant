@@ -2,7 +2,7 @@
 
 Reports each metric with the number of cases it was computed over, because the
 metrics have different denominators: content scores exist only for rules that
-parsed, and E4/E5 are undefined for some cases (no ATT&CK tags, keyword-only
+parsed, and S4/S5 are undefined for some cases (no ATT&CK tags, keyword-only
 detections). A mean without its n is not interpretable.
 
 Every agreement metric is printed next to the null baseline measured in Change 4 —
@@ -105,13 +105,13 @@ def _fmt(value, digits: int = 3) -> str:
 def report(name: str, s: dict) -> None:
     print(f"\n=== {name} ===")
     print(f"  cases                : {s['n_cases']}  (errors: {s['n_errors']})")
-    print(f"  E1 valid Sigma       : {_fmt(s['validity_rate'])}  (n={s['n_scored']})")
-    print(f"  E2 mean issues/rule  : {_fmt(s['mean_issues'], 2)}  (n={s['n_parsed']})")
+    print(f"  S1 valid Sigma       : {_fmt(s['validity_rate'])}  (n={s['n_scored']})")
+    print(f"  S2 mean issues/rule  : {_fmt(s['mean_issues'], 2)}  (n={s['n_parsed']})")
 
     for label, key, baseline_key in [
-        ("E3 logsource exact  ", "logsource_exact", "logsource_exact"),
-        ("E4 ATT&CK F1        ", "attack_f1", "attack_f1"),
-        ("E5 detection F1     ", "detection_f1", "detection_f1"),
+        ("S3 logsource exact  ", "logsource_exact", "logsource_exact"),
+        ("S4 ATT&CK F1        ", "attack_f1", "attack_f1"),
+        ("S5 detection F1     ", "detection_f1", "detection_f1"),
     ]:
         value = s[key]
         baseline = NULL_BASELINES[baseline_key]
@@ -135,11 +135,11 @@ def compare(a: dict, b: dict, name_a: str, name_b: str) -> None:
     print(f"\n=== {name_a} vs {name_b} ===")
     print(f"  {'metric':<22} {'A':>10} {'B':>10} {'delta':>10}")
     for label, key, digits in [
-        ("E1 valid Sigma", "validity_rate", 3),
-        ("E3 logsource exact", "logsource_exact", 3),
-        ("E4 ATT&CK F1", "attack_f1", 3),
-        ("E5 detection F1", "detection_f1", 3),
-        ("E2 mean issues", "mean_issues", 2),
+        ("S1 valid Sigma", "validity_rate", 3),
+        ("S3 logsource exact", "logsource_exact", 3),
+        ("S4 ATT&CK F1", "attack_f1", 3),
+        ("S5 detection F1", "detection_f1", 3),
+        ("S2 mean issues", "mean_issues", 2),
         ("mean tokens/case", "mean_tokens", 0),
         ("mean latency (s)", "mean_latency_s", 1),
     ]:
@@ -147,7 +147,7 @@ def compare(a: dict, b: dict, name_a: str, name_b: str) -> None:
         delta = "n/a" if (va is None or vb is None) else f"{vb - va:+.{digits}f}"
         print(f"  {label:<22} {_fmt(va, digits):>10} {_fmt(vb, digits):>10} {delta:>10}")
     print("\n  Deltas are descriptive only. Significance requires a paired test over "
-          "the per-case scores (McNemar for E1/E3, bootstrap CI for E4/E5).")
+          "the per-case scores (McNemar for S1/S3, bootstrap CI for S4/S5).")
 
 
 def main() -> None:

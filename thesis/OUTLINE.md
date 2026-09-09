@@ -75,10 +75,8 @@ with the defects documented in Chapter 6 as findings.
 > **Working notes with all measured numbers: `CH5_NOTES_EVALUATION.md`.** Write this
 > chapter from that file.
 >
-> **UNRESOLVED CONFLICT:** the E0–E7 IDs below do not match what `eval/scorers.py`
-> actually implements. E3 and E5 collide with *different meanings* in each place.
-> See §5.0 of the notes for the conflict table and a proposed S/D/C renumbering.
-> Resolve before writing.
+> **Metric IDs are S / R / C** (static, runtime, cost) — see the metric suite below.
+> The old E0–E7 scheme is retired; it collided across three files. Resolved 2026-09-09.
 
 ### Datasets
 - **D1 Holdout (leave-one-out):** remove a SigmaHQ rule, regenerate from its source CTI,
@@ -94,19 +92,43 @@ with the defects documented in Chapter 6 as findings.
 > fields and results become meaningless. D1 requires hand-built real CTI→rule pairs.
 
 ### Metric suite
-| ID | Metric | Oracle | Automatable |
-|---|---|---|---|
-| E0 | Generation succeeded (non-empty YAML) | — | yes |
-| E1 | Syntactic validity — parses via `SigmaCollection.from_yaml` | pySigma | yes |
-| E2 | Semantic validity — violations by validator class (31 classes) | pySigma `SigmaValidator` | yes |
-| E3 | Backend compilability — converts to a target backend | pySigma backend | yes |
-| E4 | MITRE mapping accuracy — tactic + technique vs. ground truth | ATT&CK graph | yes |
-| E5 | Detection efficacy — TPR on D3 | Zircolite over EVTX | yes |
-| E6 | False-positive rate on D4 | Zircolite over EVTX | yes |
-| E7 | Cost & latency per rule, per tier | instrumentation | yes |
 
-E2 reporting **by validator class** is better than a binary valid/invalid — it gives a
+Three families. The split is deliberate: it makes visible which half of the evaluation
+is built and which half is still the open novelty claim.
+
+**S — Static.** Offline, from generated rule text alone. *Implemented, S1–S5.*
+
+| ID | Metric | Oracle | Status |
+|---|---|---|---|
+| S0 | Generation produced non-empty output (refusal vs. malformed) | — | folded into S1 |
+| S1 | Syntactic validity — parses via `SigmaCollection.from_yaml` | pySigma | built |
+| S2 | Semantic validity — violations by validator class (31 classes) | pySigma `SigmaValidator` | built |
+| S3 | Logsource accuracy — category/product/service vs. gold | gold rule | built |
+| S4 | MITRE mapping accuracy — technique, exact + parent | gold rule / ATT&CK | built |
+| S5 | Detection field-name overlap — P/R/F1 | gold rule | built |
+| S6 | Backend compilability — converts to a target backend | pySigma backend | **not built** |
+
+**R — Runtime.** Require detonated telemetry. *Not built — this is novelty claim 1.*
+
+| ID | Metric | Oracle | Status |
+|---|---|---|---|
+| R1 | Detection efficacy — TPR on D3 | Zircolite over EVTX | **not built** |
+| R2 | False-positive rate on D4 | Zircolite over EVTX | **not built** |
+
+**C — Cost.** *Implemented in `backend/telemetry.py`.*
+
+| ID | Metric | Oracle | Status |
+|---|---|---|---|
+| C1 | Tokens / cost per rule, per tier | instrumentation | built, **unverified live** |
+| C2 | Latency per rule, per tier | instrumentation | built, **unverified live** |
+
+S2 reporting **by validator class** is better than a binary valid/invalid — it gives a
 richer dependent variable for the ablations.
+
+> **Numbering note.** This replaces an earlier E0–E7 scheme that collided across three
+> files (E3, E5, E6 and E7 each meant different things in `OUTLINE.md`,
+> `eval/scorers.py` and `backend/telemetry.py`). Do not reintroduce E-numbers.
+> `R` is used rather than `D` because D1–D4 already name the *datasets* above.
 
 ### Ablation matrix
 | ID | Arm | Isolates |
@@ -126,7 +148,7 @@ richer dependent variable for the ablations.
 - Holm–Bonferroni correction across the ablation family
 
 ## 6. Results and Discussion `[ ]`
-- 6.1 Baseline system performance across E0–E7
+- 6.1 Baseline system performance across S1–S5 and C1–C2
 - 6.2 Ablation findings
 - 6.3 Cost–quality Pareto frontier
 - 6.4 Defects found by systematic evaluation (the Tier 1 bugs) — framed as evidence
