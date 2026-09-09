@@ -391,3 +391,85 @@ Step 1 of 4. Remaining: deterministic scorers (offline), llm_client instrumentat
 runner over `orchestrator.run_sync`.
 
 ---
+
+## Change 4 — Deterministic offline scorers
+**Date:** 2026-09-09
+**Baseline defect addressed:** 7 (no eval harness / instrumentation) — step 2 of 4
+**Files:** `eval/scorers.py` (new), `tests/test_eval_scorers.py` (new)
+
+### Motivation
+Step 1 froze 303 evaluation cases but produced no way to score them. Without scorers,
+a Spark session would generate rules that could not be assessed, so the scorers had to
+precede any GPU time. They are pure functions over YAML text: no LLM, no network, no
+API budget, and therefore no dependency on VPN availability.
+
+### Metrics
+| ID | Metric | Definition |
+|---|---|---|
+| E1 | parse validity | `SigmaCollection.from_yaml` succeeds |
+| E2 | validator issues | pySigma core-validator issues, counted by severity |
+| E3 | logsource agreement | per-field category/product/service match vs gold |
+| E4 | ATT&CK agreement | precision/recall/F1 over `attack.tXXXX` tags |
+| E5 | detection fields | precision/recall/F1 over detection field names |
+
+E1-E2 are absolute; **E3-E5 measure agreement with a human analyst, not correctness.**
+A rule that differs from the gold rule may still be a good detection. This distinction
+is stated in the module docstring so it cannot quietly drift into a correctness claim.
+
+### Design decisions
+| Decision | Rationale |
+|---|---|
+| Undefined metrics return `None`, never `0.0` | A model that emits no tags has undefined precision, not zero precision. Substituting 0.0 would penalise it inside an average and silently bias every aggregate |
+| Fresh `SigmaValidator` per call | Core validators accumulate state (duplicate title, identifier collision); a shared instance reports phantom issues on unrelated rules. Same trap found during Change 1 |
+| E4 reported at two granularities | `exact` distinguishes t1059.001 from t1059; `parent` collapses sub-techniques. Reporting both prevents selecting whichever definition flatters the result |
+| Modifiers stripped in E5 (`Image|endswith` -> `image`) | A modifier qualifies a field, it does not make it a different field |
+| Code fences stripped at the boundary | Models wrap YAML in ```yaml; scoring that as a parse failure would attribute a formatting habit to rule quality |
+| Content metrics `None` when the rule does not parse | Comparing fields of an unparseable rule compares against nothing |
+
+### Verification
+1. **26 unit tests** covering each metric, including the failure modes easiest to get
+   wrong silently: validator state leaks, undefined-vs-zero, sub-technique
+   granularity, modifier stripping, list-valued selections, prose instead of a rule.
+   Full suite: **41 passed** (13 pre-existing + 28 new), 0.15s, fully offline.
+2. **Upper bound on real data** — all 341 gold rules scored against themselves:
+   0 parse failures, 0 logsource mismatches, 264 defined ATT&CK F1 all == 1.0,
+   detection F1 == 1.0 for 333. Fixture tests alone would not have exercised this.
+3. **Discrimination check** — each gold rule scored against a *different* random gold
+   rule (seed 0, 341 pairs). This is the control that a self-comparison cannot provide:
+   a scorer returning 1.0 unconditionally passes step 2 and fails here.
+
+### Null baselines (mismatched-pair control)
+| Metric | Mean | Median |
+|---|---|---|
+| logsource exact match | 17.3% (59/341) | — |
+| detection-field F1 | 0.133 | 0.000 |
+| ATT&CK exact F1 | 0.092 | 0.000 |
+
+**These are the numbers every later result must be read against.** Logsource
+agreement in particular has a high floor: `process_creation`/`windows` is so common
+that unrelated rules match 17.3% of the time by coincidence. A system scoring ~0.13
+detection F1 is performing no better than random pairing, and reporting such a figure
+as a success would be indefensible.
+
+### Finding: E5 is inapplicable to 8 rules (2.3%)
+Investigating 8 undefined detection scores showed they are **keyword-based rules**
+(log4shell, FortiOS CVE-2022-42475) that match unstructured text via a bare keyword
+list and name no fields at all — valid Sigma with nothing for E5 to compare. They are
+excluded from E5 aggregates rather than scored as zero. Encountering these confirmed
+the undefined-vs-zero decision above; had `_prf` returned 0.0, these 8 would have
+depressed every E5 average for a reason unrelated to model quality.
+
+### Limitations to disclose
+- **E5 is structural and ignores values.** `Image|endswith: \evil.exe` and
+  `\good.exe` score identically. A test pins this explicitly so the limitation is
+  recorded in code, not just prose.
+- **E3-E5 penalise legitimate disagreement.** A rule may target a different but valid
+  logsource, or use different fields for the same behaviour.
+- **No detection efficacy.** There is no telemetry corpus, so true-positive and
+  false-positive rates remain unmeasurable regardless of these scores.
+
+### Status
+Step 2 of 4 complete. Remaining: instrumentation wrapper on `llm_client` (tokens,
+latency — none exists today), then the runner over `orchestrator.run_sync`.
+
+---
