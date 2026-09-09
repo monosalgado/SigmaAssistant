@@ -38,7 +38,7 @@ Claims 1 and 3 are the strongest. Claim 2 is the most likely to produce a clean 
 ## 2. Background `[ ]`
 - Sigma rule anatomy: `logsource` (category/product/service), `detection` selections,
   `condition` grammar, `tags`.
-- pySigma: parsing, 33 validator classes, backend conversion.
+- pySigma: parsing, 31 validator classes, backend conversion.
 - MITRE ATT&CK: tactics, techniques, the tactic↔technique consistency constraint.
 - Sysmon / Windows Event Log telemetry model.
 
@@ -70,7 +70,15 @@ Describes the implemented pipeline. Source of truth for current behaviour:
 Write this chapter *after* the Tier 1 fixes land, so it describes the fixed system,
 with the defects documented in Chapter 6 as findings.
 
-## 5. Evaluation Methodology `[ ]`  ← **the empirical backbone**
+## 5. Evaluation Methodology `[~]`  ← **the empirical backbone**
+
+> **Working notes with all measured numbers: `CH5_NOTES_EVALUATION.md`.** Write this
+> chapter from that file.
+>
+> **UNRESOLVED CONFLICT:** the E0–E7 IDs below do not match what `eval/scorers.py`
+> actually implements. E3 and E5 collide with *different meanings* in each place.
+> See §5.0 of the notes for the conflict table and a proposed S/D/C renumbering.
+> Resolve before writing.
 
 ### Datasets
 - **D1 Holdout (leave-one-out):** remove a SigmaHQ rule, regenerate from its source CTI,
@@ -90,7 +98,7 @@ with the defects documented in Chapter 6 as findings.
 |---|---|---|---|
 | E0 | Generation succeeded (non-empty YAML) | — | yes |
 | E1 | Syntactic validity — parses via `SigmaCollection.from_yaml` | pySigma | yes |
-| E2 | Semantic validity — violations by validator class (33 classes) | pySigma `SigmaValidator` | yes |
+| E2 | Semantic validity — violations by validator class (31 classes) | pySigma `SigmaValidator` | yes |
 | E3 | Backend compilability — converts to a target backend | pySigma backend | yes |
 | E4 | MITRE mapping accuracy — tactic + technique vs. ground truth | ATT&CK graph | yes |
 | E5 | Detection efficacy — TPR on D3 | Zircolite over EVTX | yes |
