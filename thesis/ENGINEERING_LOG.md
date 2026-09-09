@@ -594,12 +594,29 @@ degrades like a dead link in production instead of aborting the case.
 | `--arm` label and full config recorded in every row | Two result files can be compared only if each states the configuration that produced it |
 
 ### Cost warning surfaced at runtime
-In the default hybrid configuration **only economy-tier calls reach Ollama**;
-attack-vector extraction, analysis and generation all use the Gemini *primary*
-tier. A 303-case run would issue roughly 900 primary-tier calls against a 9 RPM
-limit. This corrects an earlier working assumption that a local run costs "time,
-not tokens". The runner prints the warning before starting and the docstring
-states that `LLM_PROVIDER=ollama` is required for a genuinely zero-cost run.
+In the default hybrid configuration **only economy-tier calls reach Ollama**, so a
+run is not free even with the Spark available. Verified per-stage routing:
+
+| Stage | Tier | Backend in hybrid mode |
+|---|---|---|
+| preprocess | primary | Gemini — **only when an image is attached**; no call for a URL |
+| web_enrich | fast | Gemini (skipped entirely under `--no-web-enrich`) |
+| poc_analysis | economy | Ollama |
+| attack_vector | economy | Ollama |
+| analysis | economy | Ollama |
+| **generate** | **primary** | **Gemini** |
+| review | economy | Ollama |
+
+So a 303-case URL-only run with enrichment disabled issues roughly **303–606
+primary-tier Gemini calls** — one per case for rule generation, two when the
+generation retry fires — against a 9 RPM limit. Everything else is local.
+
+This corrects an earlier working assumption that a local run costs "time, not
+tokens". It also corrects a first draft of this entry, which claimed
+attack-vector and analysis were primary-tier and put the figure at ~900 calls;
+both are `economy=True` (`stage_attack_vector.py:78`, `stage_analysis.py:61`).
+The runner prints a warning before starting, and `LLM_PROVIDER=ollama` remains
+the setting for a genuinely zero-cost run.
 
 ### Summariser: every metric reported with its own n, against chance
 `eval/summarise.py` reports each metric with the number of cases it was computed

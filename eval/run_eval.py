@@ -17,10 +17,12 @@ from. Nothing in `backend/` is modified.
 Cost warning
 ------------
 With `ECONOMY_PROVIDER=ollama` (hybrid), **only economy-tier calls go to the Spark**.
-Attack-vector extraction, analysis and rule generation all use the Gemini primary
-tier, so a hybrid run still spends Gemini quota and is rate-limited to ~9 RPM. For a
-zero-cost run set `LLM_PROVIDER=ollama`, which routes every stage to Ollama and makes
-web enrichment a no-op. The provider actually used is recorded in each output row.
+poc_analysis, attack_vector, analysis and review are `economy=True` and run locally,
+but **rule generation uses the Gemini primary tier** (`stage_generate.py:235`), so a
+hybrid run still spends Gemini quota and is rate-limited to ~9 RPM: one primary call
+per case, two when the generation retry fires. For a zero-cost run set
+`LLM_PROVIDER=ollama`, which routes every stage to Ollama and makes web enrichment a
+no-op. The provider actually used is recorded in each output row.
 
 Usage
 -----
@@ -311,8 +313,9 @@ def main() -> None:
     }
     print(f"Config: {config}")
     if type(client).__name__ == "HybridLLMClient":
-        print("NOTE: hybrid mode — primary/fast stages still bill to Gemini and are "
-              "rate-limited. Set LLM_PROVIDER=ollama for a zero-cost run.")
+        print("NOTE: hybrid mode — rule generation uses the Gemini primary tier "
+              "(~1 call/case, rate-limited to ~9 RPM). Every other stage is local. "
+              "Set LLM_PROVIDER=ollama for a zero-cost run.")
 
     n_ok = n_failed = 0
     started_all = time.time()
