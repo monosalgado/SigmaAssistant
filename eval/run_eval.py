@@ -1,0 +1,386 @@
+"""Run the pipeline over the frozen evaluation cases and record scores + cost.
+
+Why this exists
+---------------
+This is the piece that finally answers "did the changes help?". It joins the three
+earlier parts: the frozen cases (Change 3), the deterministic scorers (Change 4),
+and the telemetry (Change 5), writing one JSONL row per case.
+
+How pages are served
+--------------------
+`PreprocessStage` fetches reference URLs with `requests.get`. During evaluation the
+`requests` reference inside that module is swapped for a shim that serves the cached
+snapshot instead. Everything downstream — HTML extraction, truncation, segmentation —
+runs exactly as in production, so the only altered behaviour is where the bytes come
+from. Nothing in `backend/` is modified.
+
+Cost warning
+------------
+With `ECONOMY_PROVIDER=ollama` (hybrid), **only economy-tier calls go to the Spark**.
+Attack-vector extraction, analysis and rule generation all use the Gemini primary
+tier, so a hybrid run still spends Gemini quota and is rate-limited to ~9 RPM. For a
+zero-cost run set `LLM_PROVIDER=ollama`, which routes every stage to Ollama and makes
+web enrichment a no-op. The provider actually used is recorded in each output row.
+
+Usage
+-----
+    # smoke test: 2 cases, no web search
+    .venv/bin/python eval/run_eval.py --limit 2 --no-web-enrich --out eval/results/smoke.jsonl
+
+    # stratified subsample, resumable
+    .venv/bin/python eval/run_eval.py --sample 60 --seed 0 --out eval/results/run1.jsonl
+
+Re-running with the same --out resumes: cases already present are skipped.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import random
+import re
+import sys
+import time
+import traceback
+from collections import defaultdict
+from contextlib import contextmanager
+from datetime import datetime, timezone
+from pathlib import Path
+
+import yaml
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from backend.pipeline.stage_preprocess import PreprocessStage  # noqa: E402
+from backend.telemetry import TELEMETRY  # noqa: E402
+from eval.scorers import score_case  # noqa: E402
+
+_YAML_BLOCK_RE = re.compile(r"```ya?ml\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
+
+
+# --------------------------------------------------------------------------
+# Serving snapshots in place of the network
+# --------------------------------------------------------------------------
+
+class _SnapshotResponse:
+    """Duck-types the parts of `requests.Response` that PreprocessStage uses."""
+
+    def __init__(self, content: bytes, status_code: int = 200):
+        self.content = content
+        self.status_code = status_code
+
+
+class _SnapshotRequests:
+    """Stands in for the `requests` module inside PreprocessStage."""
+
+    def __init__(self, url_to_path: dict):
+        self._map = url_to_path
+        self.served = 0
+        self.missed = 0
+
+    def get(self, url, **kwargs):
+        path = self._map.get(url)
+        if path is None:
+            self.missed += 1
+            # 404 rather than an exception: the pipeline already handles a bad
+            # status, and a case with a missing snapshot should degrade the same
+            # way a dead link does in production.
+            return _SnapshotResponse(b"", status_code=404)
+        self.served += 1
+        return _SnapshotResponse(Path(path).read_bytes(), status_code=200)
+
+
+@contextmanager
+def snapshots_instead_of_network(url_to_path: dict):
+    """Swap PreprocessStage's `requests` for a snapshot-backed shim.
+
+    Patches the module attribute rather than `requests.get` globally, so nothing
+    else in the process loses network access.
+    """
+    import backend.pipeline.stage_preprocess as module
+
+    original = module.requests
+    shim = _SnapshotRequests(url_to_path)
+    module.requests = shim
+    try:
+        yield shim
+    finally:
+        module.requests = original
+
+
+@contextmanager
+def web_enrichment_disabled(client, disabled: bool):
+    """Optionally stub out Gemini Google-Search grounding.
+
+    Enrichment is non-deterministic week to week and bills to the primary tier,
+    so it is separated from the deterministic core rather than silently included.
+    """
+    if not disabled:
+        yield
+        return
+    original = client.web_search
+    client.web_search = lambda query: {"text": "", "sources": []}
+    try:
+        yield
+    finally:
+        client.web_search = original
+
+
+# --------------------------------------------------------------------------
+# Case loading
+# --------------------------------------------------------------------------
+
+def load_cases(manifest_path: Path, repo_root: Path, min_chars: int) -> list:
+    """Load manifest entries that have a snapshot with enough extracted text.
+
+    Text is extracted with the pipeline's own `_extract_page_content`, so the
+    threshold is applied to exactly what the model would receive.
+    """
+    extractor = PreprocessStage(client=None, model_name="")
+    cases = []
+
+    for line in manifest_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        entry = json.loads(line)
+        if entry.get("status") != "ok":
+            continue
+
+        gold_path = repo_root / entry["rule_path"]
+        try:
+            gold = yaml.safe_load(gold_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if not isinstance(gold, dict) or "detection" not in gold:
+            continue
+
+        url_to_path, total_chars, urls = {}, 0, []
+        for snap in entry.get("snapshots", []):
+            path = repo_root / snap["path"]
+            if not path.exists():
+                continue
+            try:
+                text, _ = extractor._extract_page_content(path.read_bytes(), snap["url"])
+            except Exception:
+                continue
+            total_chars += len(text)
+            url_to_path[snap["url"]] = str(path)
+            urls.append(snap["url"])
+
+        if total_chars < min_chars:
+            continue
+
+        cases.append({
+            "rule_id": entry["rule_id"],
+            "rule_path": entry["rule_path"],
+            "title": entry.get("title", ""),
+            "category": (entry.get("logsource") or {}).get("category") or "none",
+            "product": (entry.get("logsource") or {}).get("product") or "none",
+            "urls": urls,
+            "url_to_path": url_to_path,
+            "text_chars": total_chars,
+            "gold": gold,
+        })
+    return cases
+
+
+def stratified_sample(cases: list, n: int, seed: int) -> list:
+    """Sample while preserving the logsource-category mix.
+
+    A uniform sample would under-represent the non-Windows categories, which are
+    exactly the ones the corpus-expansion change (A3) was meant to affect.
+    """
+    if n >= len(cases):
+        return cases
+    by_category = defaultdict(list)
+    for case in cases:
+        by_category[case["category"]].append(case)
+
+    rng = random.Random(seed)
+    fraction = n / len(cases)
+    selected, leftovers = [], []
+
+    # Floor the proportional quota and keep at least one per category, then top
+    # up to exactly `n`. Rounding each quota independently loses cases — every
+    # category rounding down makes the sample smaller than requested, so the run
+    # would not match the sample size reported alongside the results.
+    for category in sorted(by_category):
+        group = sorted(by_category[category], key=lambda c: c["rule_id"])
+        rng.shuffle(group)
+        take = min(len(group), max(1, int(len(group) * fraction)))
+        selected.extend(group[:take])
+        leftovers.extend(group[take:])
+
+    if len(selected) < n:
+        rng.shuffle(leftovers)
+        selected.extend(leftovers[:n - len(selected)])
+    elif len(selected) > n:
+        # Only reachable when n is smaller than the number of categories, in
+        # which case not every category can be represented.
+        rng.shuffle(selected)
+        selected = selected[:n]
+
+    rng.shuffle(selected)
+    return selected
+
+
+def extract_rule_yamls(response_text: str) -> list:
+    """Pull YAML blocks out of the pipeline's markdown response."""
+    return [m.strip() for m in _YAML_BLOCK_RE.findall(response_text or "") if m.strip()]
+
+
+# --------------------------------------------------------------------------
+# Runner
+# --------------------------------------------------------------------------
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--manifest", default="eval/manifest.jsonl")
+    parser.add_argument("--out", default="eval/results/run.jsonl")
+    parser.add_argument("--min-chars", type=int, default=2000,
+                        help="Minimum extracted text for a case to be usable.")
+    parser.add_argument("--limit", type=int, default=0, help="First N cases (0 = all).")
+    parser.add_argument("--sample", type=int, default=0,
+                        help="Stratified subsample of N cases (0 = no sampling).")
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--no-web-enrich", action="store_true",
+                        help="Stub out Gemini Google-Search grounding.")
+    parser.add_argument("--arm", default="default",
+                        help="Label recorded with every row, for comparing runs.")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Report the case selection without calling any LLM.")
+    args = parser.parse_args()
+
+    repo_root = Path(__file__).resolve().parent.parent
+    manifest_path = repo_root / args.manifest
+    if not manifest_path.exists():
+        raise SystemExit(f"Manifest not found: {manifest_path}. Run build_snapshots.py first.")
+
+    print(f"Loading cases from {manifest_path} ...")
+    cases = load_cases(manifest_path, repo_root, args.min_chars)
+    print(f"  {len(cases)} cases with >= {args.min_chars} chars of extracted text")
+
+    if args.sample:
+        cases = stratified_sample(cases, args.sample, args.seed)
+        print(f"  stratified subsample: {len(cases)} cases (seed {args.seed})")
+    if args.limit:
+        cases = cases[:args.limit]
+        print(f"  limited to first {len(cases)}")
+
+    out_path = repo_root / args.out
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    done = set()
+    if out_path.exists():
+        for line in out_path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                try:
+                    done.add(json.loads(line)["rule_id"])
+                except Exception:
+                    continue
+        if done:
+            print(f"  resuming: {len(done)} cases already in {out_path}")
+
+    todo = [c for c in cases if c["rule_id"] not in done]
+    print(f"  {len(todo)} cases to run")
+
+    mix = defaultdict(int)
+    for case in todo:
+        mix[case["category"]] += 1
+    print("  category mix:", dict(sorted(mix.items(), key=lambda kv: -kv[1])))
+
+    if args.dry_run:
+        print("\nDry run: no LLM calls made.")
+        return
+
+    # Imported late so --dry-run needs no vector store or API key.
+    from backend.agent import SigmaAgent
+
+    print("\nInitialising agent ...")
+    agent = SigmaAgent()
+    client = agent.client
+    config = {
+        "arm": args.arm,
+        "backend": type(client).__name__,
+        "primary_model": getattr(client, "model_name", ""),
+        "fast_model": getattr(client, "fast_model_name", ""),
+        "economy_model": getattr(client, "economy_model_name", ""),
+        "web_enrich": not args.no_web_enrich,
+        "min_chars": args.min_chars,
+    }
+    print(f"Config: {config}")
+    if type(client).__name__ == "HybridLLMClient":
+        print("NOTE: hybrid mode — primary/fast stages still bill to Gemini and are "
+              "rate-limited. Set LLM_PROVIDER=ollama for a zero-cost run.")
+
+    n_ok = n_failed = 0
+    started_all = time.time()
+
+    with open(out_path, "a", encoding="utf-8") as out_file:
+        for idx, case in enumerate(todo, 1):
+            TELEMETRY.reset()
+            started = time.time()
+            row = {
+                "rule_id": case["rule_id"],
+                "rule_path": case["rule_path"],
+                "title": case["title"],
+                "category": case["category"],
+                "product": case["product"],
+                "urls": case["urls"],
+                "text_chars": case["text_chars"],
+                "config": config,
+                "run_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+            try:
+                with snapshots_instead_of_network(case["url_to_path"]) as shim, \
+                        web_enrichment_disabled(client, args.no_web_enrich):
+                    result = agent.analyze_attack(" ".join(case["urls"]))
+                row["snapshots_served"] = shim.served
+                row["snapshots_missed"] = shim.missed
+
+                response_text = result.get("rule", "")
+                rules = extract_rule_yamls(response_text)
+                # Every generated rule is stored so best-of-N can be computed
+                # later without paying for another run; scoring uses the first,
+                # which is what a user sees.
+                row["n_rules"] = len(rules)
+                row["rules_yaml"] = rules
+                row["scores"] = score_case(rules[0], case["gold"]) if rules else \
+                    score_case(response_text, case["gold"])
+                row["response_chars"] = len(response_text)
+                row["error"] = None
+                n_ok += 1
+            except Exception as exc:
+                row["error"] = f"{type(exc).__name__}: {exc}"
+                row["traceback"] = traceback.format_exc()[-1500:]
+                row["scores"] = None
+                row["n_rules"] = 0
+                n_failed += 1
+
+            row["elapsed_s"] = round(time.time() - started, 2)
+            row["telemetry"] = TELEMETRY.summary()
+            row["llm_calls"] = TELEMETRY.as_dicts()
+
+            out_file.write(json.dumps(row) + "\n")
+            out_file.flush()  # a crash must not lose completed cases
+
+            scores = row.get("scores") or {}
+            validity = (scores.get("validity") or {}).get("parses")
+            tokens = row["telemetry"].get("total_tokens")
+            print(f"[{idx}/{len(todo)}] {case['rule_id'][:8]} "
+                  f"{case['category']:<18} valid={validity} "
+                  f"rules={row['n_rules']} {row['elapsed_s']}s "
+                  f"tokens={tokens} {'ERROR: ' + row['error'] if row['error'] else ''}")
+
+    elapsed = time.time() - started_all
+    print(f"\n--- Done in {elapsed/60:.1f} min ---")
+    print(f"  succeeded: {n_ok}")
+    print(f"  failed   : {n_failed}")
+    print(f"  output   : {out_path}")
+    print("\nSummarise with: .venv/bin/python eval/summarise.py " + str(args.out))
+
+
+if __name__ == "__main__":
+    main()

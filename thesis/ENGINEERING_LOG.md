@@ -549,3 +549,107 @@ Step 3 of 4 complete. Remaining: the runner over `orchestrator.run_sync`, joinin
 telemetry (Change 5) to scores (Change 4) per case and writing JSONL.
 
 ---
+
+## Change 6 — Evaluation runner and summariser
+**Date:** 2026-09-09
+**Baseline defect addressed:** 7 (no eval harness / instrumentation) — step 4 of 4
+**Files:** `eval/run_eval.py` (new), `eval/summarise.py` (new),
+`tests/test_eval_runner.py` (new), `tests/test_eval_summarise.py` (new)
+
+### Motivation
+Changes 3–5 produced a frozen dataset, deterministic scorers and cost
+instrumentation, but nothing joined them. The runner closes the loop: for each
+case it feeds the gold rule's own reference URLs to the production pipeline,
+scores the output against the gold rule, and records the tokens and latency the
+run consumed. Until this existed, Changes 1–3 had all landed with their effect on
+output quality **unmeasured**.
+
+### Why the pipeline is driven through its real entry point
+The runner calls `PipelineOrchestrator.run_sync` — the same function the FastAPI
+endpoint calls — not a reimplementation of the stages. An evaluation that
+reconstructs the pipeline measures the reconstruction, not the system. The only
+things substituted are the two sources of non-determinism, and both are
+substituted at their boundary rather than by editing stage logic.
+
+### How reproducibility is enforced
+| Source of drift | Substitution |
+|---|---|
+| Live URL fetches (pages change or die) | `snapshots_instead_of_network` swaps the `requests` reference *inside* `stage_preprocess` for a shim reading the Change 3 snapshots. The stage's own extraction code runs unchanged |
+| Google Search grounding (results differ week to week, bills to primary tier) | `web_enrichment_disabled` stubs `client.web_search` to return an empty result |
+
+Both are context managers that restore the original in a `finally`, because a
+leaked patch would silently disable network access for the rest of the process.
+A URL with no snapshot returns **404 rather than raising**, so a missing page
+degrades like a dead link in production instead of aborting the case.
+
+### Design decisions
+| Decision | Rationale |
+|---|---|
+| Stratified sample by logsource category, not uniform | A uniform sample drops the rare non-Windows categories — exactly the ones the corpus expansion (Change 2 / A3) was meant to affect. Sampling that cannot see the effect it is meant to measure is worthless |
+| Floor quotas, guarantee >=1 per category, then top up from a leftover pool | Proportional rounding lost cases: a request for 25 returned 24. Caught by a test asserting the requested size, not by inspection |
+| All YAML blocks extracted, not just the first | The pipeline can emit several rules. Keeping all of them allows best-of-N to be computed later without paying for a second run |
+| Append with `flush()` after each case; resumable by `rule_id` | A 303-case run is long and the economy tier depends on a VPN. A dropped connection must not discard completed work |
+| Per-case `TELEMETRY.reset()`, full call list stored per row | Enables per-stage and per-tier cost attribution after the fact, not just a total |
+| Errors recorded as rows, never dropped | A case that crashed is still a case. Excluding it would make a fragile configuration look accurate |
+| `--arm` label and full config recorded in every row | Two result files can be compared only if each states the configuration that produced it |
+
+### Cost warning surfaced at runtime
+In the default hybrid configuration **only economy-tier calls reach Ollama**;
+attack-vector extraction, analysis and generation all use the Gemini *primary*
+tier. A 303-case run would issue roughly 900 primary-tier calls against a 9 RPM
+limit. This corrects an earlier working assumption that a local run costs "time,
+not tokens". The runner prints the warning before starting and the docstring
+states that `LLM_PROVIDER=ollama` is required for a genuinely zero-cost run.
+
+### Summariser: every metric reported with its own n, against chance
+`eval/summarise.py` reports each metric with the number of cases it was computed
+over, because the denominators genuinely differ — content scores exist only for
+rules that parsed, and E4/E5 are undefined for rules with no ATT&CK tags or
+keyword-only detections. A mean without its n is not interpretable.
+
+Every agreement metric is printed next to the null baseline measured in Change 4
+(logsource 0.173, ATT&CK F1 0.092, detection F1 0.133) and flagged when it falls
+at or below it. Anchoring the numbers this way was done **before** any real
+result existed, so a weak result cannot be rationalised after the fact.
+
+### Verification
+1. **Dry run over the real manifest** yields **303 usable cases**, matching the
+   Change 3 figure exactly. Category mix: process_creation 123, webserver 54,
+   file_event 36, none 33, proxy 17, registry_set 10, image_load 10, and 6
+   categories with a single case each.
+2. **Integration test against the production stage** — the real `PreprocessStage`
+   runs under the shim and its extracted text is asserted. If interception ever
+   broke, this fails rather than silently falling through to the live network.
+3. **Restoration tests**, including the case where the body raises.
+4. **Sampling bug found by test, not by reading** — `round()` on proportional
+   quotas returned 24 for a requested 25. After the fix, requests for 30/60/100
+   return exactly 30/60/100 and the rare categories survive.
+5. **Summariser exercised on fixtures built with the real scorers**, not
+   hand-written dicts, so the score shape cannot drift from what the runner
+   writes. Confirms undefined F1 is excluded rather than averaged as 0.0, and
+   that unparsed rules do not count as logsource misses.
+6. Full suite **85 passed** (58 prior + 17 runner + 10 summariser), 0.31s,
+   fully offline.
+
+### Not yet verified
+**No evaluation has been run.** The economy tier is firewalled at the lab, so the
+harness is complete but unexercised end to end. Nothing is yet known about
+whether Changes 1–3 improved output quality. The first live run should assert
+`calls_without_token_data == 0` and `snapshots_missed == 0`; a non-zero value in
+either means the harness is degrading silently.
+
+### Limitations to disclose
+- Deltas between arms are **descriptive only**. Significance requires a paired
+  test over the per-case scores — McNemar for the binary metrics (E1/E3),
+  bootstrap CI for the F1 metrics (E4/E5). Neither is implemented.
+- Disabling web enrichment buys reproducibility at the cost of measuring a
+  configuration that differs from the deployed default.
+- A model refusal currently surfaces its parse failure as an `AttributeError`,
+  which reads like a harness bug rather than a refusal.
+
+### Status
+Defect 7 closed as far as it can be without a live run. The harness is built,
+tested and reproducible; producing results is now blocked only on economy-tier
+access.
+
+---
