@@ -20,6 +20,8 @@ import time
 import threading
 from collections import deque
 
+from backend.telemetry import TELEMETRY, extract_gemini_usage, extract_openai_usage
+
 
 # ---------------------------------------------------------------------------
 # Rate limiter (token bucket) — prevents self-inflicted 429s on Gemini free tier
@@ -137,13 +139,31 @@ class GeminiLLMClient(LLMClient):
 
         contents = [prompt] + (media_parts or [])
         # Pre-flight RPM check — block instead of firing and getting a 429.
+        # Timed after acquire() so latency measures the API call, not queueing
+        # behind our own rate limiter.
         self._limiters[tier].acquire()
-        response = self._genai_client.models.generate_content(
-            model=model,
-            contents=contents,
-            config=config,
+        started = time.monotonic()
+        try:
+            response = self._genai_client.models.generate_content(
+                model=model,
+                contents=contents,
+                config=config,
+            )
+        except Exception as exc:
+            TELEMETRY.record(
+                backend="gemini", tier=tier, model=model, operation="generate",
+                latency_s=time.monotonic() - started, prompt_chars=len(prompt),
+                ok=False, error=f"{type(exc).__name__}: {exc}",
+            )
+            raise
+
+        text = response.text
+        TELEMETRY.record(
+            backend="gemini", tier=tier, model=model, operation="generate",
+            latency_s=time.monotonic() - started, prompt_chars=len(prompt),
+            response_chars=len(text or ""), usage=extract_gemini_usage(response),
         )
-        return response.text
+        return text
 
     def web_search(self, query: str) -> dict:
         """Use Gemini's built-in Google Search grounding to search the web.
@@ -161,6 +181,7 @@ class GeminiLLMClient(LLMClient):
         import time
         max_retries = 3
         for attempt in range(max_retries + 1):
+            attempt_started = time.monotonic()
             try:
                 config = types.GenerateContentConfig(
                     tools=[types.Tool(google_search=types.GoogleSearch())],
@@ -171,10 +192,19 @@ class GeminiLLMClient(LLMClient):
                 # context quality, so we use the best model for synthesis.
                 # Pre-flight RPM check against the same primary bucket.
                 self._limiters["primary"].acquire()
+                started = time.monotonic()
                 response = self._genai_client.models.generate_content(
                     model=self.model_name,
                     contents=prompt,
                     config=config,
+                )
+                # Recorded against the primary tier because grounding bills there,
+                # which is easy to overlook when attributing cost per stage.
+                TELEMETRY.record(
+                    backend="gemini", tier="primary", model=self.model_name,
+                    operation="web_search", latency_s=time.monotonic() - started,
+                    prompt_chars=len(prompt), response_chars=len(response.text or ""),
+                    usage=extract_gemini_usage(response),
                 )
 
                 # Extract source URLs from grounding metadata
@@ -200,6 +230,16 @@ class GeminiLLMClient(LLMClient):
                 }
 
             except Exception as e:
+                # Recorded per attempt: a search that succeeds only after two 429s
+                # costs real latency, and a search that fails entirely returns an
+                # empty string that would otherwise be indistinguishable from a
+                # page with nothing to add.
+                TELEMETRY.record(
+                    backend="gemini", tier="primary", model=self.model_name,
+                    operation="web_search", latency_s=time.monotonic() - attempt_started,
+                    prompt_chars=len(prompt), ok=False,
+                    error=f"{type(e).__name__}: {e}",
+                )
                 err_str = str(e)
                 is_retryable = (
                     "429" in err_str
@@ -266,12 +306,34 @@ class OllamaLLMClient(LLMClient):
             })
         messages.append({"role": "user", "content": prompt})
 
-        response = self._openai.chat.completions.create(
-            model=self.model_name,
-            messages=messages,
-            temperature=temperature,
+        # Tier is always "economy": HybridLLMClient only routes economy calls here.
+        started = time.monotonic()
+        try:
+            response = self._openai.chat.completions.create(
+                model=self.model_name,
+                messages=messages,
+                temperature=temperature,
+            )
+        except Exception as exc:
+            # Recorded before re-raising so that a Spark outage is visible in the
+            # telemetry as a failed economy call, rather than appearing only as an
+            # unexplained extra Gemini call from the hybrid fallback.
+            TELEMETRY.record(
+                backend="ollama", tier="economy", model=self.model_name,
+                operation="generate", latency_s=time.monotonic() - started,
+                prompt_chars=len(prompt), ok=False,
+                error=f"{type(exc).__name__}: {exc}",
+            )
+            raise
+
+        content = response.choices[0].message.content
+        TELEMETRY.record(
+            backend="ollama", tier="economy", model=self.model_name,
+            operation="generate", latency_s=time.monotonic() - started,
+            prompt_chars=len(prompt), response_chars=len(content or ""),
+            usage=extract_openai_usage(response),
         )
-        return response.choices[0].message.content
+        return content
 
     def make_image_part(self, file_path: str, mime_type: str):
         """Image transcription not supported for text-only local models."""

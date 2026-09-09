@@ -473,3 +473,79 @@ Step 2 of 4 complete. Remaining: instrumentation wrapper on `llm_client` (tokens
 latency — none exists today), then the runner over `orchestrator.run_sync`.
 
 ---
+
+## Change 5 — LLM telemetry (tokens, latency, tier routing)
+**Date:** 2026-09-09
+**Baseline defect addressed:** 7 (no eval harness / instrumentation) — step 3 of 4
+**Files:** `backend/telemetry.py` (new), `backend/llm_client.py`,
+`tests/test_telemetry.py` (new)
+
+### Motivation
+The system had no measurement of cost or latency whatsoever: a grep across
+`backend/` for `usage_metadata|token_count|total_tokens|latency|elapsed` returned a
+single comment. E6 (cost) and E7 (latency) were therefore unmeasurable, and the
+three-tier routing design — the project's main efficiency claim — was unverified.
+
+### Why the client was modified rather than wrapped
+A non-invasive decorator around `LLMClient` cannot recover token counts: both
+backends discarded their usage objects before returning. `GeminiLLMClient.generate`
+returned `response.text` and `OllamaLLMClient.generate` returned
+`response.choices[0].message.content`, so `usage_metadata` / `usage` were already out
+of scope by the time a wrapper saw the result. A wrapper could only have measured
+latency and *estimated* tokens from character counts. Reporting an estimate as a
+measurement in a cost evaluation is not defensible, so usage is captured where it
+exists, inside each client. The change is additive: no return value, signature, or
+control-flow path was altered.
+
+### Finding: thinking tokens would have been silently dropped
+Inspecting the installed SDK (offline, via `model_fields`) confirmed the field names
+and revealed `thoughts_token_count`. **gemini-2.5-flash is a thinking model: reasoning
+tokens are billed at the output rate but are excluded from
+`candidates_token_count`.** The first implementation derived
+`total = prompt + completion`, which would have undercounted every primary-tier
+request by its entire thinking budget while presenting a precise-looking figure.
+
+Fixed by recording `thinking_tokens` separately and preferring the provider's own
+`total_token_count`, falling back to `prompt + completion + thinking` only when the
+provider omits a total. This is the single most consequential detail in the change:
+an undetected version would have produced a systematically optimistic cost result for
+exactly the tier the thesis argues is expensive.
+
+### Design decisions
+| Decision | Rationale |
+|---|---|
+| Counts measured, never estimated from characters | chars/4 varies by tokenizer, language, and code/base64 content |
+| Missing token data is `None`, never `0` | A call with no usage did not use zero tokens. `summary()` reports `calls_without_token_data` so a partial total cannot pass as a complete one. Same rule as `eval/scorers.py` |
+| Latency timed *after* `_RateLimiter.acquire()` | Otherwise latency measures queueing behind our own limiter, not provider response time |
+| Failed calls recorded, then re-raised | A Spark outage must appear as a failed economy call; otherwise the hybrid fallback shows up only as an unexplained extra Gemini call |
+| `web_search` recorded per attempt, against the primary tier | Google Search grounding bills to the primary model — easy to overlook when attributing per-stage cost — and its retry loop swallows 429s into an empty string |
+| Bounded `deque` (2000) | The FastAPI server is long-running; unbounded history would leak memory |
+| No recording in `HybridLLMClient` | It delegates to the sub-clients, which record; recording there too would double-count |
+
+### Verification
+1. **SDK field names confirmed offline** against `GenerateContentResponseUsageMetadata`
+   and `CompletionUsage` rather than assumed. This is what surfaced
+   `thoughts_token_count`, and it cost no API budget.
+2. **17 unit tests**, including the silent-failure modes: missing usage returning `{}`
+   not zeros, all-missing giving a `None` total, per-tier attribution, bounded
+   history, and thinking tokens excluded from a naive total.
+3. **Wiring test** — `OllamaLLMClient` with a faked transport asserts the client
+   actually calls `TELEMETRY`. Without it, every unit test above would still pass if
+   `llm_client` never recorded anything.
+4. **Failure-path test** — a `ConnectionError` is recorded and re-raised, matching the
+   real Spark-unavailable behaviour observed this session.
+5. Full suite **58 passed** (41 prior + 17 new), 0.31s, fully offline;
+   `import backend.main` clean; `create_llm_client()` still returns
+   `HybridLLMClient` with the expected banner.
+
+### Not yet verified
+No telemetry has been recorded from a **real** API call. The extraction logic is
+confirmed against the SDK's declared schema and against fabricated response objects,
+but not against a live response. First live run should assert
+`calls_without_token_data == 0`; if it is non-zero, extraction is silently failing.
+
+### Status
+Step 3 of 4 complete. Remaining: the runner over `orchestrator.run_sync`, joining
+telemetry (Change 5) to scores (Change 4) per case and writing JSONL.
+
+---
