@@ -724,3 +724,135 @@ Both occurrences corrected. The figure had been asserted, never checked.
 ### Status
 Metric IDs are now consistent across outline, code and tests. Chapter 5 can be
 written without contradicting the artefact.
+
+---
+
+## 2026-09-11 — First live harness run (infrastructure, no change to the system)
+
+### What unblocked it
+The lab Spark was reachable again after the admin restored access. Its address had
+changed (`10.246.27.160` -> `10.246.14.123`); `uptime` reported 35 days, which
+retrospectively **falsifies the earlier diagnosis that the host was powered off**.
+A firewall DROP and a dead host produce an identical signature from the client
+side, and I asserted the wrong one. Recorded here because the same ambiguity will
+recur.
+
+Ollama is not exposed on the network; port 11434 is reachable only through an SSH
+tunnel, which does not persist between sessions and must be re-established:
+```
+ssh -N -f -o ExitOnForwardFailure=yes -L 11434:localhost:11434 dsalgado@10.246.14.123
+```
+
+### Result
+A 2-case pilot ran `orchestrator.run_sync` end to end for the first time. Both
+hard gates were clean:
+- `snapshots_missed == 0` — every fetch was served from `eval/snapshots/`, so no
+  case silently escaped to the live network.
+- `calls_without_token_data == 0` — **this is the live verification C1/C2 had been
+  waiting for.** Token extraction was previously built but unexercised; it is now
+  confirmed against real Ollama responses. The Gemini thinking-token path remains
+  unverified, because that API key is suspended.
+
+`eval/summarise.py` executed against real output for the first time.
+
+### Two defects the run exposed
+Neither is caused by this change; both were pre-existing and only became visible
+once the pipeline was actually driven over real inputs.
+
+- **Defect 8 — intent misrouting.** Addressed by Change 8 below.
+- **Defect 9 — page extraction can yield near-zero text.** `_extract_page_content`
+  returned 0 and 12 characters for two of the three pages in the pilot. The
+  snapshot builder's >=2000-character threshold is applied to the *combined* text
+  of all of a rule's references, so a case containing one rich page and several
+  empty ones still enters the dataset. **Open.**
+
+### Status
+Harness verified live. Defect 7 is now fully closed. Cost instrumentation is no
+longer "built, unverified" on the Ollama path.
+
+---
+
+## 2026-09-13 — Change 8: short-circuit bare-URL input to rule generation
+
+### Motivation (defect 8)
+The first live run showed a case fetching **no** snapshot despite having one
+available. Tracing it: `classify_intent` (`orchestrator.py:48`) had routed the
+input to `question`, and `run_sync:129` returns a conversational answer for
+`chat`/`question` **before** the pipeline starts. All seven grounding stages are
+skipped, so the page is never retrieved.
+
+The failure is worse than a skipped fetch. `handle_conversational` still receives
+RAG context and still emits a plausible-looking Sigma rule — one written from the
+**URL string alone**. It looks like a normal result. Nothing in the output marks
+it as ungrounded.
+
+Measured on the 30 real CTI reference URLs the evaluation uses:
+
+| Routed intent | Count |
+|---|---|
+| `generate_rule` (correct) | 13 |
+| `question` | 14 |
+| `chat` | 3 |
+
+**17 of 30 (57%) of real inputs were never grounded.** The prevalence matters
+because `data/sessions.json` shows 28 of 30 real user messages are bare URLs —
+this is the dominant usage mode, not an edge case.
+
+Root cause is in the prompt: the four few-shot examples in
+`prompts.py:12` (`INTENT_CLASSIFICATION`) **contain no URL at all**. A bare link
+has no instruction verb, so the classifier has nothing to anchor on and the
+decision is close to arbitrary.
+
+### Design decisions
+| Decision | Rationale |
+|---|---|
+| Short-circuit in code, not another few-shot example | An added example would shift the distribution without bounding it. A deterministic rule is testable offline and cannot regress with a model swap |
+| Fix inside `classify_intent` rather than at the call sites | It is invoked from two places — `run_sync:125` and the streaming path at `:209`. Patching the method covers both and cannot drift apart |
+| Return **before** any LLM call | Also removes one economy-tier call per URL request. A test asserts this by injecting a client that raises if called |
+| Trigger on "bare" URL, not "contains a URL" | "Can you explain what this article says? <url>" is a genuine question. Forcing every URL-bearing message into generation would break refinement and Q&A |
+| Threshold: fewer than 10 alphanumeric characters outside the URLs | Tolerates trailing filler ("please", "thanks") while any real sentence exceeds it. The constant is named and commented, not inline |
+| Reasoning string states the route was forced | The decision remains auditable in the returned metadata rather than looking like a model judgement |
+
+### Verification
+1. **18 offline tests** (`tests/test_intent_routing.py`), no LLM and no network:
+   parametrised positives (single URL, multiple URLs, surrounding whitespace,
+   trailing filler, trailing newline) and negatives (empty, whitespace, greeting,
+   question, prose rule request, refinement, question *about* a URL, refinement
+   citing a URL), plus two wiring tests — one asserting no LLM call occurs on the
+   short-circuit, one asserting prose still reaches the model.
+2. **Re-measured the same 30 URLs: 30/30 (100%) now route to `generate_rule`**,
+   from 13/30.
+3. **Regression probe, 5/5 still classified correctly by the LLM** — `chat`,
+   `question`, `generate_rule`, `refine_rule`, and a genuine question *about* a
+   URL. This is the evidence the rule is not over-broad.
+4. **Pilot re-run, same two cases, before vs after:**
+
+   | Case | snapshots served | LLM calls | rules produced | tokens | wall time |
+   |---|---|---|---|---|---|
+   | `5b2bbc47` before | 0 | 2 | 1 | 3,099 | 13s |
+   | `5b2bbc47` after | **1** | **5** | **3** | 36,529 | 112s |
+   | `0d0d9a8a` before | 3 | 5 | 2 | 38,328 | 79s |
+   | `0d0d9a8a` after | 3 | 4 | 3 | 29,317 | 82s |
+
+   Case `5b2bbc47` is the proof: it had previously been answered conversationally
+   and is now fetched and processed by the full pipeline. Both cases produced
+   parsing rules; both gates stayed at zero.
+5. Full suite **103 passed** (85 prior + 18 new), offline.
+
+### Limitations to disclose
+- The before/after quality comparison is **n=2**. It demonstrates the mechanism
+  changed, and nothing about score improvement. Every number produced by the
+  harness before this change was measured on a pipeline that skipped grounding on
+  roughly half its inputs and must be treated as invalid.
+- Cost moves the wrong way by design: correct grounding costs ~2.5x the LLM calls
+  and ~8x the wall time on the affected case. Correctness was bought with compute.
+- The 10-character threshold is a heuristic tuned against 35 observed inputs. It
+  is defensible as a bound, not as an optimum.
+- The underlying prompt weakness is untouched — this constrains the classifier's
+  input rather than improving the classifier.
+- Not an ablation arm: there is no flag to disable it, so the 57% figure is
+  reproducible only by reverting the commit.
+
+### Status
+Defect 8 closed. Defect 9 remains open and blocks trusting per-case content
+scores, because a case can still enter the dataset with almost no extracted text.

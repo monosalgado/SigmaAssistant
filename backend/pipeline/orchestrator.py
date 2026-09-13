@@ -11,6 +11,7 @@ Optimized for Gemini free tier:
 
 from __future__ import annotations
 import json
+import re
 import datetime
 from typing import Generator
 
@@ -23,6 +24,32 @@ from backend.pipeline.stage_analysis import AnalysisStage
 from backend.pipeline.stage_generate import GenerateStage
 from backend.pipeline.stage_review import ReviewStage
 from backend.pipeline import prompts
+
+
+_URL_RE = re.compile(r"https?://\S+")
+
+# Characters of non-URL prose tolerated before we stop treating the input as a
+# bare URL drop. Allows trailing filler ("please", "thanks") but any real
+# sentence has more than this and is sent to the LLM classifier instead.
+_BARE_URL_PROSE_TOLERANCE = 10
+
+
+def is_bare_url_input(message: str) -> bool:
+    """True if the message is essentially just URL(s) with no substantive prose.
+
+    Pasting a bare CTI link is by far the most common way this app is used, but
+    such input contains no instruction verb, so the LLM intent classifier has
+    nothing to anchor on and misroutes it to "question"/"chat" about half the
+    time. That path skips every grounding stage, so the page is never fetched
+    and the rule is written from the URL string alone.
+    """
+    if not message:
+        return False
+    if not _URL_RE.search(message):
+        return False
+    remainder = _URL_RE.sub(" ", message)
+    prose_chars = sum(1 for ch in remainder if ch.isalnum())
+    return prose_chars < _BARE_URL_PROSE_TOLERANCE
 
 
 class PipelineOrchestrator:
@@ -49,6 +76,12 @@ class PipelineOrchestrator:
         """Classify user intent to decide whether to run the full pipeline.
         Uses FAST model - simple classification task.
         """
+        if is_bare_url_input(message):
+            return {
+                "intent": "generate_rule",
+                "reasoning": "Input is a bare URL; routed to rule generation without classification",
+            }
+
         history_text = ""
         if history:
             for msg in history[-6:]:
