@@ -856,3 +856,92 @@ decision is close to arbitrary.
 ### Status
 Defect 8 closed. Defect 9 remains open and blocks trusting per-case content
 scores, because a case can still enter the dataset with almost no extracted text.
+
+---
+
+## 2026-09-13 — Change 9: assign rule identifiers in code, not in the model
+
+### Motivation (defect 10)
+Found by running the app end to end against the Bumblebee DFIR report while
+preparing a demo. The generated rule failed pySigma outright:
+
+```
+id: 5a3b4c5d-6e7f-8g9h-1i2j-3k4l5m6n7o8p
+-> SigmaIdentifierError: Sigma rule identifier must be an UUID
+```
+
+`g, h, i, j, k, l, m, n, o` are not hexadecimal. The model produced text with
+the *shape* of a UUID and none of the constraints.
+
+The consequence is disproportionate to the cause. `id:` carries no detection
+semantics, but pySigma rejects the rule at **parse** time, so the failure
+cascades: **S1 records `parses: false`, and S2–S5 are undefined because there is
+no parsed rule to score.** A rule whose detection logic may be perfectly sound
+contributes a total miss on every static metric. It also short-circuits
+`stage_review.py:167`, which skips LLM review entirely when a syntax error is
+present, and burns the single permitted regeneration on a cosmetic field.
+
+This is a **measurement-integrity defect before it is a product defect**: it
+depresses the headline validity metric for a reason unrelated to the capability
+being measured.
+
+### Design decisions
+| Decision | Rationale |
+|---|---|
+| Fix in code, not by strengthening the prompt | `prompts.py:246` already says "id (valid UUID)" and the model ignored it. Generating a random unique identifier is not a language-modelling task — no amount of prompting makes sampling produce guaranteed-hex output |
+| Repair after generation rather than pre-seeding an id into the prompt | Pre-seeding spends context tokens on a value the model may still overwrite. Post-hoc repair is unconditional |
+| Validate with `uuid.UUID()`, not a regex | The regex would encode a second, independently-wrong definition of the format. The stdlib parser is the same authority pySigma uses |
+| Replace only when invalid; never rewrite a good id | A regenerated rule keeps its identifier across the retry, so the id remains stable when it was already legal |
+| `id:` matched anchored at column 0 | A nested `id:` inside `detection.selection` is a **log field name**, not the rule identifier. Rewriting it would corrupt the detection logic. Covered by a test |
+| `re.MULTILINE` across the whole document | A multi-document YAML with a valid first id must not mask an invalid second one |
+| Insert after `title:` when `id:` is absent | Preserves SigmaHQ field order, so the output stays diff-comparable with the gold corpus |
+| Count replacements into `context["generation"]["ids_replaced"]` | The substitution rate is itself a finding. Silently correcting it would hide how often the model fails this constraint |
+
+### Verification
+1. **Against the real failing rule** captured from the live run:
+   `parses: False -> True`, `replaced = True`, 0 errors, 1 remaining warning
+   (an unrelated ATT&CK tag issue). The new id is a real UUIDv4.
+2. **19 offline tests** (`tests/test_rule_id_normalisation.py`), no LLM, no
+   network. Parametrised invalid ids — including the exact observed string —
+   and valid ids in bare, quoted and uppercase form. Structural tests assert
+   that a YAML round-trip differs in the `id` key **and nothing else**, that a
+   nested `id:` field name is untouched, that both documents of a two-rule YAML
+   are checked, and that 20 successive calls yield 20 distinct ids.
+3. **End-to-end claim asserted directly**: the test feeds the original to
+   `SigmaCollection.from_yaml` under `pytest.raises(SigmaError)`, then feeds the
+   repaired version and asserts it parses. The fix cannot silently stop working.
+4. Full suite **122 passed** (103 prior + 19), offline.
+
+### Limitations to disclose
+- **Frequency is unmeasured.** Observed in 1 of 1 live generations, which is not
+  a rate. `ids_replaced` is now recorded, so the 60-case run will produce a real
+  denominator. Do not cite a percentage before then.
+- The rule is no longer reproducible from the same inputs, because the id is
+  drawn from a fresh UUIDv4 each run. Acceptable — the field is meaningless by
+  construction — but it means byte-exact output comparison across runs must
+  exclude `id:`.
+- This **repairs the symptom, not the cause**: the generation stage still emits
+  invalid identifiers, and the same disregard for a stated format constraint
+  presumably affects other fields that are not this cheap to validate. Defect 5
+  (`json_mode=True` on the generation stage) is the more likely root cause and
+  remains open.
+- Any S1 validity figure measured before this commit is depressed by an unknown
+  amount for a non-semantic reason and should not be compared with figures after
+  it.
+
+### Related observation, NOT fixed (defect 11)
+The same run exposed a stage disagreement worth recording. The analysis stage
+recommended `process_creation / windows / sysmon` at **0.95 confidence**, and
+`logsource_primary` was `process_creation (Sysmon Event ID 1)`. The generated
+rule used `category: webserver_access_log` and described an "unauthenticated
+SSRF to /rs.js" — not what the report documents. Extraction was sound
+(`rundll32.exe`, `tamirlan.dll`, `lsass.exe` via procdump, 23 PoC snippets); the
+generation stage followed `attack_vector` and ignored `logsource_suggestions`.
+
+This bears directly on ablation **A5** (is the pipeline decomposition earning
+its cost): here one stage's output silently overrode a higher-confidence one.
+Logged, not fixed — it needs the 60-case run to establish whether it is
+systematic or a single bad case.
+
+### Status
+Defect 10 closed. Defects 4, 5, 6, 9 and 11 remain open.

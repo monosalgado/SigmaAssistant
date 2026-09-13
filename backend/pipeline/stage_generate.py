@@ -7,10 +7,61 @@ products, TTPs, or log formats is hardcoded in this file.
 
 import json
 import datetime
+import re
+import uuid
 from backend.pipeline.base_stage import PipelineStage
 from backend.pipeline.stage_attack_vector import AttackVectorStage
 from backend.pipeline import prompts
 from backend.pipeline import domain_knowledge as dk
+
+
+# Top-level `id:` line. Anchored at column 0 so nested mapping keys are never
+# touched; MULTILINE so multi-document YAML has every rule's id checked.
+_ID_LINE_RE = re.compile(r"^id:[ \t]*(.*)$", re.MULTILINE)
+_TITLE_LINE_RE = re.compile(r"^title:.*$", re.MULTILINE)
+
+
+def _is_valid_uuid(value: str) -> bool:
+    try:
+        uuid.UUID(value.strip().strip("'\""))
+    except (ValueError, AttributeError, TypeError):
+        return False
+    return True
+
+
+def normalize_rule_id(yaml_content: str):
+    """Replace a missing or non-UUID top-level `id:` with a fresh UUIDv4.
+
+    An LLM cannot generate a random unique identifier. It reliably produces
+    UUID-*shaped* text that often contains non-hex characters, e.g.
+    `5a3b4c5d-6e7f-8g9h-1i2j-3k4l5m6n7o8p`. pySigma then rejects the entire
+    rule with SigmaIdentifierError, so a rule whose detection logic is fine
+    scores as invalid for a purely cosmetic reason. Assigning the value in code
+    removes the failure mode rather than asking the model to try harder.
+
+    Returns (yaml_content, replaced).
+    """
+    if not yaml_content:
+        return yaml_content, False
+
+    replaced = False
+
+    if _ID_LINE_RE.search(yaml_content):
+        def _fix(match):
+            nonlocal replaced
+            if _is_valid_uuid(match.group(1)):
+                return match.group(0)
+            replaced = True
+            return f"id: {uuid.uuid4()}"
+
+        return _ID_LINE_RE.sub(_fix, yaml_content), replaced
+
+    # No `id:` at all. Insert after `title:` to preserve SigmaHQ field order.
+    title = _TITLE_LINE_RE.search(yaml_content)
+    if title:
+        cut = title.end()
+        return f"{yaml_content[:cut]}\nid: {uuid.uuid4()}{yaml_content[cut:]}", True
+    return f"id: {uuid.uuid4()}\n{yaml_content}", True
 
 
 class GenerateStage(PipelineStage):
@@ -239,10 +290,23 @@ class GenerateStage(PipelineStage):
             result = {"rules": [], "notes": f"Generation error: {e}"}
 
         rules = result.get("rules", [])
+
+        # The model's `id:` is not trustworthy — see normalize_rule_id. Counted
+        # rather than silently corrected, so the rate stays measurable.
+        ids_replaced = 0
+        for rule in rules:
+            fixed, replaced = normalize_rule_id(rule.get("yaml_content", ""))
+            if replaced:
+                rule["yaml_content"] = fixed
+                ids_replaced += 1
+
         context["generation"] = {
             "rules": rules,
             "notes": result.get("notes", ""),
+            "ids_replaced": ids_replaced,
         }
 
+        if ids_replaced:
+            print(f"[{self.name}] Replaced {ids_replaced} invalid/missing rule id(s)")
         print(f"[{self.name}] Generated {len(rules)} rule(s)")
         return context
