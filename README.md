@@ -119,10 +119,8 @@ backend/
 │   ├── orchestrator.py
 │   ├── base_stage.py
 │   ├── prompts.py            All LLM prompt templates
-│   ├── schemas.py
 │   ├── domain_knowledge.py   RAG context formatting helpers
-│   ├── stage_*.py            One file per stage
-│   └── archive/              Superseded stages, kept for reference
+│   └── stage_*.py            One file per stage
 └── translation/              Sigma → LEQL converter
 scripts/
 ├── ingest_cwe.py

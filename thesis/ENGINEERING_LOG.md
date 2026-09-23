@@ -1485,3 +1485,29 @@ this file.** The Ollama key added on 2026-09-23 lives only in the gitignored
 None on the measurements: every run since 2026-09-11 has been all-local on
 Ollama. It does mean the Gemini thinking-token path of C1 stays unverified, and
 contribution 2 (cloud/local routing) stays blocked unless a new key is created.
+
+---
+
+## 2026-09-23 — Housekeeping: `schemas.py` removed (no change to behaviour)
+
+The housekeeping entry above kept `backend/pipeline/schemas.py` pending a
+decision. Checked against the real pipeline before deciding:
+
+- Imported by nothing (import graph from every entry point) — so nothing
+  validated any data against it.
+- It had drifted from what the pipeline actually produces. `PipelineMetadata`
+  declared 8 fields; the dict `orchestrator._format_output` really returns has
+  15. Ten real fields were absent — including `attack_vector` and
+  `coverage_check` — and three declared fields no longer exist. There was no
+  model for the attack-vector output at all, although that stage anchors the
+  rest of the pipeline.
+
+A schema that nothing enforces and that describes a different system misleads
+more than it documents. Removed; it remains in git history. The assistant's
+report (plan Phase 3) will get its own contract, one the code actually checks.
+Also removed the file, and the `archive/` directory deleted earlier, from the
+README's project tree.
+
+Verified: no remaining references in code or documentation; full suite **139
+passed**; `backend.main` imports. Pydantic stays a dependency (`backend/main.py`
+uses it for the API models).
