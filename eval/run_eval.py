@@ -322,6 +322,62 @@ def run_case(agent, case: dict, config: dict, no_web_enrich: bool) -> dict:
     return row
 
 
+def unmeasured_reason(row: dict):
+    """Why a case's row is not a measurement of the pipeline, or None if it is.
+
+    A failed LLM call means some stage ran on its empty default instead of the
+    model's answer, so the case measured a degraded pipeline. Two shapes occurred
+    (defect 12): every call failing within seconds while the backend was
+    unreachable, and one failed call in a case that then hung for hours but still
+    produced rules. Both are caught here; a pipeline crash with every call
+    succeeding is not, because that is a finding about the pipeline itself.
+    """
+    calls = row.get("llm_calls") or []
+    failed = [c for c in calls if not c.get("ok", True)]
+    if not failed:
+        return None
+    stages = sorted({c.get("stage") or "unknown" for c in failed})
+    return (f"{len(failed)} of {len(calls)} LLM calls failed "
+            f"(stages: {', '.join(stages)}); first error: {failed[0].get('error')}")
+
+
+def run_cases(agent, cases: list, config: dict, no_web_enrich: bool, out_file):
+    """Run cases in order, appending one JSON row per case to `out_file`.
+
+    Stops at the first case with a failed LLM call and does NOT write its row, so
+    rerunning the same command resumes from that case instead of skipping it.
+    Returns (n_ok, n_failed, stopped), where `stopped` is None when every case ran.
+    """
+    n_ok = n_failed = 0
+    stopped = None
+    for idx, case in enumerate(cases, 1):
+        row = run_case(agent, case, config, no_web_enrich)
+        reason = unmeasured_reason(row)
+        if reason:
+            stopped = (f"STOPPED at case {case['rule_id']} ({idx}/{len(cases)}): {reason}. "
+                       "Its row was NOT written. Check the backend (VPN, SSH tunnel, "
+                       "Ollama), then rerun the same command to resume from this case.")
+            print("\n" + stopped)
+            break
+
+        if row["error"] is None:
+            n_ok += 1
+        else:
+            n_failed += 1
+
+        out_file.write(json.dumps(row) + "\n")
+        out_file.flush()  # a crash must not lose completed cases
+
+        scores = row.get("scores") or {}
+        validity = (scores.get("validity") or {}).get("parses")
+        tokens = row["telemetry"].get("total_tokens")
+        print(f"[{idx}/{len(cases)}] {case['rule_id'][:8]} "
+              f"{case['category']:<18} valid={validity} "
+              f"rules={row['n_rules']} {row['elapsed_s']}s "
+              f"tokens={tokens} {'ERROR: ' + row['error'] if row['error'] else ''}")
+    return n_ok, n_failed, stopped
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", default="eval/manifest.jsonl")
@@ -403,33 +459,19 @@ def main() -> None:
               "(~1 call/case, rate-limited to ~9 RPM). Every other stage is local. "
               "Set LLM_PROVIDER=ollama for a zero-cost run.")
 
-    n_ok = n_failed = 0
     started_all = time.time()
-
     with open(out_path, "a", encoding="utf-8") as out_file:
-        for idx, case in enumerate(todo, 1):
-            row = run_case(agent, case, config, args.no_web_enrich)
-            if row["error"] is None:
-                n_ok += 1
-            else:
-                n_failed += 1
-
-            out_file.write(json.dumps(row) + "\n")
-            out_file.flush()  # a crash must not lose completed cases
-
-            scores = row.get("scores") or {}
-            validity = (scores.get("validity") or {}).get("parses")
-            tokens = row["telemetry"].get("total_tokens")
-            print(f"[{idx}/{len(todo)}] {case['rule_id'][:8]} "
-                  f"{case['category']:<18} valid={validity} "
-                  f"rules={row['n_rules']} {row['elapsed_s']}s "
-                  f"tokens={tokens} {'ERROR: ' + row['error'] if row['error'] else ''}")
+        n_ok, n_failed, stopped = run_cases(agent, todo, config, args.no_web_enrich, out_file)
 
     elapsed = time.time() - started_all
     print(f"\n--- Done in {elapsed/60:.1f} min ---")
     print(f"  succeeded: {n_ok}")
     print(f"  failed   : {n_failed}")
     print(f"  output   : {out_path}")
+    if stopped:
+        # Non-zero, so a wrapper can tell "stopped early" from "finished".
+        print("\n" + stopped)
+        raise SystemExit(2)
     print("\nSummarise with: .venv/bin/python eval/summarise.py " + str(args.out))
 
 

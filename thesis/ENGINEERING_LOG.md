@@ -1660,3 +1660,69 @@ the row). Full suite **156 passed**; `backend.main` imports.
 ### Status
 Plan task 1.1 complete: stage labels (Change 13), crashes reach the harness
 (Change 14), intermediate results kept (Change 15).
+
+---
+
+## 2026-09-23 — Change 16 (plan 1.2): a case with a failed LLM call stops the run instead of being written (defect 12)
+
+### Motivation (defect 12)
+Every stage catches its own failed LLM call and continues on an empty default.
+With the backend unreachable a case therefore "completed" in seconds with zero
+rules, and its row was written; because resume skips any `rule_id` already in
+the output, the case was never rerun. 14 of 21 rows of the 2026-09-13 attempt
+were such rows. Until now only an external watchdog script caught this, by
+purging suspicious rows after the fact.
+
+### The rule — broader than the plan's first wording
+The plan said "refuse to write a row for a case with zero successful LLM
+calls". Re-reading the committed evidence showed that is too narrow. The 14
+bad rows have two shapes: 13 where every call failed within ~6 s, and one
+(`43259cc4`) with **1 failed call of 5** that hung for 12,990 s and still wrote
+rules. A zero-successes rule misses the second. The rule implemented is:
+
+> **A row is written only if every LLM call of the case succeeded.** Otherwise
+> the run stops at that case without writing its row, naming the case, the
+> failed stages and the first error; rerunning the same command resumes from
+> that case. The process exits with status 2, so a wrapper can tell "stopped"
+> from "finished".
+
+A pipeline **crash** whose LLM calls all succeeded is still written, as an
+error row (Change 14): that is a finding about the pipeline, not about the
+connection.
+
+### Design decisions
+| Decision | Rationale |
+|---|---|
+| Decide from the recorded calls (`llm_calls[].ok`), not from elapsed time | Time was a proxy with two thresholds (under 30 s, over 1000 s) and caught the two shapes by different rules. The failed call is the cause itself |
+| Stop, rather than skip and continue | A failed call almost always means the backend is down; continuing would fail every remaining case. Stopping loses nothing, since the unwritten case reruns on resume |
+| Loop moved into `run_cases()` | Testable offline with a scripted stand-in pipeline that records successful and failed calls through the real telemetry |
+| The message states which stages failed | Uses the stage labels from Change 13 |
+
+### Verification
+Tests written first. After extracting the loop *unchanged*, the three stop tests
+**failed** — the failed case's row was written — reproducing the defect. **5
+offline tests** (`tests/test_eval_runner.py`): a clean run writes every case;
+all calls failing stops without writing the row and never starts the next case;
+one failed call of five also stops; a crash with every call successful is
+written as an error row and the run continues; the stop message says how to
+resume. Full suite **161 passed**; `--dry-run` unchanged.
+
+**Against the real evidence** (committed files, no fakes):
+`baseline60.jsonl.corrupt.bak` → **14 of 21 rows refused** — exactly the 13 fast
+rows plus the one that hung — each with `APIConnectionError`.
+`baseline60.jsonl` and `baseline60.prefix-fix.bak` → **0 of 120 refused**.
+
+### Consequences
+- Gate 3 (`n_errors == 0`) now holds by construction for every row a run writes.
+  The five gates are still checked on every file, since they cost nothing.
+- The external watchdog's purge logic is obsolete. What remains useful is
+  relaunching after a reconnect when the run exits with status 2 — plan 1.4.
+
+### Limitation
+A case that fails *deterministically* on one LLM call (for example a request the
+server always rejects) would stop the run at the same place every time. That is
+visible, not silent, and has not been observed; it would need an explicit
+decision if it happens.
+
+### Status
+Defect 12 fixed.

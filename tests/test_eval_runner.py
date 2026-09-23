@@ -20,6 +20,7 @@ from eval.run_eval import (
     snapshot_key,
     extract_rule_yamls,
     run_case,
+    run_cases,
     snapshots_instead_of_network,
     stratified_sample,
     web_enrichment_disabled,
@@ -385,3 +386,94 @@ def test_missing_metadata_does_not_break_the_row():
                                          "pipeline_metadata": None}))
     row = run_case(agent, _case(), config={}, no_web_enrich=True)
     assert row["error"] is None and row["pipeline"] == {}
+
+
+# --------------------------------------------------------------------------
+# A case with a failed LLM call is not written; the run stops (plan 1.2, defect 12)
+# --------------------------------------------------------------------------
+# With the backend unreachable, every stage swallows its failed call and the case
+# "completes" in seconds with zero rules. Written, that row made resume skip the
+# case. The committed evidence (baseline60.jsonl.corrupt.bak) also holds a second
+# shape: a case that hung for 3.6 h with one failed call of five and still wrote
+# rules. Both must stop the run instead.
+
+import io
+import json as _json
+
+from backend.telemetry import TELEMETRY, stage_scope
+
+
+class _ScriptedOrchestrator:
+    """Per case (keyed by its URL): how many LLM calls succeed and fail, and
+    whether the pipeline then raises."""
+
+    def __init__(self, script):
+        self.script, self.ran = script, []
+
+    def run_sync(self, description, history=None, media_file=None):
+        self.ran.append(description)
+        ok, failed, raises = self.script[description]
+        for i in range(ok + failed):
+            with stage_scope("analysis" if i < ok else "review"):
+                TELEMETRY.record(backend="ollama", tier="economy", model="m",
+                                 operation="generate", latency_s=0.1, prompt_chars=1,
+                                 ok=i < ok, error=None if i < ok else "connection refused")
+        if raises:
+            raise raises
+        return {"rule": "```yaml\n" + GENERATED_RULE + "```", "context": {},
+                "pipeline_metadata": {}}
+
+
+def _cases_for(*names):
+    out = []
+    for name in names:
+        case = _case()
+        case["rule_id"], case["urls"] = name, [f"https://example.com/{name}"]
+        out.append(case)
+    return out
+
+
+def _run(script_by_name, names):
+    orchestrator = _ScriptedOrchestrator(
+        {f"https://example.com/{k}": v for k, v in script_by_name.items()})
+    out = io.StringIO()
+    result = run_cases(_Agent(orchestrator), _cases_for(*names), {}, True, out)
+    rows = [_json.loads(line) for line in out.getvalue().splitlines()]
+    return result, rows, orchestrator.ran
+
+
+def test_clean_run_writes_every_case():
+    (n_ok, n_failed, stopped), rows, _ = _run(
+        {"a": (3, 0, None), "b": (3, 0, None)}, ["a", "b"])
+    assert (n_ok, n_failed, stopped) == (2, 0, None)
+    assert [r["rule_id"] for r in rows] == ["a", "b"]
+
+
+def test_all_calls_failed_stops_without_writing_the_row():
+    """The defect-12 signature: backend unreachable, every call fails."""
+    (n_ok, _, stopped), rows, ran = _run(
+        {"a": (3, 0, None), "b": (0, 4, None), "c": (3, 0, None)}, ["a", "b", "c"])
+    assert [r["rule_id"] for r in rows] == ["a"]      # b not written
+    assert len(ran) == 2                               # c never started
+    assert "b" in stopped and "4 of 4" in stopped
+    assert n_ok == 1
+
+
+def test_one_failed_call_also_stops_the_run():
+    """The second shape in the evidence: a partial failure that still wrote rules."""
+    (_, _, stopped), rows, _ = _run({"a": (4, 1, None)}, ["a"])
+    assert rows == []
+    assert "1 of 5" in stopped and "review" in stopped
+
+
+def test_crash_with_every_call_ok_is_written_as_an_error_row():
+    """A pipeline bug is a finding about the pipeline, not a connection problem."""
+    (n_ok, n_failed, stopped), rows, _ = _run(
+        {"a": (3, 0, ValueError("bug")), "b": (3, 0, None)}, ["a", "b"])
+    assert stopped is None and (n_ok, n_failed) == (1, 1)
+    assert rows[0]["error"] == "ValueError: bug"
+
+
+def test_the_stop_message_says_how_to_resume():
+    (_, _, stopped), _, _ = _run({"a": (0, 2, None)}, ["a"])
+    assert "rerun the same command" in stopped.lower()
