@@ -35,14 +35,39 @@ eval/scorers.py.
 
 Recording is always on. The cost is one append to a bounded deque per LLM call,
 which is negligible against a network round trip.
+
+Each call is attributed to a stage
+----------------------------------
+Every call used to record operation="generate", so the stages of one case could
+only be told apart by call order, which shifts whenever the PoC stage or a
+regeneration runs. `stage_scope()` sets the current stage in a context variable
+and `record()` reads it, so the clients need no stage argument and every call made
+inside a stage carries its name. Calls made outside any stage record None.
 """
 
 from __future__ import annotations
 
 import threading
 from collections import deque
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import asdict, dataclass
-from typing import Any, Optional
+from typing import Any, Iterator, Optional
+
+
+# The pipeline stage making the current LLM call. A context variable rather than
+# a global: the web server runs requests on worker threads, and each keeps its own.
+_current_stage: ContextVar[Optional[str]] = ContextVar("llm_stage", default=None)
+
+
+@contextmanager
+def stage_scope(name: str) -> Iterator[None]:
+    """Attribute every LLM call made inside this block to stage `name`."""
+    token = _current_stage.set(name)
+    try:
+        yield
+    finally:
+        _current_stage.reset(token)
 
 
 @dataclass
@@ -65,6 +90,7 @@ class LLMCall:
     total_tokens: Optional[int] = None
     ok: bool = True
     error: Optional[str] = None
+    stage: Optional[str] = None  # None = made outside any pipeline stage
 
 
 def extract_gemini_usage(response: Any) -> dict:
@@ -136,6 +162,7 @@ class LLMTelemetry:
             total_tokens=usage.get("total_tokens"),
             ok=ok,
             error=error,
+            stage=_current_stage.get(),
         )
         with self._lock:
             self._calls.append(call)

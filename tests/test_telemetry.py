@@ -20,6 +20,7 @@ from backend.telemetry import (
     LLMTelemetry,
     extract_gemini_usage,
     extract_openai_usage,
+    stage_scope,
 )
 
 
@@ -242,3 +243,90 @@ def test_ollama_failure_is_recorded_and_reraised(monkeypatch):
     assert summary["n_calls"] == 1
     assert summary["n_errors"] == 1
     assert fake_telemetry.calls()[0].ok is False
+
+
+# --------------------------------------------------------------------------
+# Stage attribution (plan 1.1a)
+# --------------------------------------------------------------------------
+# Every recorded call used to read operation="generate", so the stages of a case
+# could only be told apart by call order, which shifts whenever the PoC stage or a
+# regeneration runs.
+
+def _fake_ollama(monkeypatch, create):
+    """The real OllamaLLMClient, with only its network call replaced."""
+    from backend import telemetry as telemetry_module
+    from backend.llm_client import OllamaLLMClient
+
+    fake_telemetry = LLMTelemetry()
+    monkeypatch.setattr(telemetry_module, "TELEMETRY", fake_telemetry)
+    monkeypatch.setattr("backend.llm_client.TELEMETRY", fake_telemetry)
+    client = OllamaLLMClient("http://localhost:11434", "qwen3-coder:30b")
+    monkeypatch.setattr(
+        client, "_openai", _Obj(chat=_Obj(completions=_Obj(create=create))))
+    return client, fake_telemetry
+
+
+def _ok_response(**kwargs):
+    return _Obj(
+        choices=[_Obj(message=_Obj(content='{"intent": "question", "reasoning": "x"}'))],
+        usage=_Obj(prompt_tokens=1, completion_tokens=1, total_tokens=2),
+    )
+
+
+def test_call_outside_any_stage_has_no_stage(tel):
+    _record(tel)
+    assert tel.calls()[0].stage is None
+
+
+def test_call_inside_a_stage_scope_is_labelled(tel):
+    with stage_scope("analysis"):
+        _record(tel)
+    _record(tel)
+    assert [c.stage for c in tel.calls()] == ["analysis", None]
+
+
+def test_stage_scope_is_restored_after_an_exception(tel):
+    with pytest.raises(RuntimeError):
+        with stage_scope("review"):
+            raise RuntimeError("stage failed")
+    _record(tel)
+    assert tel.calls()[0].stage is None
+
+
+def test_stage_label_survives_serialisation(tel):
+    """The harness writes as_dicts() into each result row."""
+    with stage_scope("generation"):
+        _record(tel)
+    assert tel.as_dicts()[0]["stage"] == "generation"
+
+
+def test_pipeline_stage_labels_the_real_client_call(monkeypatch):
+    from backend.pipeline.stage_attack_vector import AttackVectorStage
+
+    client, fake_telemetry = _fake_ollama(monkeypatch, _ok_response)
+    AttackVectorStage(client, "qwen3-coder:30b").llm_call("a prompt", economy=True)
+    assert fake_telemetry.calls()[0].stage == "attack_vector"
+
+
+def test_failed_call_is_still_attributed_to_its_stage(monkeypatch):
+    """A failed call must say which stage lost its answer."""
+    from backend.pipeline.stage_review import ReviewStage
+
+    def boom(**kwargs):
+        raise ConnectionError("connection refused")
+
+    client, fake_telemetry = _fake_ollama(monkeypatch, boom)
+    with pytest.raises(ConnectionError):
+        ReviewStage(client, "qwen3-coder:30b").llm_call("a prompt", economy=True)
+    call = fake_telemetry.calls()[0]
+    assert (call.stage, call.ok) == ("review", False)
+
+
+def test_orchestrator_intent_call_is_labelled(monkeypatch):
+    """Intent classification calls the client directly, not through a stage."""
+    from backend.pipeline.orchestrator import PipelineOrchestrator
+
+    client, fake_telemetry = _fake_ollama(monkeypatch, _ok_response)
+    PipelineOrchestrator(client, "qwen3-coder:30b", vector_store=None).classify_intent(
+        "how do I write a rule for lateral movement?")
+    assert fake_telemetry.calls()[0].stage == "intent_classification"

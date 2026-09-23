@@ -5,6 +5,8 @@ from typing import Any, Callable, Optional
 import json
 import time
 
+from backend.telemetry import stage_scope
+
 
 # Upper bound on how much extracted source text a stage puts into its prompt.
 # The attack-vector and analysis stages used to read only the first 8000 and
@@ -56,14 +58,17 @@ class PipelineStage(ABC):
         """
         for attempt in range(max_retries + 1):
             try:
-                return self.client.generate(
-                    prompt=prompt,
-                    temperature=temperature,
-                    json_mode=json_mode,
-                    media_parts=media_parts,
-                    fast=fast,
-                    economy=economy,
-                )
+                # Labels the telemetry record with this stage, including a failed
+                # call and any fallback the hybrid client makes to Gemini.
+                with stage_scope(self.name):
+                    return self.client.generate(
+                        prompt=prompt,
+                        temperature=temperature,
+                        json_mode=json_mode,
+                        media_parts=media_parts,
+                        fast=fast,
+                        economy=economy,
+                    )
             except Exception as e:
                 err_str = str(e)
                 is_retryable = (

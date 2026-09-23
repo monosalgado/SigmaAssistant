@@ -24,6 +24,7 @@ from backend.pipeline.stage_analysis import AnalysisStage
 from backend.pipeline.stage_generate import GenerateStage
 from backend.pipeline.stage_review import ReviewStage
 from backend.pipeline import prompts
+from backend.telemetry import stage_scope
 
 
 _URL_RE = re.compile(r"https?://\S+")
@@ -94,9 +95,10 @@ class PipelineOrchestrator:
         )
 
         try:
-            response_text = self.client.generate(
-                prompt, temperature=0.0, json_mode=True, economy=True
-            )
+            with stage_scope("intent_classification"):
+                response_text = self.client.generate(
+                    prompt, temperature=0.0, json_mode=True, economy=True
+                )
             result = json.loads(response_text)
             return result
         except Exception as e:
@@ -146,9 +148,10 @@ class PipelineOrchestrator:
         )
 
         try:
-            return self.client.generate(
-                prompt, temperature=0.7, json_mode=False, economy=True
-            )
+            with stage_scope("conversational"):
+                return self.client.generate(
+                    prompt, temperature=0.7, json_mode=False, economy=True
+                )
         except Exception as e:
             return f"I apologize, I encountered an error: {e}"
 

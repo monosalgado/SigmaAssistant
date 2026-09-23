@@ -1537,3 +1537,34 @@ No change to pipeline behaviour, so no measurement is needed.
 Left for the documentation rewrite (plan H5b): the setup documents are still
 Gemini-first, and `.env.example` still lists `gemini` as the only supported
 `LLM_PROVIDER`.
+
+---
+
+## 2026-09-23 — Change 13 (plan 1.1a): every LLM call records which stage made it
+
+### Motivation
+Each result row lists its LLM calls, but every call recorded
+`operation: "generate"`. The only way to tell the attack-vector call from the
+analysis call was their position in the list, and that shifts whenever the PoC
+stage finds code or a regeneration runs. The per-stage prompt sizes reported on
+2026-09-23 had to be restricted to the 18 cases with exactly four calls for this
+reason. Phase 1's diagnosis of the logsource failure needs to attribute tokens,
+time and failures to stages without guessing.
+
+### Design decisions
+| Decision | Rationale |
+|---|---|
+| A context variable set by `stage_scope()` and read by `LLMTelemetry.record()` | The clients stay untouched: the Ollama and Gemini clients already call `record()`, and the stage is picked up there. No signature change ripples through the clients |
+| Set in `PipelineStage.llm_call`, around the client call | One place covers every stage, including a failed call and the hybrid client's fallback to Gemini |
+| Context variable, not a global | The web server runs requests on worker threads; each thread keeps its own value, so concurrent requests cannot mislabel each other |
+| The orchestrator's two direct calls are labelled too (`intent_classification`, `conversational`) | They bypass `llm_call`. Calls outside any stage (e.g. translation) record `None`, which says so rather than guessing |
+| New field `stage` on `LLMCall`, default `None` | Older result files without the field remain readable |
+
+### Verification
+Tests written first; the three wiring tests were seen to fail before the stages
+set the label. **7 offline tests** in `tests/test_telemetry.py`: no stage outside
+a scope; labelled inside; restored after an exception; survives `as_dicts()`
+(what the harness writes); a real stage through the **real** `OllamaLLMClient`
+(only its network call faked) records its name; a *failed* call is still
+attributed to its stage; the orchestrator's intent call is labelled. Full suite
+**146 passed**; `backend.main` imports. No change to what the pipeline outputs.
