@@ -1445,3 +1445,43 @@ two failure shapes need different gates.
 Two further files remain uncommitted on disk, deliberately: `baseline60.2026-09-13.jsonl`
 (9 clean rows from the abandoned attempt) and `smoke.jsonl` (the 2-case preflight);
 nothing cites them. Nothing under `eval/results/` is deleted.
+
+---
+
+## 2026-09-23 — Security: the Gemini API key was exposed in public git history (key now deleted)
+
+### Finding
+During the repository audit, a scan of the old worktree found the **complete
+Gemini API key** — identical to the one in `.env` — inside `rest_list.txt`, a
+console log from the Windows period of the project. It was committed in
+`3b29a42` ("Full project upload for migration to Mac") and deleted in `7271080`;
+both commits are on the pushed `main`, and both GitHub repositories that carry
+this project are public. The key had been reported suspended since 2026-09-11
+(`403 CONSUMER_SUSPENDED`); public exposure is the likely reason — Google
+disables keys it finds on public GitHub. The key was deleted by the user on
+2026-09-23, so the copy in history is now inert.
+
+### Why an earlier check missed it
+An earlier `git log --all -S` search concluded the key was in no commit. That was
+wrong: `rest_list.txt` is **UTF-16** text (PowerShell output). Git sees its NUL
+bytes, classifies it as binary, and neither `-S` nor `git grep` (even with `-a`)
+matches an ASCII pattern against two-byte characters. The finding came from
+macOS `grep`, which decodes UTF-16 with a byte-order mark.
+
+### Verification that nothing else is exposed
+Every blob in the repository's history was scanned, decoding UTF-16 and
+NUL-heavy blobs first (17 of them): Google API keys, OpenAI-style keys, GitHub
+tokens, private-key headers and `OLLAMA_API_KEY` assignments. **One hit only —
+this file.** The Ollama key added on 2026-09-23 lives only in the gitignored
+`.env`.
+
+### Decisions
+- **History is not rewritten.** With the key deleted there is nothing left to
+  protect, and a rewrite would mean force-pushing both public repositories.
+- Lesson recorded for future scans: decode before searching; a clean
+  `git log -S` is not evidence of absence for non-UTF-8 files.
+
+### Effect on the thesis
+None on the measurements: every run since 2026-09-11 has been all-local on
+Ollama. It does mean the Gemini thinking-token path of C1 stays unverified, and
+contribution 2 (cloud/local routing) stays blocked unless a new key is created.
