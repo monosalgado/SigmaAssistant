@@ -1390,3 +1390,26 @@ write-up itself.
 Defect 15's harmful form reduced (p = 0.039); residual incidental-list noise and
 a separate web-telemetry bias remain. Next: the 60-case harness rerun to measure
 the effect on S1–S5.
+
+---
+
+## 2026-09-23 — Housekeeping: archived stages removed, stale worktree retired (no change to behaviour)
+
+From a read-only audit of the repository (import graph from every entry point:
+the web app, the evaluation scripts, the ingestion scripts and the tests).
+
+- **Removed `backend/pipeline/archive/`** — five stages from the original linear
+  pipeline (`stage_extract`, `stage_ttp_map`, `stage_logsource`, `stage_validate`,
+  `stage_optimize`) and their README. Nothing imported them, no document referred
+  to them, and their own README declared them safe to delete. They remain in git
+  history. Verified: full suite **139 passed**; the orchestrator and agent import.
+- **Retired the worktree `.claude/worktrees/kind-davinci`** (last worked on March
+  2026, never part of main). All its commits were already in main. Its 16
+  uncommitted files were first committed onto its own local branch
+  (`claude/kind-davinci`, `c871f69`) so nothing is lost: 13 were identical to
+  versions already in history and 3 were early drafts that main has since
+  superseded (every class and prompt template in them exists in main).
+
+Not removed, by decision: `backend/pipeline/schemas.py` is imported by nothing,
+but may be reused for the assistant's report contract (plan H6). Every result
+file under `eval/results/` stays.
