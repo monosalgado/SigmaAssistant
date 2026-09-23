@@ -251,6 +251,60 @@ def extract_rule_yamls(response_text: str) -> list:
 # Runner
 # --------------------------------------------------------------------------
 
+def run_case(agent, case: dict, config: dict, no_web_enrich: bool) -> dict:
+    """Run the pipeline on one case and return its result row."""
+    client = agent.client
+    TELEMETRY.reset()
+    started = time.time()
+    row = {
+        "rule_id": case["rule_id"],
+        "rule_path": case["rule_path"],
+        "title": case["title"],
+        "category": case["category"],
+        "product": case["product"],
+        "urls": case["urls"],
+        "text_chars": case["text_chars"],
+        "config": config,
+        "run_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    try:
+        with snapshots_instead_of_network(case["url_to_path"]) as shim, \
+                web_enrichment_disabled(client, no_web_enrich):
+            # run_sync, not agent.analyze_attack: the agent wraps this same call
+            # in a catch-all that returns the error as ordinary response text,
+            # which would turn a crashed case into a normal-looking row with
+            # zero rules. Called directly, a crash lands in the except below.
+            try:
+                result = agent.orchestrator.run_sync(description=" ".join(case["urls"]))
+            finally:
+                # Kept on a crash too, so gate 1 is computable for every row.
+                row["snapshots_served"] = shim.served
+                row["snapshots_missed"] = shim.missed
+
+        response_text = result.get("rule", "")
+        rules = extract_rule_yamls(response_text)
+        # Every generated rule is stored so best-of-N can be computed
+        # later without paying for another run; scoring uses the first,
+        # which is what a user sees.
+        row["n_rules"] = len(rules)
+        row["rules_yaml"] = rules
+        row["scores"] = score_case(rules[0], case["gold"]) if rules else \
+            score_case(response_text, case["gold"])
+        row["response_chars"] = len(response_text)
+        row["error"] = None
+    except Exception as exc:
+        row["error"] = f"{type(exc).__name__}: {exc}"
+        row["traceback"] = traceback.format_exc()[-1500:]
+        row["scores"] = None
+        row["n_rules"] = 0
+
+    row["elapsed_s"] = round(time.time() - started, 2)
+    row["telemetry"] = TELEMETRY.summary()
+    row["llm_calls"] = TELEMETRY.as_dicts()
+    return row
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", default="eval/manifest.jsonl")
@@ -337,49 +391,11 @@ def main() -> None:
 
     with open(out_path, "a", encoding="utf-8") as out_file:
         for idx, case in enumerate(todo, 1):
-            TELEMETRY.reset()
-            started = time.time()
-            row = {
-                "rule_id": case["rule_id"],
-                "rule_path": case["rule_path"],
-                "title": case["title"],
-                "category": case["category"],
-                "product": case["product"],
-                "urls": case["urls"],
-                "text_chars": case["text_chars"],
-                "config": config,
-                "run_at": datetime.now(timezone.utc).isoformat(),
-            }
-
-            try:
-                with snapshots_instead_of_network(case["url_to_path"]) as shim, \
-                        web_enrichment_disabled(client, args.no_web_enrich):
-                    result = agent.analyze_attack(" ".join(case["urls"]))
-                row["snapshots_served"] = shim.served
-                row["snapshots_missed"] = shim.missed
-
-                response_text = result.get("rule", "")
-                rules = extract_rule_yamls(response_text)
-                # Every generated rule is stored so best-of-N can be computed
-                # later without paying for another run; scoring uses the first,
-                # which is what a user sees.
-                row["n_rules"] = len(rules)
-                row["rules_yaml"] = rules
-                row["scores"] = score_case(rules[0], case["gold"]) if rules else \
-                    score_case(response_text, case["gold"])
-                row["response_chars"] = len(response_text)
-                row["error"] = None
+            row = run_case(agent, case, config, args.no_web_enrich)
+            if row["error"] is None:
                 n_ok += 1
-            except Exception as exc:
-                row["error"] = f"{type(exc).__name__}: {exc}"
-                row["traceback"] = traceback.format_exc()[-1500:]
-                row["scores"] = None
-                row["n_rules"] = 0
+            else:
                 n_failed += 1
-
-            row["elapsed_s"] = round(time.time() - started, 2)
-            row["telemetry"] = TELEMETRY.summary()
-            row["llm_calls"] = TELEMETRY.as_dicts()
 
             out_file.write(json.dumps(row) + "\n")
             out_file.flush()  # a crash must not lose completed cases

@@ -1568,3 +1568,52 @@ a scope; labelled inside; restored after an exception; survives `as_dicts()`
 (only its network call faked) records its name; a *failed* call is still
 attributed to its stage; the orchestrator's intent call is labelled. Full suite
 **146 passed**; `backend.main` imports. No change to what the pipeline outputs.
+
+---
+
+## 2026-09-23 — Change 14 (plan 1.1b): pipeline crashes reach the harness (defect 17)
+
+### Motivation (defect 17)
+Found while starting plan task 1.1. The harness called
+`agent.analyze_attack`, which wraps `orchestrator.run_sync` in
+`except Exception` and returns the error as ordinary response text
+(`backend/agent.py:36`: `"Error during analysis: <e>"`). The harness's own
+exception handler therefore never saw a pipeline crash. A crashed case was
+written as a normal row: `error: None`, zero rules, the error message as its
+"response".
+
+### This corrects two earlier claims
+- The baseline-run entry states that a pipeline exception "would appear as a
+  case error; this run recorded none". **It would not have appeared.** Gate 4
+  ("every `row["error"]` is `None`") was vacuous for pipeline crashes in
+  `baseline60.jsonl`; "zero case exceptions" there is not evidence that none
+  occurred.
+- The two zero-rule cases of that run (`43259cc4`, `ec3a3c2f`) both returned an
+  **86-character** response. The orchestrator's no-rule fallback is 88
+  characters, so it was not that; `"Error during analysis: "` (23) plus a
+  63-character exception message fits exactly. **Consistent with two identical
+  swallowed crashes, not proven** — the response text was not kept (plan 1.1c
+  fixes that). The baseline's S1 figure (55/60 valid) is unaffected either way;
+  what changes is the *reason* two of its five failures are recorded as
+  "no rule".
+
+### Design decisions
+| Decision | Rationale |
+|---|---|
+| The harness calls `agent.orchestrator.run_sync` directly | `analyze_attack` is a print, this same call and the catch-all. Calling `run_sync` measures the identical pipeline, and a crash reaches the harness's handler with its full traceback |
+| No change to `backend/agent.py` | The web app returns the agent's dict straight to the browser (`backend/main.py:215`); adding a traceback there would leak stack traces to users. The web app's behaviour is untouched |
+| Snapshot counts recorded in a `finally` | Gate 1 stays computable for crashed rows too; previously a crash left the row without them |
+| Loop body moved into `run_case()` | Makes one case testable with a stand-in pipeline, offline. Pure extraction otherwise; `main()` still writes one row per case and counts successes and failures from `row["error"]` |
+
+### Verification
+Tests written first. After extracting `run_case` *unchanged* (still calling
+`analyze_attack`), the crash test **failed** with the row reporting
+`error: None` — the defect reproduced. After switching to `run_sync`, 3 offline
+tests pass (`tests/test_eval_runner.py`): a normal response is scored; a crash
+becomes a case error carrying its traceback, with no scores; snapshot counts
+survive a crash. The stand-in agent copies the real agent's catch-all, so a
+regression to `analyze_attack` would fail the test. Full suite **149 passed**;
+`--dry-run` still selects the same 60 of 303 cases.
+
+### Status
+Defect 17 fixed. From the next run on, gate 4 means what it says.

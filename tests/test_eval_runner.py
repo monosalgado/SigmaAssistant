@@ -19,6 +19,7 @@ from eval.run_eval import (
     _SnapshotRequests,
     snapshot_key,
     extract_rule_yamls,
+    run_case,
     snapshots_instead_of_network,
     stratified_sample,
     web_enrichment_disabled,
@@ -235,3 +236,91 @@ def test_missing_snapshot_leaves_no_url_content(tmp_path):
                              "media_file": None})
 
     assert context["preprocessed"]["url_content"] == []
+
+
+# --------------------------------------------------------------------------
+# One case end to end, with a stand-in pipeline (plan 1.1b)
+# --------------------------------------------------------------------------
+# The real agent's analyze_attack catches every exception and returns the error as
+# ordinary response text. When the harness called it, a crashed case became a
+# normal-looking row with error None and zero rules, so gate 4 could never fire.
+
+GENERATED_RULE = """title: Encoded PowerShell
+id: 5e3d3601-0000-4000-8000-000000000000
+status: experimental
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        Image|endswith: '\\powershell.exe'
+        CommandLine|contains: ' -enc '
+    condition: selection
+level: high
+"""
+
+GOLD = {
+    "title": "Gold",
+    "logsource": {"category": "process_creation", "product": "windows"},
+    "detection": {"selection": {"Image|endswith": "\\powershell.exe"},
+                  "condition": "selection"},
+}
+
+
+class _Orchestrator:
+    def __init__(self, result=None, raises=None):
+        self.result, self.raises = result, raises
+
+    def run_sync(self, description, history=None, media_file=None):
+        if self.raises:
+            raise self.raises
+        return self.result
+
+
+class _Agent:
+    """Mirrors the real SigmaAgent, including its catch-all in analyze_attack."""
+
+    def __init__(self, orchestrator):
+        self.orchestrator = orchestrator
+        self.client = type("C", (), {"web_search": lambda self, q: {}})()
+
+    def analyze_attack(self, description, history=None, media_file=None):
+        try:
+            return self.orchestrator.run_sync(description=description)
+        except Exception as e:
+            return {"rule": f"Error during analysis: {e}", "context": {},
+                    "pipeline_metadata": None}
+
+
+def _case():
+    return {"rule_id": "r-1", "rule_path": "x.yml", "title": "t",
+            "category": "process_creation", "product": "windows",
+            "urls": ["https://example.com/a"], "url_to_path": {},
+            "text_chars": 5000, "gold": GOLD}
+
+
+def test_normal_response_is_scored():
+    agent = _Agent(_Orchestrator(result={
+        "rule": "```yaml\n" + GENERATED_RULE + "```", "context": {},
+        "pipeline_metadata": {}}))
+    row = run_case(agent, _case(), config={}, no_web_enrich=True)
+    assert row["error"] is None
+    assert row["n_rules"] == 1
+    assert row["scores"]["validity"]["parses"] is True
+    assert row["scores"]["logsource"]["exact_match"] is True
+    assert "llm_calls" in row and "telemetry" in row
+
+
+def test_pipeline_crash_becomes_a_case_error():
+    agent = _Agent(_Orchestrator(raises=ValueError("boom")))
+    row = run_case(agent, _case(), config={}, no_web_enrich=True)
+    assert row["error"] == "ValueError: boom"
+    assert "boom" in row["traceback"]
+    assert row["scores"] is None and row["n_rules"] == 0
+
+
+def test_snapshot_counts_are_kept_on_a_crash():
+    """Gate 1 must be computable for every row, crashed ones included."""
+    agent = _Agent(_Orchestrator(raises=RuntimeError("stage failed")))
+    row = run_case(agent, _case(), config={}, no_web_enrich=True)
+    assert row["snapshots_served"] == 0 and row["snapshots_missed"] == 0
