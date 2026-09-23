@@ -1511,3 +1511,29 @@ README's project tree.
 Verified: no remaining references in code or documentation; full suite **139
 passed**; `backend.main` imports. Pydantic stays a dependency (`backend/main.py`
 uses it for the API models).
+
+---
+
+## 2026-09-23 — The web server binds to this machine only (security hardening)
+
+The documented run commands in `README.md` and `run_mac.sh`, and the
+`python backend/main.py` entry point (`backend/main.py:382`), started the server
+on `0.0.0.0` — every network interface. On a shared network (campus, café,
+conference Wi-Fi) anyone could reach the API directly: it has no
+authentication, so a stranger could run the pipeline on this machine's
+resources and read the stored sessions and saved rules. The existing CORS
+restriction does not prevent this — CORS governs what *web pages in a browser*
+may call, not direct requests from another host.
+
+All three now bind to `127.0.0.1`. `ALLOWED_ORIGINS`, which `backend/main.py`
+reads, is now documented in `.env.example` (commented out, so the local-only
+default applies).
+
+Verified: `bash -n run_mac.sh`; `backend/main.py` compiles and imports; with
+`ALLOWED_ORIGINS` unset the CORS list is still
+`['http://localhost:8000', 'http://127.0.0.1:8000']`; full suite **139 passed**.
+No change to pipeline behaviour, so no measurement is needed.
+
+Left for the documentation rewrite (plan H5b): the setup documents are still
+Gemini-first, and `.env.example` still lists `gemini` as the only supported
+`LLM_PROVIDER`.

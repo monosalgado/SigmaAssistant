@@ -92,7 +92,7 @@ python -m scripts.ingest_cwe                   # MITRE CWE catalogue
 ### 6. Run
 
 ```bash
-python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 Open <http://localhost:8000>.
