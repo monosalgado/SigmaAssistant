@@ -84,10 +84,15 @@ the intermediate results needed to explain its scores.
 **Why first:** every later step is judged against it, and the current run cannot
 say *why* logsource is at chance.
 
-- [>] **1.1** Harness records what diagnosis needs, per case: which stage made
+- [x] **1.1** Harness records what diagnosis needs, per case: which stage made
       each LLM call; the attack-vector output; the analysis stage's logsource
       suggestions; `generation.ids_replaced`; the response text when no rule is
-      extracted. *(offline)*
+      extracted. *(offline)* Done in three changes, each measured-by-tests:
+      **1.1a** stage label on every LLM call · **1.1b** pipeline crashes reach
+      the harness (defect 17, found while starting 1.1: `agent.analyze_attack`
+      swallows every exception, so gate 4 could never fire) · **1.1c** the row
+      keeps the pipeline's intermediate outputs.
+      **Done:** Changes 13–15 (`24e2a69`, `092d1de`, `ae91c46`). 156 tests pass.
 - [ ] **1.2** Defect 12: the harness refuses to write a row for a case with zero
       successful LLM calls, replacing the external guard. *(offline)*
 - [ ] **1.3** Defect 16: the PoC stage's GitHub fetches go through the snapshots
