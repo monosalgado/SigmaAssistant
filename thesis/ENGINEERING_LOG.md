@@ -1020,3 +1020,113 @@ the same failure mode as defect 8, and the only signal was the
 
 ### Status
 Defect 14 closed.
+
+---
+
+## 2026-09-19 — First full baseline run, n=60 (infrastructure, no change to the system; logged 2026-09-23)
+
+### Setup
+| Parameter | Value |
+|---|---|
+| System state | `73d8446` (Change 9) + Change 10 (harness only) |
+| Model | `qwen3-coder:30b` on every tier, Ollama on the lab Spark |
+| Sample | `--sample 60 --seed 0` from the 303-case corpus |
+| Web enrichment | disabled (`--no-web-enrich`); a silent no-op on Ollama anyway |
+| Arm | `baseline` — a label only, no ablation is wired |
+| Output | `eval/results/baseline60.jsonl`, committed with this entry as the frozen "before" measurement |
+
+### Five acceptance gates, not two
+The first live run (2026-09-11) used two gates. Three were added after defects
+12, 13 and 14 each showed a different way a result file can look normal and be
+wrong. A file is citable only if **all five** hold:
+
+| Gate | Guards against | This run |
+|---|---|---|
+| `snapshots_missed == 0` | a case silently generated from the URL string alone (defects 8, 14) | 0 |
+| `calls_without_token_data == 0` | incomplete cost figures (C1) | 0 |
+| telemetry `n_errors == 0` | stage-level LLM failures swallowed inside the pipeline | 0 |
+| every `row["error"]` is `None` | a whole case lost to an exception (defect 13) | 0 |
+| no row with `elapsed_s < 30` | rows written while the backend was unreachable (defect 12) | 0 |
+
+**All five pass.** 60 rows, 60 unique `rule_id`s. The run completed with no
+tunnel drop and no guard recovery.
+
+### Result
+Each metric is reported with its own n, because S3–S5 are undefined when the
+first rule does not parse or the gold rule lacks the field. Scores are computed
+on the **first** generated rule — the one a user sees.
+
+| Metric | Result | n | Null baseline |
+|---|---|---|---|
+| S1 valid Sigma | 0.917 (55/60) | 60 | — |
+| S2 validator issues per rule | 1.00 | 55 | — |
+| S3 logsource exact match | **0.145** (8/55), Wilson 95% CI 0.076–0.262 | 55 | 0.173 |
+| S4 ATT&CK exact F1 | 0.123 | 37 | 0.092 |
+| S5 detection-field F1 | 0.205 | 53 | 0.133 |
+| Rules per case | 3.27 (196 total) | 60 | — |
+
+**S3 is indistinguishable from chance** — the interval contains the null
+baseline. S4 and S5 are above their baselines by modest margins.
+
+Cost (C1/C2): 321 LLM calls, **2,227,584 tokens** (mean 37,126 per case),
+`thinking_tokens == 0` as expected for this model. Per-case wall time: mean
+**102.6 s**, median 89.1 s, range 38.7–320.7 s.
+
+### The 5 cases that failed S1
+| Case | Rules extracted | Failure |
+|---|---|---|
+| `43259cc4` | 0 | 86-character response containing no YAML |
+| `ec3a3c2f` | 0 | 86-character response containing no YAML |
+| `b014ea07` | 2 | first rule is malformed YAML (`ScannerError`) |
+| `36222790` | 3 | first rule is malformed YAML (`ScannerError`) |
+| `0d0d9a8a` | 2 | `contains` modifier applied to a null value (`SigmaTypeError`) |
+
+The two zero-rule cases finished in normal time with `error: None` and no
+telemetry errors, so they are not defect-12 rows. The pipeline returned a short
+non-rule answer; what it said is **not recoverable**, because the harness stores
+only the response length when no rule is extracted.
+
+### Defects recorded during this run and its preparation
+- **Defect 12 — the harness writes rows while the backend is unreachable.**
+  Found 2026-09-13 when the VPN dropped during an earlier attempt. The pipeline
+  catches per-stage LLM failures, so a case whose calls *all* failed still wrote
+  a row with `error: None`, `n_rules: 0` and 5–8 s elapsed. Because the row
+  existed, resume-by-`rule_id` treated the case as done — 14 of 21 rows were
+  garbage before it was noticed (kept as `baseline60.jsonl.corrupt.bak`). The
+  discriminator is `elapsed_s < 30`. **Open.** Contained for this run by an
+  external watchdog that detects a sub-30 s row, stops the run, purges, rebuilds
+  the tunnel and resumes; it never had to fire. The proper fix — refusing to
+  write a row for a case with zero successful LLM calls — changes harness
+  semantics and needs its own change.
+- **Defect 13 — an unguarded lazy parse discards the whole request.** Found
+  2026-09-14 by reading `backend/pipeline/stage_review.py`. pySigma parses
+  conditions lazily, so a malformed condition raises while the `for` header at
+  `:306-307` is evaluated, *before* the `try` at `:308`. The exception escapes the
+  orchestrator and every rule in the response is lost, including valid ones.
+  Observed live once: the Microsoft "Prestige" report failed at 1 min 25 s with
+  `Expected end of text, found '*'`, losing all 3 rules. **Open.** In the harness
+  it cannot kill a run (each case is wrapped at `run_eval.py:373`) and it would
+  appear as a case error; this run recorded none.
+- **Defect 14** — fixed as Change 10 above.
+
+### Limitations to disclose
+- **One sample, one seed, one model.** n=60 supports "indistinguishable from
+  chance" for S3; it does not support fine comparisons between S4/S5 and their
+  baselines.
+- **S3 at chance is established; its cause is not.** Defect 11 (generation
+  ignores the analysis stage's `logsource_suggestions`) is the leading
+  hypothesis, but this run does not record the analysis stage's suggestion, so
+  it cannot confirm it.
+- **The id-replacement rate promised in Change 9 was not measured.** The harness
+  does not copy `generation.ids_replaced` into the row, so this run gives no
+  denominator. Change 9's frequency limitation still stands.
+- The harness keeps neither the response text of a zero-rule case nor a
+  per-stage label on LLM calls (every call is recorded as `generate`), which
+  prevented diagnosing the two zero-rule cases from the file alone.
+- Scoring the first rule is a deliberate choice (it is what a user sees). All
+  rules are stored, so best-of-N can be computed later without a rerun.
+- Web enrichment was off, and the pretraining-contamination caveat from the
+  dataset design applies unchanged.
+
+### Status
+First citable result. Defects 4, 5, 6, 9, 11, 12 and 13 remain open.
