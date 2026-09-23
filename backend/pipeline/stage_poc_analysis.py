@@ -6,6 +6,35 @@ import requests
 from backend.pipeline.base_stage import PipelineStage
 from backend.pipeline import prompts
 
+_GITHUB_FILE_RE = r'https?://github\.com/([\w\-]+)/([\w\-]+)/blob/([\w\-]+)/([\w\./\-]+)'
+_GIST_RE = r'https?://gist\.github\.com/([\w\-]+)/([\w]+)'
+_MAX_GITHUB_FILES = 3
+_MAX_GISTS = 2
+
+
+def github_fetch_targets(text: str) -> tuple[list[dict], list[dict]]:
+    """The GitHub files and gists this stage fetches for `text`, in fetch order.
+
+    Shared with the evaluation's snapshot builder, so that what gets stored is
+    exactly what the stage will ask for.
+    """
+    files = [
+        {
+            "fetch_url": f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{path}",
+            "source_url": f"https://github.com/{owner}/{repo}/blob/{branch}/{path}",
+            "path": path,
+        }
+        for owner, repo, branch, path in re.findall(_GITHUB_FILE_RE, text)[:_MAX_GITHUB_FILES]
+    ]
+    gists = [
+        {
+            "fetch_url": f"https://api.github.com/gists/{gist_id}",
+            "source_url": f"https://gist.github.com/{user}/{gist_id}",
+        }
+        for user, gist_id in re.findall(_GIST_RE, text)[:_MAX_GISTS]
+    ]
+    return files, gists
+
 
 class PoCAnalysisStage(PipelineStage):
     name = "poc_analysis"
@@ -113,15 +142,12 @@ class PoCAnalysisStage(PipelineStage):
     def _fetch_github_code(self, text: str) -> list[dict]:
         """Find GitHub URLs and fetch raw code content."""
         snippets = []
+        file_targets, gist_targets = github_fetch_targets(text)
 
-        # Match GitHub file URLs (blob links)
-        github_pattern = r'https?://github\.com/([\w\-]+)/([\w\-]+)/blob/([\w\-]+)/([\w\./\-]+)'
-        matches = re.findall(github_pattern, text)
-
-        for owner, repo, branch, path in matches[:3]:  # Limit to 3 GitHub files
-            raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{path}"
+        for target in file_targets:
+            path = target["path"]
             try:
-                resp = requests.get(raw_url, timeout=8, headers={
+                resp = requests.get(target["fetch_url"], timeout=8, headers={
                     "User-Agent": "Mozilla/5.0 SigmaAssistant/1.0"
                 })
                 if resp.status_code == 200:
@@ -132,21 +158,16 @@ class PoCAnalysisStage(PipelineStage):
                     snippets.append({
                         "language": lang,
                         "source": "github",
-                        "source_url": f"https://github.com/{owner}/{repo}/blob/{branch}/{path}",
+                        "source_url": target["source_url"],
                         "content": content,
                     })
                     print(f"[{self.name}] Fetched GitHub code: {path}")
             except Exception as e:
                 print(f"[{self.name}] Failed to fetch GitHub code {path}: {e}")
 
-        # Match GitHub Gist URLs
-        gist_pattern = r'https?://gist\.github\.com/([\w\-]+)/([\w]+)'
-        gist_matches = re.findall(gist_pattern, text)
-
-        for user, gist_id in gist_matches[:2]:
+        for target in gist_targets:
             try:
-                api_url = f"https://api.github.com/gists/{gist_id}"
-                resp = requests.get(api_url, timeout=8, headers={
+                resp = requests.get(target["fetch_url"], timeout=8, headers={
                     "User-Agent": "Mozilla/5.0 SigmaAssistant/1.0"
                 })
                 if resp.status_code == 200:
@@ -157,12 +178,12 @@ class PoCAnalysisStage(PipelineStage):
                         snippets.append({
                             "language": lang.lower(),
                             "source": "github",
-                            "source_url": f"https://gist.github.com/{user}/{gist_id}",
+                            "source_url": target["source_url"],
                             "content": content,
                         })
                         break  # Only take first file from gist
             except Exception as e:
-                print(f"[{self.name}] Failed to fetch gist {gist_id}: {e}")
+                print(f"[{self.name}] Failed to fetch gist {target['source_url']}: {e}")
 
         return snippets
 

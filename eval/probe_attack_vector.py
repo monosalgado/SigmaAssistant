@@ -21,8 +21,9 @@ Criteria were fixed before the run was looked at:
       found). `inferred_from_class` is excluded. A miss means "not verbatim",
       which includes honest paraphrase, so it is an UPPER bound on invention.
 
-Runs the stages exactly as the pipeline does, including the PoC stage's live
-GitHub fetches (the harness snapshot shim covers preprocess only).
+Runs the stages exactly as the pipeline does. Since plan 1.3a the PoC stage's
+GitHub fetches are served from `eval/github_manifest.jsonl` like the pages; the
+two earlier result files (av60.jsonl, av60_window.jsonl) fetched them live.
 
 Usage (needs the Spark tunnel):
     LLM_PROVIDER=ollama ECONOMY_PROVIDER=ollama \\
@@ -42,7 +43,10 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from eval.run_eval import load_cases, snapshots_instead_of_network  # noqa: E402
+from eval.run_eval import (  # noqa: E402
+    load_cases, load_github_manifest, poc_snapshots_instead_of_network,
+    snapshots_instead_of_network,
+)
 
 # Invented strings that appear only in the prompt's examples (prompts.py:560-685).
 EXAMPLE_MARKERS = {
@@ -93,6 +97,7 @@ def main() -> int:
     if out_path.exists():
         done = {json.loads(l)["rule_id"] for l in open(out_path)}
 
+    poc_url_map = load_github_manifest(REPO / "eval/github_manifest.jsonl")
     from backend.agent import SigmaAgent
     orch = SigmaAgent().orchestrator
     print(f"Model: {orch.client.model_name} | {len(wanted)} cases, {len(done)} already done")
@@ -106,7 +111,8 @@ def main() -> int:
             ctx = {"original_query": " ".join(case["urls"]), "history": [], "media_file": None}
             with snapshots_instead_of_network(case["url_to_path"]) as shim:
                 ctx = orch.preprocess.run(ctx)
-            ctx = orch.poc_analysis.run(ctx)
+            with poc_snapshots_instead_of_network(poc_url_map) as poc_shim:
+                ctx = orch.poc_analysis.run(ctx)
             ctx = orch.attack_vector.run(ctx)
 
             # Rebuilt as stage_attack_vector.py:62-72 builds the prompt input,
@@ -129,6 +135,7 @@ def main() -> int:
                 "gold_category": case.get("category"),
                 "gold_product": case.get("product"),
                 "snapshots_missed": shim.missed,
+                "poc_snapshots_missed": poc_shim.missed,
                 "poc_snippets": ctx.get("poc_analysis", {}).get("snippets_found", 0),
                 "failed": str(av.get("reasoning", "")).startswith(FAILED_PREFIX),
                 "model_input_chars": len(model_input),

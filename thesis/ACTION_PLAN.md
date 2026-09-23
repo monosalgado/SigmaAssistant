@@ -100,14 +100,18 @@ say *why* logsource is at chance.
 - [>] **1.3** Defect 16: the PoC stage's GitHub fetches go through the snapshots
       too, or are disclosed as a live input. *(decide, then offline)* Measured:
       43/303 cases (10/60) fetch GitHub live. Split, **decision needed first**:
-  - [ ] **1.3a** Reproducibility: save the PoC stage's GitHub fetches into the
-        snapshots (recommended), or block them during evaluation.
+  - [x] **1.3a** Reproducibility: save the PoC stage's GitHub fetches into the
+        snapshots (recommended), or block them during evaluation. **Done, Change 17:**
+        chosen A; 40 stored + 10 recorded 404s; gate 1 now covers PoC fetches.
   - [ ] **1.3b** Contamination: 23/303 cases (5/60) put a detection rule in front
         of the pipeline (PoC downloads, rule-file references, Sigma rules printed
         in the page). Keep and report separately (recommended), drop them, or
         disclose only.
 - [ ] **1.4** One-command preflight: tunnel, model warm, server context ≥ 32k,
       tests, 2-case smoke. *(offline to write)*
+      Also: `summarise.py` prints the gates (it reports none today; they have been
+      checked by hand), including the new `poc_snapshots_missed`; and a relaunch
+      wrapper for exit status 2 (replaces the old watchdog).
 - [ ] **1.5** Run baseline v2: 60 cases, same sample. **Needs ~2 h on the VPN.**
       Exit: all five gates pass, results + log entry committed.
 
@@ -222,6 +226,8 @@ is a decision, not a default.
   cases: `data/saved_rules.json` holds a real "CVE-2026-3055 Citrix NetScaler SAML
   … NSC_TASS" rule, which is Example A. Examples this specific are what the model
   copied (defect 15). Relevant to 2.3.
+- The PoC stage's GitHub link pattern has no dot in the branch/tag part, so links
+  to tags like `v1.2` are never fetched (pinned by a test, not changed).
 - `.env.example` lacks `ALLOWED_ORIGINS`, which `backend/main.py` reads. Trivial;
   fold into H5.
 

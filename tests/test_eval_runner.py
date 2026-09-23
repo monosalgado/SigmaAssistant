@@ -325,6 +325,7 @@ def test_snapshot_counts_are_kept_on_a_crash():
     agent = _Agent(_Orchestrator(raises=RuntimeError("stage failed")))
     row = run_case(agent, _case(), config={}, no_web_enrich=True)
     assert row["snapshots_served"] == 0 and row["snapshots_missed"] == 0
+    assert row["poc_snapshots_served"] == 0 and row["poc_snapshots_missed"] == 0
 
 
 # --------------------------------------------------------------------------

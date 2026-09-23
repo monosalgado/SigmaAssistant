@@ -135,6 +135,74 @@ def snapshots_instead_of_network(url_to_path: dict):
         module.requests = original
 
 
+class _PocSnapshotResponse:
+    """Duck-types what PoCAnalysisStage reads from a response: status, text, json()."""
+
+    def __init__(self, content: bytes, status_code: int):
+        self.content = content
+        self.status_code = status_code
+
+    @property
+    def text(self) -> str:
+        return self.content.decode("utf-8", errors="replace")
+
+    def json(self):
+        return json.loads(self.text)
+
+
+class _PocSnapshotRequests:
+    """Stands in for the `requests` module inside PoCAnalysisStage (defect 16).
+
+    A URL in the manifest is replayed as it was snapshotted, including a recorded
+    404. A URL not in the manifest is answered 404 and counted as a miss, so it can
+    never reach the live network unnoticed.
+    """
+
+    def __init__(self, url_map: dict):
+        self._map = url_map
+        self.served = 0
+        self.missed = 0
+
+    def get(self, url, **kwargs):
+        entry = self._map.get(url)
+        if entry is None:
+            self.missed += 1
+            return _PocSnapshotResponse(b"", 404)
+        self.served += 1
+        body = Path(entry["path"]).read_bytes() if entry.get("path") else b""
+        return _PocSnapshotResponse(body, entry["status"])
+
+
+def load_github_manifest(path: Path) -> dict:
+    """fetch_url -> manifest entry, with stored paths made absolute."""
+    repo_root = Path(__file__).resolve().parent.parent
+    url_map = {}
+    if not Path(path).exists():
+        return url_map
+    for line in Path(path).read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        entry = json.loads(line)
+        if entry.get("path") and not Path(entry["path"]).is_absolute():
+            entry["path"] = str(repo_root / entry["path"])
+        url_map[entry["fetch_url"]] = entry
+    return url_map
+
+
+@contextmanager
+def poc_snapshots_instead_of_network(url_map: dict):
+    """Swap PoCAnalysisStage's `requests` for the snapshot-backed shim."""
+    import backend.pipeline.stage_poc_analysis as module
+
+    original = module.requests
+    shim = _PocSnapshotRequests(url_map)
+    module.requests = shim
+    try:
+        yield shim
+    finally:
+        module.requests = original
+
+
 @contextmanager
 def web_enrichment_disabled(client, disabled: bool):
     """Optionally stub out Gemini Google-Search grounding.
@@ -262,7 +330,8 @@ def extract_rule_yamls(response_text: str) -> list:
 # Runner
 # --------------------------------------------------------------------------
 
-def run_case(agent, case: dict, config: dict, no_web_enrich: bool) -> dict:
+def run_case(agent, case: dict, config: dict, no_web_enrich: bool,
+             poc_url_map: dict = None) -> dict:
     """Run the pipeline on one case and return its result row."""
     client = agent.client
     TELEMETRY.reset()
@@ -281,6 +350,7 @@ def run_case(agent, case: dict, config: dict, no_web_enrich: bool) -> dict:
 
     try:
         with snapshots_instead_of_network(case["url_to_path"]) as shim, \
+                poc_snapshots_instead_of_network(poc_url_map or {}) as poc_shim, \
                 web_enrichment_disabled(client, no_web_enrich):
             # run_sync, not agent.analyze_attack: the agent wraps this same call
             # in a catch-all that returns the error as ordinary response text,
@@ -292,6 +362,8 @@ def run_case(agent, case: dict, config: dict, no_web_enrich: bool) -> dict:
                 # Kept on a crash too, so gate 1 is computable for every row.
                 row["snapshots_served"] = shim.served
                 row["snapshots_missed"] = shim.missed
+                row["poc_snapshots_served"] = poc_shim.served
+                row["poc_snapshots_missed"] = poc_shim.missed
 
         response_text = result.get("rule", "")
         rules = extract_rule_yamls(response_text)
@@ -341,7 +413,8 @@ def unmeasured_reason(row: dict):
             f"(stages: {', '.join(stages)}); first error: {failed[0].get('error')}")
 
 
-def run_cases(agent, cases: list, config: dict, no_web_enrich: bool, out_file):
+def run_cases(agent, cases: list, config: dict, no_web_enrich: bool, out_file,
+              poc_url_map: dict = None):
     """Run cases in order, appending one JSON row per case to `out_file`.
 
     Stops at the first case with a failed LLM call and does NOT write its row, so
@@ -351,7 +424,7 @@ def run_cases(agent, cases: list, config: dict, no_web_enrich: bool, out_file):
     n_ok = n_failed = 0
     stopped = None
     for idx, case in enumerate(cases, 1):
-        row = run_case(agent, case, config, no_web_enrich)
+        row = run_case(agent, case, config, no_web_enrich, poc_url_map)
         reason = unmeasured_reason(row)
         if reason:
             stopped = (f"STOPPED at case {case['rule_id']} ({idx}/{len(cases)}): {reason}. "
@@ -392,6 +465,9 @@ def main() -> None:
                         help="Stub out Gemini Google-Search grounding.")
     parser.add_argument("--arm", default="default",
                         help="Label recorded with every row, for comparing runs.")
+    parser.add_argument("--github-manifest", default="eval/github_manifest.jsonl",
+                        help="Snapshots of the PoC stage's GitHub fetches "
+                             "(build with eval/build_poc_snapshots.py).")
     parser.add_argument("--dry-run", action="store_true",
                         help="Report the case selection without calling any LLM.")
     args = parser.parse_args()
@@ -438,6 +514,9 @@ def main() -> None:
         print("\nDry run: no LLM calls made.")
         return
 
+    poc_url_map = load_github_manifest(repo_root / args.github_manifest)
+    print(f"  PoC GitHub snapshots: {len(poc_url_map)} URLs from {args.github_manifest}")
+
     # Imported late so --dry-run needs no vector store or API key.
     from backend.agent import SigmaAgent
 
@@ -461,7 +540,8 @@ def main() -> None:
 
     started_all = time.time()
     with open(out_path, "a", encoding="utf-8") as out_file:
-        n_ok, n_failed, stopped = run_cases(agent, todo, config, args.no_web_enrich, out_file)
+        n_ok, n_failed, stopped = run_cases(agent, todo, config, args.no_web_enrich, out_file,
+                                            poc_url_map)
 
     elapsed = time.time() - started_all
     print(f"\n--- Done in {elapsed/60:.1f} min ---")

@@ -1792,3 +1792,52 @@ in Azure Sentinel's `Detections`, in `nuclei-templates`, or ending in
 ### Status
 Nothing changed in the code. How to handle both findings is a methodological
 decision (plan 1.3a, 1.3b), taken before baseline v2 runs.
+
+---
+
+## 2026-09-23 — Change 17 (plan 1.3a): the PoC stage's GitHub fetches are served from snapshots (defect 16)
+
+### Motivation (defect 16)
+The PoC stage fetched GitHub files and gists live during evaluation, outside the
+page snapshots: 43 of 303 cases (10 of 60) were not reproducible, and their input
+drifted as repositories changed. Measured before storing anything, **10 of the 45
+linked files already returned 404** — the drift is real, not hypothetical. Chosen
+approach (decision A, user, 2026-09-23): snapshot the fetches, as the pages are,
+rather than block them, so the evaluation keeps measuring the pipeline that
+actually runs.
+
+### Design decisions
+| Decision | Rationale |
+|---|---|
+| `github_fetch_targets(text)` extracted from the stage and shared with the builder | What gets stored is, by construction, what the stage asks for. The stage's patterns, caps (3 files, 2 gists) and order are unchanged |
+| `eval/build_poc_snapshots.py` fetches each unique URL once | Bodies go to `eval/snapshots/github/` (gitignored, like the pages); `eval/github_manifest.jsonl` is committed with status, size, SHA-256 and fetch time per URL |
+| A 404 is recorded and replayed as a 404 | The file was gone at snapshot time; replaying that is faithful. A network error is *not* recorded, so a rerun retries it |
+| Idempotent | URLs already in the manifest are never refetched |
+| Harness shim for the PoC stage's `requests`, like the page shim | A URL in the manifest is served from disk; one not in it gets 404 and increments `poc_snapshots_missed`, so a live fetch cannot happen unnoticed |
+| New per-row counters `poc_snapshots_served` / `poc_snapshots_missed` | Gate 1 now requires both `snapshots_missed == 0` and `poc_snapshots_missed == 0` |
+| The defect-15 measurement script uses the same shim | Its two earlier files fetched live; disclosed in its docstring |
+
+### Verification
+Tests written first. **12 offline tests**: `tests/test_poc_github_targets.py`
+(file links become raw URLs capped at three; gists capped at two; no links, no
+targets; a ref containing a dot such as `v1.2` is *not* matched — existing
+behaviour, pinned and noted in the plan's Inbox rather than changed) and
+`tests/test_poc_snapshots.py` (the builder records every URL with its status and
+does not refetch; a stored file is served with its content; gist JSON is served;
+a recorded 404 is replayed and not counted as a miss; an unknown URL is a counted
+miss; `requests` is restored after an exception; and the **real** `PoCAnalysisStage`
+reads the snapshot, with the stored content reaching the model's prompt). Plus a
+runner test that crashed rows keep the PoC counters. Full suite **173 passed**.
+
+On the real corpus: the shared function reproduces the pre-refactor measurement
+exactly (43 cases, 72 file + 9 gist fetches, 45 + 5 unique URLs). The builder
+stored **40** bodies (575 KB) and recorded **10** 404s, 0 failures; all 50 targets
+of the 303 cases are in the manifest; a second run fetched nothing.
+
+### Disclosure for earlier results
+`baseline60.jsonl`, `av60.jsonl` and `av60_window.jsonl` were produced with live
+GitHub fetches, so the PoC input of their 10 affected cases may differ from the
+snapshot. From baseline v2 on, it is fixed.
+
+### Status
+Defect 16 fixed.
