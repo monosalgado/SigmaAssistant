@@ -49,6 +49,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urldefrag
 
 import yaml
 
@@ -73,6 +74,18 @@ class _SnapshotResponse:
         self.status_code = status_code
 
 
+def snapshot_key(url: str) -> str:
+    """Normalise a URL for snapshot lookup by dropping the `#fragment`.
+
+    A fragment is a client-side anchor and is never sent to the server, so two
+    URLs differing only by fragment name the same page and the same snapshot
+    file. The pipeline strips it while extracting links, so without this the
+    manifest key (fragment kept) and the lookup (fragment gone) never match and
+    the case silently degrades to a 404.
+    """
+    return urldefrag(url)[0]
+
+
 class _SnapshotRequests:
     """Stands in for the `requests` module inside PreprocessStage."""
 
@@ -82,7 +95,7 @@ class _SnapshotRequests:
         self.missed = 0
 
     def get(self, url, **kwargs):
-        path = self._map.get(url)
+        path = self._map.get(snapshot_key(url))
         if path is None:
             self.missed += 1
             # 404 rather than an exception: the pipeline already handles a bad
@@ -167,7 +180,9 @@ def load_cases(manifest_path: Path, repo_root: Path, min_chars: int) -> list:
             except Exception:
                 continue
             total_chars += len(text)
-            url_to_path[snap["url"]] = str(path)
+            url_to_path[snapshot_key(snap["url"])] = str(path)
+            # `urls` keeps the original reference, fragment and all, because that
+            # is what a user would paste; only the lookup key is normalised.
             urls.append(snap["url"])
 
         if total_chars < min_chars:

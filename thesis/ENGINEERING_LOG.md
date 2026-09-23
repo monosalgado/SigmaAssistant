@@ -945,3 +945,78 @@ systematic or a single bad case.
 
 ### Status
 Defect 10 closed. Defects 4, 5, 6, 9 and 11 remain open.
+
+---
+
+## 2026-09-19 — Change 10: snapshot lookup ignores the URL fragment (logged 2026-09-23)
+
+### Motivation (defect 14)
+Found during the n=60 baseline run by checking `snapshots_missed` per case rather
+than only in aggregate: 4 of 60 cases reported a miss even though every one of
+their snapshot files existed on disk.
+
+`eval/manifest.jsonl` stores each reference URL verbatim, fragment included —
+`https://wikileaks.org/vault7/#Pandemic` — and `load_cases` used that string as the
+key of the URL-to-snapshot map. The pipeline, however, strips the fragment while
+extracting links from the input, so the URL it asks for is
+`https://wikileaks.org/vault7/`. The two keys never matched and
+`_SnapshotRequests.get` answered **404**.
+
+The failure is silent and points in the *correct-looking* direction. The case
+still runs, still produces rules, still scores, and still writes a row with
+`error: None` and a plausible elapsed time. It is simply generated from less
+source material than it should have been — in two cases, from **none**. This is
+the same failure mode as defect 8, and the only signal was the
+`snapshots_missed` counter, which is the reason that gate exists.
+
+### Design decisions
+| Decision | Rationale |
+|---|---|
+| Drop the fragment, not the query string | A fragment is a client-side anchor and is never sent to the server, so two URLs differing only by fragment name the same page. A query string *is* sent and can select different content (`?tab=readme-ov-file` in case `9aa27839`), so it must survive |
+| One function, `snapshot_key()`, used on both sides (`run_eval.py:77`) | Normalising only the lookup would still break if a future manifest stored the stripped form. Applying the same function to the map build (`:183`) and the lookup (`:98`) makes the direction irrelevant |
+| `urllib.parse.urldefrag`, not a string split on `#` | The standard library is the authority for URL syntax; a hand-rolled split is a second, independently wrong definition |
+| `case["urls"]` keeps the original fragment URL | That is what a user would actually paste, so the input the pipeline sees stays realistic. Only the lookup key is normalised |
+| Fix the harness, not the pipeline | Stripping fragments is correct pipeline behaviour. The defect was the harness keying its cache on a form of the URL the pipeline never requests |
+
+### Verification
+1. **Collision check across all 437 manifest rows: 0.** No two distinct snapshots
+   collapse to the same key once fragments are dropped.
+2. **Corpus size unchanged at 303** cases, so `--sample 60 --seed 0` still selects
+   the same 60 and resume-by-`rule_id` remained valid for the rerun below.
+3. **3 offline tests** (`tests/test_eval_runner.py:121-151`): a fragment URL is
+   served from the unfragmented snapshot; normalisation works whichever form
+   arrives; and `snapshot_key` strips only the fragment — query strings survive
+   and distinct pages keep distinct keys. Full suite **125 passed** (122 prior + 3).
+4. **The 4 affected rows were purged and rerun** with the identical command, so
+   the final `baseline60.jsonl` is uniformly post-fix. Before (from
+   `baseline60.prefix-fix.bak`) vs after:
+
+   | Case | Input | snapshots served / missed | rules | tokens | wall time |
+   |---|---|---|---|---|---|
+   | `47e0852a` before | `wikileaks.org/vault7/#Pandemic` | **0** / 1 | 2 | 20,238 | 34s |
+   | `47e0852a` after | | 1 / 0 | 2 | 37,593 | 76s |
+   | `9aa27839` before | `github.com/amlweems/xzbot?tab=...#backdoor-demo` | **0** / 1 | 2 | 23,039 | 45s |
+   | `9aa27839` after | | 1 / 0 | 3 | 44,761 | 112s |
+   | `b7155193` before | 3 URLs, one with `#atomic-test-7...` | 2 / 1 | 4 | 50,890 | 152s |
+   | `b7155193` after | | 3 / 0 | 4 | 36,199 | 110s |
+   | `e710a880` before | 3 URLs, one with `#L36` | 2 / 1 | 5 | 58,825 | 166s |
+   | `e710a880` after | | 3 / 0 | 6 | 40,332 | 143s |
+
+   Two cases (`47e0852a`, `9aa27839`) had **no source page at all** before the
+   fix — their rules were written from the URL string alone.
+
+### Limitations to disclose
+- The before/after scores on these 4 cases are **not evidence of a quality
+  effect** in either direction. `9aa27839` gained a logsource match and detection
+  F1 0.0 -> 0.4; `e710a880` went the other way, detection F1 1.0 -> 0.67. At n=4
+  this shows the mechanism changed, nothing more.
+- The collision check covers the current manifest only. A future manifest could
+  contain two references that differ only by fragment and point at different
+  cached content (e.g. a single-page app routing on the fragment). None exist
+  today; the check would need repeating after any rebuild.
+- Any harness file produced before this change may contain cases like these.
+  The earlier `pilot.jsonl`/`postfix.jsonl` do not — both report
+  `snapshots_missed == 0`.
+
+### Status
+Defect 14 closed.

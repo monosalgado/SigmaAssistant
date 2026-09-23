@@ -17,6 +17,7 @@ import pytest
 
 from eval.run_eval import (
     _SnapshotRequests,
+    snapshot_key,
     extract_rule_yamls,
     snapshots_instead_of_network,
     stratified_sample,
@@ -115,6 +116,39 @@ def test_unknown_url_returns_404_rather_than_raising():
     response = shim.get("https://example.com/missing")
     assert response.status_code == 404
     assert shim.missed == 1
+
+
+def test_fragment_url_is_served_from_the_unfragmented_snapshot(tmp_path):
+    """The manifest keeps `#fragment`, the pipeline strips it. Without
+    normalisation the lookup misses and the case silently loses its only page.
+    """
+    page = tmp_path / "page.html"
+    page.write_bytes(b"<html><body><p>cached</p></body></html>")
+    shim = _SnapshotRequests({snapshot_key("https://example.com/a#section-2"): str(page)})
+
+    response = shim.get("https://example.com/a")
+    assert response.status_code == 200
+    assert shim.served == 1
+    assert shim.missed == 0
+
+
+def test_fragment_is_ignored_in_both_directions(tmp_path):
+    """Normalising both sides means it does not matter which form arrives."""
+    page = tmp_path / "page.html"
+    page.write_bytes(b"<html><body><p>cached</p></body></html>")
+    shim = _SnapshotRequests({snapshot_key("https://example.com/a"): str(page)})
+
+    assert shim.get("https://example.com/a#top").status_code == 200
+    assert shim.served == 1
+
+
+def test_snapshot_key_only_strips_the_fragment():
+    """Query strings are server-visible and must survive; fragments are not."""
+    assert snapshot_key("https://example.com/a?b=1#frag") == "https://example.com/a?b=1"
+    assert snapshot_key("https://example.com/a?b=1") == "https://example.com/a?b=1"
+    assert snapshot_key("https://example.com/a") == "https://example.com/a"
+    # A different page is still a different key.
+    assert snapshot_key("https://example.com/a") != snapshot_key("https://example.com/b")
 
 
 def test_requests_module_is_restored_afterwards():
