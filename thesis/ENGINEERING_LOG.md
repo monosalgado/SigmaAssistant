@@ -1726,3 +1726,69 @@ decision if it happens.
 
 ### Status
 Defect 12 fixed.
+
+---
+
+## 2026-09-23 — Live check of Changes 13 and 16; defect 16 measured; a contamination finding
+
+### Changes 13 and 16, checked live
+With the model deliberately unreachable (no VPN, no tunnel), a one-case run of
+the real harness (`--sample 60 --seed 0 --limit 1`) **exited with status 2 and
+wrote no row**, reporting `5 of 5 LLM calls failed (stages: analysis,
+attack_vector, generation, poc_analysis); first error: APIConnectionError`.
+That exercises the stop rule (Change 16) end to end, and shows the stage labels
+(Change 13) arriving through the real Ollama client, not only through the
+test's stand-in.
+
+### Defect 16 — the PoC stage fetches GitHub live, outside the snapshots
+`stage_poc_analysis.py:118-165` takes up to three GitHub file links
+(`github.com/<owner>/<repo>/blob/...`, fetched from `raw.githubusercontent.com`)
+and up to two gists (`api.github.com`) from anywhere in the text. The harness
+replaces `requests` only in the preprocess stage, so these fetches go to the live
+network, invisible to the `snapshots_missed` gate. Measured offline by applying
+the stage's own patterns to the snapshot text of every case:
+
+| | All 303 cases | 60-case sample |
+|---|---|---|
+| Cases that trigger live GitHub fetches | **43** | **10** |
+| File fetches / gist fetches | 72 / 9 | 18 / 2 |
+
+Those cases are not reproducible offline, and their PoC input can change as the
+repositories change. **Open.**
+
+### Finding: some cases put a detection rule in front of the pipeline
+Checking what those fetches retrieve showed that some are **detection rules, not
+exploit code**: rules from the SigmaHQ repository itself, Rapid7's own Sigma rule
+for CVE-2024-3400 (case `f130a5f1`, whose gold rule covers the same CVE), The DFIR
+Report's Sigma rules for Bumblebee (`994cac2b`), Azure Sentinel detections, a
+nuclei template. The input itself can carry a rule too: some cases' reference
+URLs *are* rule files or rule repositories, and some pages print a Sigma rule in
+the article.
+
+| Route by which a detection rule reaches the pipeline | All 303 | Sample of 60 |
+|---|---|---|
+| The PoC stage downloads a rule-like file | 13 | 4 |
+| An input URL is a rule file or rule repository | 10 | 1 |
+| A Sigma rule is printed in the page text | 7 | 1 |
+| **Any of these** | **23 (7.6%)** | **5** |
+
+Sample cases affected: `7b501acf`, `994cac2b`, `a62298a3`, `e710a880`, `f130a5f1`.
+
+This is **not a defect in the product** — an analyst whose source includes a rule
+is well served by the pipeline reading it. It is a threat to the **validity of
+the evaluation**: on these cases the task is partly "adapt a rule that is
+already there", which can inflate the scores. In baseline v1 the flagged cases of
+the sample scored higher (logsource exact 0.50 vs 0.13), but on two cases that is
+an anecdote, not evidence.
+
+Definitions used, to be disclosed with any number: "rule-like file" = a GitHub
+blob path in the SigmaHQ organisation, under a `sigma`/`sigma-rules` directory,
+in Azure Sentinel's `Detections`, in `nuclei-templates`, or ending in
+`.yml`/`.yaml`; "Sigma rule in the text" = `logsource:`, `detection:` and
+`condition:` within 3,000 characters. The `.yml` criterion over-counts — case
+`e710a880` downloads a YAML file of TTPs, not necessarily a detection rule — so
+23 is an upper bound under this definition.
+
+### Status
+Nothing changed in the code. How to handle both findings is a methodological
+decision (plan 1.3a, 1.3b), taken before baseline v2 runs.
