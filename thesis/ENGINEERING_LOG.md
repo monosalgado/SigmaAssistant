@@ -1413,3 +1413,35 @@ the web app, the evaluation scripts, the ingestion scripts and the tests).
 Not removed, by decision: `backend/pipeline/schemas.py` is imported by nothing,
 but may be reused for the assistant's report contract (plan H6). Every result
 file under `eval/results/` stays.
+
+---
+
+## 2026-09-23 — Evidence files committed; a clarification on defect 12's count
+
+Two result files that earlier entries cite as evidence were on disk but not in
+git, because `.gitignore` excludes `*.bak`. They are now committed under their
+**original names** (force-added), so the citations resolve for anyone reading
+the repository:
+
+| File | Cited by | Content |
+|---|---|---|
+| `eval/results/baseline60.jsonl.corrupt.bak` | baseline-run entry, defect 12 | 21 rows from the 2026-09-13 attempt, written while the backend was unreachable |
+| `eval/results/baseline60.prefix-fix.bak` | Change 10, before/after table | the n=60 run before the 4 defect-14 rows were purged and rerun (4 missed snapshots) |
+
+**Clarification on "14 of 21 rows were garbage"** (baseline-run entry). The
+number is right, but that entry's one-line discriminator, `elapsed_s < 30`,
+catches only 13 of them. Re-reading the committed file:
+
+- 13 rows (5.5–7.8 s) had every LLM call fail and recorded 0 tokens — the
+  signature the entry describes.
+- The 14th, case `43259cc4`, was the case in progress when the VPN dropped: it
+  hung for **12,989.5 s** (3.6 h) with one failed LLM call, yet still recorded
+  4 rules and 26,087 tokens. The sub-30 s rule does not catch it; the telemetry
+  gate `n_errors == 0` does, as does the watchdog's upper bound of 1000 s.
+
+This is the case for keeping all five gates rather than the time rule alone: the
+two failure shapes need different gates.
+
+Two further files remain uncommitted on disk, deliberately: `baseline60.2026-09-13.jsonl`
+(9 clean rows from the abandoned attempt) and `smoke.jsonl` (the 2-case preflight);
+nothing cites them. Nothing under `eval/results/` is deleted.
