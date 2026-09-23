@@ -1130,3 +1130,68 @@ only the response length when no rule is extracted.
 
 ### Status
 First citable result. Defects 4, 5, 6, 9, 11, 12 and 13 remain open.
+
+---
+
+## 2026-09-23 — Change 11: a validator that raises no longer discards the request
+
+### Motivation (defect 13)
+Observed live on 2026-09-14: the Microsoft "Prestige" ransomware report failed
+after 1 min 25 s with `Expected end of text, found '*'`, and **all three
+generated rules were lost** — including any that were valid. The exception
+escaped `ReviewStage`, escaped the orchestrator, and ended the request.
+
+### The mechanism, corrected
+The earlier write-up (baseline-run entry above, and working notes) attributed
+the escape to the condition-resolution loop at `stage_review.py:306-307`. **A
+reproduction shows that was wrong.** That loop catches the error correctly and
+records it. The escape happens later, in phase 3: `SigmaValidator.validate_rules`
+runs pySigma's core validators, one of which re-parses every condition itself
+(`sigma/validators/core/condition.py:116`, `condition.parse(False)`). The same
+malformed condition raises `SigmaConditionError` again — and phase 3 had no
+`try`. The call site (`run`, `:161`) has none either.
+
+Reproduced offline with `condition: selection *`, which yields the exact live
+message `Expected end of text, found '*'`.
+
+The evaluation harness was never exposed: its scorer already wraps the same call
+(`eval/scorers.py:143-147`). Only the product path lacked the guard.
+
+### Design decisions
+| Decision | Rationale |
+|---|---|
+| Guard phase 3, not the loop the earlier note blamed | The loop was never the problem; guarding it would have changed nothing. Fix where the reproduction shows the raise |
+| Catch `Exception`, not only `SigmaError` | pySigma's exception surface is not unified (see Change 1); the scorer makes the same choice for the same reason |
+| Record the failure as its own issue, `rule[i].validators` | If validators silently stopped, an empty warning list would read as "passed every validator". Saying the suite did not run keeps the result honest |
+| Severity `error` | The rule cannot be trusted if the validators cannot complete; it also triggers the existing single regeneration with the message as feedback |
+| Return immediately after recording it | `validate_rules` is all-or-nothing, so there are no partial validator results to keep |
+
+### Verification
+1. **Tests written first and seen to fail** with the real `SigmaConditionError`
+   (3 failed, 13 passed), then passing after the fix.
+2. **3 offline tests** (`tests/test_review_validation.py`): the malformed
+   condition is reported rather than raised; the validator-suite failure appears
+   as exactly one issue on `rule[2].validators` when checked at index 2; and,
+   end to end through `ReviewStage.run`, a response with one valid and one
+   malformed rule keeps **both** rules, marks the result invalid, and attributes
+   every error to `rule[1]` only. The end-to-end test needs no LLM because the
+   syntax-error path returns before the LLM review.
+3. Full suite **128 passed** (125 prior + 3), offline.
+
+### Effect on existing results
+None. The n=60 baseline recorded zero case-level exceptions, so defect 13 never
+fired on that sample and `baseline60.jsonl` remains the valid comparison point.
+
+### Limitations to disclose
+- **Frequency is unknown.** One live observation, zero in 60 harness cases. It
+  is a robustness fix, not a quality improvement, and should not be presented as
+  one.
+- A rule with a malformed condition now gets two error messages (the condition
+  and the validator suite), and both are passed to the regeneration as feedback.
+  Redundant but harmless.
+- The orchestrator still has no guard around stages in general. An unexpected
+  exception in any *other* stage still ends the request. This change closes the
+  one path that was observed.
+
+### Status
+Defect 13 closed. Defects 4, 5, 6, 9, 11 and 12 remain open.

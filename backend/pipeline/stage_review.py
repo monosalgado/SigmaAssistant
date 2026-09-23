@@ -324,8 +324,24 @@ class ReviewStage(PipelineStage):
         # A fresh SigmaValidator per call: instances keep state across
         # validate_rules(), and reuse makes the cross-rule validators
         # (duplicate title, identifier collision) fire as false positives.
+        #
+        # Some core validators re-parse the condition themselves, so a malformed
+        # condition already reported in phase 2 raises again here. Uncaught, it
+        # escapes the stage and the orchestrator and discards every rule in the
+        # response, the valid ones included. Recorded as its own issue so that
+        # an empty validator result is never mistaken for a clean one.
         validator = SigmaValidator(CORE_VALIDATORS.values())
-        for issue in validator.validate_rules(collection.rules):
+        try:
+            validator_issues = validator.validate_rules(collection.rules)
+        except Exception as e:
+            issues.append({
+                "severity": "error",
+                "field": f"{prefix}.validators",
+                "message": f"Validator suite could not run: {type(e).__name__}: {e}",
+            })
+            return issues
+
+        for issue in validator_issues:
             issues.append({
                 "severity": _SEVERITY_MAP.get(issue.severity, "warning"),
                 "field": f"{prefix}.{type(issue).__name__}",

@@ -178,3 +178,46 @@ def test_mitre_tactic_validation_is_skipped_without_vector_store(stage):
     in a static allow-list, not that tactic and technique are consistent."""
     rules = [{"yaml_content": VALID_RULE}]
     assert stage._validate_mitre_tactics(rules) == []
+
+
+# --- defect 13: a validator that raises must not discard the request -------
+
+# Reproduces the live failure on the Microsoft "Prestige" report, which lost
+# all three generated rules to `Expected end of text, found '*'`.
+MALFORMED_CONDITION_RULE = VALID_RULE.replace(
+    "    condition: selection", "    condition: selection *")
+
+
+def test_malformed_condition_is_reported_not_raised(stage):
+    """pySigma parses conditions lazily. The condition check catches the error,
+    but the core validator suite re-parses the condition and raised
+    SigmaConditionError outside any `try`."""
+    issues = stage._validate_rule(MALFORMED_CONDITION_RULE, 0)
+    messages = [i["message"] for i in errors(issues)]
+    assert any("found '*'" in m for m in messages)
+
+
+def test_validator_suite_failure_is_its_own_issue(stage):
+    """An empty warning list must not read as "passed every validator" when the
+    suite never finished."""
+    issues = stage._validate_rule(MALFORMED_CONDITION_RULE, 2)
+    suite = [i for i in issues if i["field"] == "rule[2].validators"]
+    assert len(suite) == 1
+    assert suite[0]["severity"] == "error"
+    assert "Validator suite could not run" in suite[0]["message"]
+
+
+def test_one_bad_rule_does_not_lose_the_others(stage):
+    """End to end through run(): before the fix the exception escaped the stage
+    and the orchestrator, and every rule in the response was discarded."""
+    context = {"generation": {"rules": [
+        {"yaml_content": VALID_RULE},
+        {"yaml_content": MALFORMED_CONDITION_RULE},
+    ]}}
+    context = stage.run(context)
+
+    assert context["validation"]["is_valid"] is False
+    kept = [r["yaml_content"] for r in context["optimization"]["rules"]]
+    assert kept == [VALID_RULE, MALFORMED_CONDITION_RULE]
+    fields = {i["field"] for i in errors(context["validation"]["issues"])}
+    assert all(f.startswith("rule[1]") for f in fields)
