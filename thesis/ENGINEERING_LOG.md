@@ -1617,3 +1617,46 @@ regression to `analyze_attack` would fail the test. Full suite **149 passed**;
 
 ### Status
 Defect 17 fixed. From the next run on, gate 4 means what it says.
+
+---
+
+## 2026-09-23 — Change 15 (plan 1.1c): each result row keeps the pipeline's intermediate results
+
+### Motivation
+`baseline60.jsonl` recorded the final rules and their scores, but not what the
+stages concluded on the way. It could say *that* logsource matched gold in only
+8 of 55 cases, not *why*: whether the analysis stage suggested the wrong source,
+the attack-vector stage pointed elsewhere, or generation ignored a correct
+suggestion (defect 11). Nor could it support the invalid-id rate promised in
+Change 9, or say what the two zero-rule cases actually returned. The pipeline
+already computes all of this and returns most of it in `pipeline_metadata`; the
+harness discarded it.
+
+### Design decisions
+| Decision | Rationale |
+|---|---|
+| A named tuple of fields, `DIAGNOSIS_FIELDS`, copied into `row["pipeline"]` | Explicit about what is kept: attack vector, attack summary, indicators, ATT&CK mappings, logsource suggestions and primary, suggested log sources, coverage check, review's validation issues, PoC snippet count, generation log, retry flag. Enrichment sources are left out — always empty on the all-local setup |
+| The generation stage appends one entry per call to `context["generation_log"]` (`{"rules", "ids_replaced"}`) | A regeneration *replaces* `context["generation"]`, so its `ids_replaced` alone would lose the first call. The log keeps every call and gives the invalid-id rate its full denominator |
+| `pipeline_metadata` gains `generations` and `generation_retried` | The web API returns the same dict; the frontend reads only named keys (`indicators`, `ttp_mappings`, `validation_issues`), so nothing new appears in the UI |
+| `response_text` stored only when no rule was extracted | That is the case where nothing else can be inspected. With rules present, `rules_yaml` already holds them and the full text would roughly double the file |
+| `pipeline_metadata` of `None` gives an empty dict | Conversational answers return `None`; the row must still be written |
+
+### Verification
+Tests written first; 6 of 7 were seen to fail, the generation test for the right
+reason (the stage ran; only the log was missing). **7 offline tests**:
+`tests/test_diagnosis_fields.py` (every generation call is logged across a
+regeneration; the output exposes the log and retry flag; defaults when nothing
+was generated) and `tests/test_eval_runner.py` (the row keeps the diagnosis
+fields and drops the excluded one; the response text is kept when no rule is
+extracted and not duplicated when rules exist; missing metadata does not break
+the row). Full suite **156 passed**; `backend.main` imports.
+
+### Limitations
+- Not yet exercised against the live model — the baseline-v2 run (plan 1.5) is
+  the first. The fields come from the same dict the web UI already renders, so
+  the risk is low, but it is untested live.
+- Rows grow by the size of these fields (a few KB each); acceptable at n=60.
+
+### Status
+Plan task 1.1 complete: stage labels (Change 13), crashes reach the harness
+(Change 14), intermediate results kept (Change 15).

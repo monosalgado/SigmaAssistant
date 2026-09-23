@@ -324,3 +324,64 @@ def test_snapshot_counts_are_kept_on_a_crash():
     agent = _Agent(_Orchestrator(raises=RuntimeError("stage failed")))
     row = run_case(agent, _case(), config={}, no_web_enrich=True)
     assert row["snapshots_served"] == 0 and row["snapshots_missed"] == 0
+
+
+# --------------------------------------------------------------------------
+# The row keeps the pipeline's intermediate results (plan 1.1c)
+# --------------------------------------------------------------------------
+
+METADATA = {
+    "attack_vector": {"vuln_class": "command_injection", "primary_telemetry": "process_creation"},
+    "attack_summary": "summary",
+    "indicators": [{"value": "powershell.exe", "type": "process"}],
+    "ttp_mappings": [{"technique_id": "T1059.001"}],
+    "logsource_suggestions": [{"category": "process_creation", "product": "windows"}],
+    "logsource_primary": "process_creation/windows",
+    "suggested_log_sources": ["Sysmon EID 1"],
+    "coverage_check": {"warnings": []},
+    "validation_issues": [],
+    "poc_snippets_found": 0,
+    "generations": [{"rules": 1, "ids_replaced": 0}],
+    "generation_retried": False,
+    "enrichment_sources": [],          # deliberately not kept: empty on the all-local setup
+}
+
+
+def test_row_keeps_the_diagnosis_fields():
+    agent = _Agent(_Orchestrator(result={
+        "rule": "```yaml\n" + GENERATED_RULE + "```", "context": {},
+        "pipeline_metadata": METADATA}))
+    row = run_case(agent, _case(), config={}, no_web_enrich=True)
+    kept = row["pipeline"]
+    assert kept["attack_vector"]["primary_telemetry"] == "process_creation"
+    assert kept["logsource_suggestions"][0]["category"] == "process_creation"
+    assert kept["generations"] == [{"rules": 1, "ids_replaced": 0}]
+    assert kept["generation_retried"] is False
+    assert "enrichment_sources" not in kept
+
+
+def test_response_text_is_kept_when_no_rule_is_extracted():
+    """The two zero-rule baseline cases could not be diagnosed: only the length of
+    their 86-character response was stored."""
+    agent = _Agent(_Orchestrator(result={
+        "rule": "I was unable to generate a rule.", "context": {},
+        "pipeline_metadata": METADATA}))
+    row = run_case(agent, _case(), config={}, no_web_enrich=True)
+    assert row["n_rules"] == 0
+    assert row["response_text"] == "I was unable to generate a rule."
+
+
+def test_response_text_is_not_duplicated_when_rules_exist():
+    """rules_yaml already holds the rules; the full text would double the file."""
+    agent = _Agent(_Orchestrator(result={
+        "rule": "```yaml\n" + GENERATED_RULE + "```", "context": {},
+        "pipeline_metadata": METADATA}))
+    assert "response_text" not in run_case(agent, _case(), config={}, no_web_enrich=True)
+
+
+def test_missing_metadata_does_not_break_the_row():
+    """Conversational answers return pipeline_metadata None."""
+    agent = _Agent(_Orchestrator(result={"rule": "hello", "context": {},
+                                         "pipeline_metadata": None}))
+    row = run_case(agent, _case(), config={}, no_web_enrich=True)
+    assert row["error"] is None and row["pipeline"] == {}

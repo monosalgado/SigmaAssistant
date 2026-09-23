@@ -61,6 +61,17 @@ from eval.scorers import score_case  # noqa: E402
 
 _YAML_BLOCK_RE = re.compile(r"```ya?ml\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
 
+# Intermediate results kept in each row, so a score can be explained: what the
+# attack-vector and analysis stages concluded, what review objected to, and how
+# many generation calls ran. Everything else in pipeline_metadata is left out
+# (e.g. enrichment sources, which are always empty on the all-local setup).
+DIAGNOSIS_FIELDS = (
+    "attack_vector", "attack_summary", "indicators", "ttp_mappings",
+    "logsource_suggestions", "logsource_primary", "suggested_log_sources",
+    "coverage_check", "validation_issues", "poc_snippets_found",
+    "generations", "generation_retried",
+)
+
 
 # --------------------------------------------------------------------------
 # Serving snapshots in place of the network
@@ -292,6 +303,12 @@ def run_case(agent, case: dict, config: dict, no_web_enrich: bool) -> dict:
         row["scores"] = score_case(rules[0], case["gold"]) if rules else \
             score_case(response_text, case["gold"])
         row["response_chars"] = len(response_text)
+        if not rules:
+            # Only kept when there is nothing else to look at: rules_yaml already
+            # holds every rule, and the full text would double the file.
+            row["response_text"] = response_text
+        metadata = result.get("pipeline_metadata") or {}
+        row["pipeline"] = {k: metadata[k] for k in DIAGNOSIS_FIELDS if k in metadata}
         row["error"] = None
     except Exception as exc:
         row["error"] = f"{type(exc).__name__}: {exc}"

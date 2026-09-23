@@ -305,6 +305,10 @@ class GenerateStage(PipelineStage):
             "notes": result.get("notes", ""),
             "ids_replaced": ids_replaced,
         }
+        # A regeneration replaces context["generation"]; this log keeps every
+        # call, so the invalid-id rate has the full denominator.
+        context.setdefault("generation_log", []).append(
+            {"rules": len(rules), "ids_replaced": ids_replaced})
 
         if ids_replaced:
             print(f"[{self.name}] Replaced {ids_replaced} invalid/missing rule id(s)")

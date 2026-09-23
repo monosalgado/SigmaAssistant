@@ -590,6 +590,8 @@ class PipelineOrchestrator:
             "logsource_primary": logsource_suggestion.get("primary_source", ""),
             "attack_vector": attack_vector,
             "coverage_check": coverage,
+            "generations": context.get("generation_log", []),
+            "generation_retried": bool(context.get("generation_retried")),
         }
 
         # Build context for sidebar (backward compatible)
