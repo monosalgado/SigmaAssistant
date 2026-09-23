@@ -47,10 +47,10 @@ class AnalysisStage(PipelineStage):
         # 3. Single LLM call for combined analysis (ECONOMY → Spark)
         # Routes to qwen3-coder:30b on Spark when tunnel is up; falls back to
         # Gemini fast (gemini-2.0-flash) if Ollama unreachable.
-        # Limit combined_text to 4000 chars to keep the prompt within a safe
-        # budget on both backends.
+        # The whole source up to SOURCE_TEXT_MAX_CHARS: a 4000-char window held
+        # only site navigation on many pages (see base_stage).
         prompt = prompts.COMBINED_ANALYSIS.format(
-            text=combined_text[:4000],
+            text=self.source_text(combined_text),
             attack_vector_summary=attack_vector_summary,
             incidental_blacklist=incidental_blacklist,
             mitre_context=mitre_context,

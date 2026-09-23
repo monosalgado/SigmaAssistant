@@ -67,7 +67,7 @@ class AttackVectorStage(PipelineStage):
             poc_text = "No PoC behaviors extracted."
 
         prompt = prompts.ATTACK_VECTOR_EXTRACTION.format(
-            text=combined_text[:8000],
+            text=self.source_text(combined_text),
             poc_behaviors=poc_text,
         )
 

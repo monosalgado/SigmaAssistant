@@ -10,8 +10,9 @@ Criteria were fixed before the run was looked at:
 
   M1  example leak — the output contains a marker string that exists only in the
       ATTACK_VECTOR_EXTRACTION prompt's examples, AND that marker is absent from
-      the text the model was actually given (source cut to 8000 chars + PoC
-      behaviours). Markers are invented, example-specific strings; generic
+      the text the model was actually given (the stage's source window + PoC
+      behaviours; the window was 8000 chars for av60.jsonl, SOURCE_TEXT_MAX_CHARS
+      after Change 12). Markers are invented, example-specific strings; generic
       patterns the prompt also mentions ("$(", "../../etc/passwd", "rO0AB")
       are excluded because a model may legitimately infer them from the class.
   M2  quote verification — each payload signature's `derived_from` is supposed
@@ -108,10 +109,12 @@ def main() -> int:
             ctx = orch.poc_analysis.run(ctx)
             ctx = orch.attack_vector.run(ctx)
 
-            # Rebuilt exactly as stage_attack_vector.py:62-72 builds the prompt input.
+            # Rebuilt as stage_attack_vector.py:62-72 builds the prompt input,
+            # using the stage's own window so the check follows any change to it.
             behaviours = ctx.get("poc_analysis", {}).get("behavioral_indicators", [])
             poc_text = json.dumps(behaviours[:15], indent=2) if behaviours else "No PoC behaviors extracted."
-            model_input = ctx["preprocessed"]["combined_text"][:8000] + "\n" + poc_text
+            source = orch.attack_vector.source_text(ctx["preprocessed"]["combined_text"])
+            model_input = source + "\n" + poc_text
             av = ctx["attack_vector"]
             output = json.dumps(av)
             input_norm = normalise(model_input)

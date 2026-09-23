@@ -6,6 +6,16 @@ import json
 import time
 
 
+# Upper bound on how much extracted source text a stage puts into its prompt.
+# The attack-vector and analysis stages used to read only the first 8000 and
+# 4000 characters. On pages that open with site navigation, that window held
+# no article at all, and the attack-vector stage fell back on its own prompt
+# examples (defect 15). 100,000 characters covers the longest text in the
+# evaluation corpus (79,800) at roughly 25k tokens, well inside the 262k
+# context the Spark serves qwen3-coder with.
+SOURCE_TEXT_MAX_CHARS = 100_000
+
+
 class PipelineStage(ABC):
     """Abstract base class for pipeline stages."""
 
@@ -70,6 +80,18 @@ class PipelineStage(ABC):
                     time.sleep(wait_time)
                 else:
                     raise
+
+    def source_text(self, text: str) -> str:
+        """The part of the extracted source this stage may put in its prompt.
+
+        A cut is logged, so a page longer than the window cannot silently lose
+        its end the way the old fixed windows lost everything after the start.
+        """
+        if len(text) > SOURCE_TEXT_MAX_CHARS:
+            print(f"[{self.name}] Source text cut from {len(text)} to "
+                  f"{SOURCE_TEXT_MAX_CHARS} characters")
+            return text[:SOURCE_TEXT_MAX_CHARS]
+        return text
 
     def parse_json(self, text: str) -> Any:
         """Parse JSON from LLM response, handling common issues."""

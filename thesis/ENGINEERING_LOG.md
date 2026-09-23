@@ -1309,3 +1309,84 @@ reproducible. **Open.**
 Defect 15 confirmed as systematic: roughly one case in five. Candidate
 mechanism: the fixed-size input windows are filled with page boilerplate.
 Defects 4, 5, 6, 9, 11, 12, 15 and 16 are open. No system code changed.
+
+---
+
+## 2026-09-23 — Change 12: the attack-vector and analysis stages read the whole source
+
+### Motivation (defect 15)
+The defect-15 measurement (previous entry) found the attack-vector stage
+reproducing its own prompt examples, and traced it on inspected cases to a fixed
+input window filled with site navigation. Measured across all 303 cases,
+offline: the extracted text fits entirely inside the analysis stage's
+4000-character window in **23/303 (8%)** cases and inside the attack-vector
+stage's 8000 in **66/303 (22%)**. Median length is 19,158 characters, p95
+59,167, maximum 79,800. For most inputs, both stages were working from the
+opening of the page — which on many sites is navigation — and never from the
+write-up itself.
+
+### Design decisions
+| Decision | Rationale |
+|---|---|
+| One named limit, `SOURCE_TEXT_MAX_CHARS = 100_000`, in `base_stage.py` | Two unrelated magic numbers become one stated, citable bound shared by both stages |
+| 100,000 characters | Covers the longest text in the corpus (79,800), about 25k tokens with the template. Unbounded input would make prompt size depend on whatever a page contains |
+| `PipelineStage.source_text()` logs every cut | A page longer than the bound cannot silently lose its end the way the old windows lost everything after the start. Zero cuts occurred in the measurement below |
+| Rely on the server's context, and check it | The Spark's Ollama 0.34.1 loads `qwen3-coder:30b` with a **262,144-token** context (`ollama ps`, confirmed during the run). The code sets none, so this is a preflight check, not a guarantee — added to the run recipe |
+| Leave other slices alone | `combined_text[:500]` in the analysis stage is a RAG *query* and a failure fallback, not model input; the PoC and enrichment caps bound different inputs. One change at a time |
+| Measurement script uses the stage's own method | `eval/probe_attack_vector.py` rebuilt the model input with a hard-coded 8000; left unchanged, its leak check would have tested against text the model no longer receives |
+
+### Verification
+1. **5 offline tests** (`tests/test_source_window.py`), written first and seen
+   to fail (3 of 5) against the old windows: a marker placed 30,000 characters
+   into the source reaches the prompt of both stages; the bound covers the
+   longest corpus text; text past the bound is cut *and* the cut is logged;
+   text inside it is not reported as cut. Full suite **139 passed**.
+2. **Defect-15 measurement rerun** on the same 60 `rule_id`s, same model, same
+   criteria: `eval/results/av60_window.jsonl` against `av60.jsonl`. Gates: 0
+   snapshots missed, 0 stage failures (1 before), 0 cuts logged. Paired
+   comparison, exact McNemar test on the discordant cases:
+
+   | Measure | Before | After | Paired |
+   |---|---|---|---|
+   | Example content **in the attack vector itself** (vector, entry point, input, signatures) | 11/60 (18.3%) | **4/60 (6.7%)**, CI 2.6–15.9% | 8 fixed, 1 new, **p = 0.039** |
+   | Example content anywhere in the output | 13/60 (21.7%) | 10/60 (16.7%) | 7 fixed, 4 new, p = 0.55 |
+   | … of which only in the incidental-artifacts list | 2 | 6 | — |
+   | `derived_from` quotes found verbatim | 54/203 (26.6%) | 64/250 (25.6%) | unchanged |
+   | Web-server telemetry chosen when the gold rule is not web/proxy | 23/48 | 21/48 | 4 fixed, 2 new, p = 0.69 |
+   | Median model input | 8,529 chars | 22,358 chars | — |
+   | Time for preprocess + PoC + attack vector | 15.1 min (median 13.6 s) | 19.0 min (median 16.6 s) | +26% |
+
+### Interpretation
+- **The harmful form of defect 15 is largely fixed.** Copying into the fields
+  that anchor generation fell from 11 to 4 cases, and the paired test clears
+  0.05. What remains is mostly Example B's patch filenames listed as
+  "incidental artifacts" — noise sent to a blacklist, not a detection anchor.
+- **The web-telemetry bias is a separate problem, and the window did not touch
+  it.** Almost half of the non-web cases (21/48) are still told their primary
+  telemetry is a web-server log. Two of the three worked examples and most of
+  the inline examples in `ATTACK_VECTOR_EXTRACTION` are web exploits, and the
+  field is defined as where "the initial exploit" would be visible — whereas
+  many gold rules in this corpus detect post-exploitation behaviour on the host.
+  **Hypothesis, not measured.** Recorded because it bears directly on S3.
+- **Quote fidelity is not a window problem either**: about a quarter of quotes
+  are verbatim before and after, so the model paraphrases what it cites.
+
+### Limitations to disclose
+- Only the **attack-vector stage** is measured here. The analysis stage's window
+  grew tenfold (4000 → 100,000) and its effect on the indicators, ATT&CK mapping
+  and logsource suggestions — and therefore on S1–S5 — is **unmeasured** until
+  the 60-case harness rerun.
+- One run per condition. Ollama output at temperature 0 is not bit-for-bit
+  repeatable, so part of the case-level churn (1 new core leak, 4 new
+  anywhere-leaks) is run-to-run variation rather than an effect of the change.
+- The boilerplate itself is still in the text; the article is now *included*,
+  not *isolated*. Extraction quality (defect 9) is untouched.
+- The PoC stage still fetches GitHub live (candidate defect 16), so PoC inputs
+  may differ between the two runs.
+- Cost moves the wrong way by design: +26% wall time on these stages, and
+  larger prompts on the analysis stage as well.
+
+### Status
+Defect 15's harmful form reduced (p = 0.039); residual incidental-list noise and
+a separate web-telemetry bias remain. Next: the 60-case harness rerun to measure
+the effect on S1–S5.
