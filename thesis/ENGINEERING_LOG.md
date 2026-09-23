@@ -1195,3 +1195,117 @@ fired on that sample and `baseline60.jsonl` remains the valid comparison point.
 
 ### Status
 Defect 13 closed. Defects 4, 5, 6, 9, 11 and 12 remain open.
+
+---
+
+## 2026-09-23 — Defect 15 measured: the attack-vector stage reproduces its own prompt examples (measurement, no change to the system)
+
+### How it was found
+While testing whether Foundation-Sec-8B could run the attack-vector stage (it
+could not; the decision since is to keep every stage on `qwen3-coder:30b`),
+qwen itself returned, for a Windows "Defrag Deactivation" rule, the attack
+vector "Unauthenticated HTTP POST to /saml/login with a crafted SAMLRequest
+body". That is the illustrative example in the field description of
+`ATTACK_VECTOR_EXTRACTION` (`prompts.py:560`). The source text contains no
+"saml" anywhere.
+
+### Method
+`eval/probe_attack_vector.py` reruns **only** the stages that feed the
+attack-vector prompt (preprocess → PoC analysis → attack vector) through the
+real orchestrator's stage objects, on the **same 60 `rule_id`s** as
+`baseline60.jsonl`, and stores the full attack-vector output, which the harness
+does not keep. Output: `eval/results/av60.jsonl`. 15.1 minutes.
+
+Two criteria were fixed, and covered by 6 offline tests
+(`tests/test_probe_attack_vector.py`), **before** the run was looked at:
+
+- **M1 — example leak.** The output contains a marker string that exists only in
+  the prompt's examples (`/saml/login`, `SAMLRequest`, `NSC_TASS`, `patch.nss`,
+  `remoteVersion`, `BT26-02`, `thin-scc-wrapper`, `sedcp`, the example's patch
+  password, `oopsie`) **and** that marker is absent from the text the model was
+  given (the source cut to 8000 characters plus the PoC behaviours). Generic
+  patterns the prompt also mentions (`$(`, `../../etc/passwd`, `rO0AB`) are
+  excluded, because a model may legitimately infer them from a vulnerability
+  class.
+- **M2 — quote verification.** Each payload signature's `derived_from` is
+  specified as a quote from the input. Share found verbatim after lower-casing
+  and collapsing whitespace; `inferred_from_class` excluded.
+
+Gates: `snapshots_missed == 0` on all 60. One case (`47a1658b`) failed inside
+the stage with a JSON parse error and returned the empty default; it is kept in
+the denominator (it cannot leak), and the rate over 59 is given alongside.
+
+### Result
+| Measure | Value | Wilson 95% CI |
+|---|---|---|
+| **M1: cases whose output contains prompt-example content absent from the input** | **13/60 = 21.7%** (13/59 = 22.0%) | 13.1–33.6% |
+| … of which in the attack vector itself (vector, entry point, attacker input, signatures) | 11/60 = 18.3% | 10.6–29.9% |
+| … only in the incidental-artifacts list | 2/60 | — |
+| M1 when the PoC stage found no code | 10/27 = 37.0% | 21.5–55.8% |
+| M1 when the PoC stage found code | 3/33 = 9.1% | 3.1–23.6% |
+| **M2: `derived_from` quotes found verbatim in the input** | **54/203 = 26.6%** | 21.0–33.1% |
+| M2 in leak cases / clean cases | 5/41 / 49/162 | — |
+
+By example: the SAML example (A and the inline example) appears in 12 of the 13
+leak cases, the WebSocket example (B) in 6 (they overlap). **12 of the 13 leak
+cases name `webserver_access_log` as the primary telemetry, while the gold rule
+is a web or proxy rule in only 2 of them** — the rest are Windows process,
+file-event and security rules.
+
+### Mechanism (inspected, not yet measured)
+For 3 of the 13 leak cases (`92389a99`, `c601f20d`, `29fd07fc`) the first 8000
+characters of the text the stage receives were inspected by hand. **In all
+three, the entire window is website navigation and boilerplate** — GitHub's
+repository chrome, Kaspersky's product menus, Mandiant's marketing blocks — and
+the article itself starts after it. The stage cuts the text at 8000 characters
+(`stage_attack_vector.py:70`), so the model never saw the write-up, and filled
+the gap from the only concrete attack descriptions in its context: the prompt's
+examples. The PoC split above fits this: when code snippets are present they give
+the model real material even when the page text is boilerplate.
+
+`_extract_page_content` removes `nav`, `header`, `footer` and similar tags
+(`stage_preprocess.py:99-101`), but these sites build their menus from generic
+elements, which survive.
+
+**The same exposure applies to the analysis stage, which reads only the first
+4000 characters** (`stage_analysis.py:53`). That stage produces the indicators,
+the ATT&CK mapping and the logsource suggestions, so on these pages those are
+also derived from boilerplate. Generation never sees the raw text at all — only
+the stage outputs.
+
+### Association with the baseline scores — not established
+On the same 60 cases, the baseline run's first rule matched the gold logsource
+in **0 of the 13** leak cases against **8 of 42** others (scored cases only).
+One-sided Fisher exact test **p = 0.097: not significant at this n.** The
+baseline run is also a different execution, so its attack-vector output for
+these cases is unknown; the input it received, however, was identical (same
+snapshots, same truncation). This is an association worth testing, not a
+finding.
+
+### Limitations to disclose
+- **M1 is a lower bound** on example contamination: it only detects the invented
+  marker strings. A copy that paraphrases the example, or that reuses a generic
+  phrase, is not counted.
+- **M2 is an upper bound** on invented quotes: a miss means "not verbatim",
+  which includes honest paraphrase and quotes altered by text extraction.
+- One run at temperature 0; Ollama output is not bit-for-bit repeatable, so the
+  rate would move somewhat on a rerun (the smoke run and the full run both
+  produced a leak on `c5a178bf`).
+- The boilerplate mechanism was confirmed by inspection on 3 of 13 leak cases
+  only. How often the 4000/8000-character windows miss the article across the
+  corpus is **not yet measured**.
+- The PoC stage fetches GitHub **live**, outside the harness's snapshot shim —
+  recorded below as candidate defect 16 — so the PoC inputs of this run may differ
+  from the baseline run's.
+
+### Candidate defect 16 — the PoC stage bypasses the snapshots
+`stage_poc_analysis.py:124` and `:149` call `requests.get` on GitHub raw and API
+URLs. The harness replaces `requests` only inside `stage_preprocess`, so these
+fetches go to the live network and are invisible to the `snapshots_missed`
+gate. Cases whose references include GitHub are therefore not fully offline-
+reproducible. **Open.**
+
+### Status
+Defect 15 confirmed as systematic: roughly one case in five. Candidate
+mechanism: the fixed-size input windows are filled with page boilerplate.
+Defects 4, 5, 6, 9, 11, 12, 15 and 16 are open. No system code changed.
