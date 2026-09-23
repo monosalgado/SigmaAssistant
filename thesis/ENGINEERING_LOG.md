@@ -1841,3 +1841,56 @@ snapshot. From baseline v2 on, it is fixed.
 
 ### Status
 Defect 16 fixed.
+
+---
+
+## 2026-09-23 — Change 18 (plan 1.3b): contaminated cases are flagged and reported separately
+
+### Motivation
+The previous entry found that in 23 of 303 cases (5 of 60) a detection rule
+reaches the pipeline — through a PoC download, a reference that is itself a rule
+file, or a Sigma rule printed in the page. Chosen handling (decision a, user,
+2026-09-23): **keep the cases, flag them, and report them separately**, with the
+headline on the clean cases. Dropping them would lose data and change the
+sample; only disclosing them would leave "did the input contain the answer?"
+without a measured answer.
+
+### Design decisions
+| Decision | Rationale |
+|---|---|
+| The definition lives in one pure function, `eval/contamination.py` | Three named routes, each returned with its detail (the URL or file), so any flag can be checked by hand. The docstring states the definition and that the `.yml` criterion over-counts |
+| A committed list, `eval/contamination.jsonl`, written by `eval/flag_contamination.py` | Every case appears — clean or flagged — with its reasons. Deterministic (snapshots + the PoC stage's own fetch targets, no network, no LLM), reviewable, and citable |
+| The harness attaches each case's flag to its row | A case missing from the list is recorded as `None` — unknown, never assumed clean |
+| The summariser reports all / clean / flagged | Older result files have no flag field; the committed list is applied by `rule_id`, so earlier runs can be split too |
+
+### Verification
+Tests written first. **14 offline tests**: `tests/test_contamination.py` (an
+ordinary article is clean; a Sigma rule in the page is flagged; the three keys
+far apart are not; a reference that is a rule file, or into the SigmaHQ repo, is
+flagged; PoC downloads from SigmaHQ or Sentinel detections are flagged; exploit
+code is not; each reason carries its detail), `tests/test_eval_summarise.py`
+(split by the row's own flag; older rows split by the committed list; a case in
+neither place is unknown), and `tests/test_eval_runner.py` (the row carries the
+flag; an unflagged case records `None`). Full suite **187 passed**.
+
+The committed list reproduces the earlier measurement **exactly**: reference 10,
+in text 7, input 17, PoC 13, **union 23 of 303**; the same 5 sample cases
+(`7b501acf`, `994cac2b`, `a62298a3`, `e710a880`, `f130a5f1`). `--dry-run` reports
+5 of 60 flagged, none without a flag.
+
+### Baseline v1, split
+| | All 60 | Clean (55) | Flagged (5) |
+|---|---|---|---|
+| S1 valid Sigma | 0.917 | 0.909 | 1.000 |
+| S3 logsource exact | 0.145 (n=55) | 0.140 (n=50) | 0.200 (n=5) |
+| S4 ATT&CK F1 | 0.123 (n=37) | 0.120 (n=34) | 0.167 (n=3) |
+| S5 detection F1 | 0.205 (n=53) | 0.208 (n=49) | 0.167 (n=4) |
+
+**The headline does not depend on the contaminated cases**: on the clean cases
+every metric moves by at most 0.008. The flagged subset is too small (n=3–5) to
+support any conclusion about it. The earlier "0.50 vs 0.13" was an anecdote on 2
+cases and does not hold on 5.
+
+### Status
+Plan 1.3 complete: defect 16 fixed (Change 17), contamination flagged and
+reported (Change 18).

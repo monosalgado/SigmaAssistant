@@ -18,7 +18,7 @@ See thesis/ENGINEERING_LOG.md, Change 6.
 
 from __future__ import annotations
 
-from eval.summarise import NULL_BASELINES, summarise
+from eval.summarise import NULL_BASELINES, split_by_contamination, summarise
 
 
 def _row(*, parses=True, issues=0, logsource=None, attack=None,
@@ -153,3 +153,36 @@ def test_mean_issues_is_a_float_so_it_formats_consistently():
     '0' rather than '0.00' and read as a different kind of value."""
     s = summarise([_row(issues=0), _row(issues=0)])
     assert isinstance(s["mean_issues"], float)
+
+
+# --------------------------------------------------------------------------
+# Clean vs flagged cases (plan 1.3b)
+# --------------------------------------------------------------------------
+
+def _tagged(rule_id, flagged):
+    row = _row()
+    row["rule_id"] = rule_id
+    if flagged is not None:
+        row["contamination"] = {"flagged": flagged, "reasons": []}
+    return row
+
+
+def test_rows_split_by_their_own_flag():
+    rows = [_tagged("a", False), _tagged("b", True), _tagged("c", False)]
+    split = split_by_contamination(rows)
+    assert [r["rule_id"] for r in split["clean"]] == ["a", "c"]
+    assert [r["rule_id"] for r in split["flagged"]] == ["b"]
+    assert split["unknown"] == []
+
+
+def test_older_rows_are_split_with_the_committed_list():
+    """Files written before the flag existed carry no field; the committed list
+    applies by rule_id, so baseline v1 can be split too."""
+    rows = [_tagged("a", None), _tagged("b", None)]
+    split = split_by_contamination(rows, flags={"a": False, "b": True})
+    assert [r["rule_id"] for r in split["flagged"]] == ["b"]
+
+
+def test_a_case_in_neither_place_is_unknown_not_clean():
+    split = split_by_contamination([_tagged("z", None)], flags={})
+    assert [r["rule_id"] for r in split["unknown"]] == ["z"] and split["clean"] == []

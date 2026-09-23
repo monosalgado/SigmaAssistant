@@ -1,0 +1,303 @@
+{"rule_id": "a4a899e8-fd7a-49dd-b5a8-7044def72d61", "title": "CVE-2010-5278 Exploitation Attempt", "flagged": true, "reasons": [{"reason": "reference_is_rule", "detail": "https://github.com/projectdiscovery/nuclei-templates"}]}
+{"rule_id": "a133193c-2daa-4a29-8022-018695fcf0ae", "title": "Rejetto HTTP File Server RCE", "flagged": false, "reasons": []}
+{"rule_id": "c601f20d-570a-4cde-a7d6-e17f99cb8e7f", "title": "Turla Group Lateral Movement", "flagged": false, "reasons": []}
+{"rule_id": "864403a1-36c9-40a2-a982-4c9a45f7d833", "title": "Exploit for CVE-2017-0261", "flagged": false, "reasons": []}
+{"rule_id": "678eb5f4-8597-4be6-8be7-905e4234b53a", "title": "Droppers Exploiting CVE-2017-11882", "flagged": false, "reasons": []}
+{"rule_id": "79aeeb41-8156-4fac-a0cd-076495ab82a1", "title": "NotPetya Ransomware Activity", "flagged": false, "reasons": []}
+{"rule_id": "aeab5ec5-be14-471a-80e8-e344418305c2", "title": "Potential PlugX Activity", "flagged": false, "reasons": []}
+{"rule_id": "9e987c6c-4c1e-40d8-bd85-dd26fba8fdd6", "title": "StoneDrill Service Install", "flagged": false, "reasons": []}
+{"rule_id": "881834a4-6659-4773-821e-1c151789d873", "title": "Equation Group C2 Communication", "flagged": false, "reasons": []}
+{"rule_id": "47e0852a-cf81-4494-a8e6-31864f8c86ed", "title": "Pandemic Registry Key", "flagged": false, "reasons": []}
+{"rule_id": "1df8b3da-b0ac-4d8a-b7c7-6cb7c24160e4", "title": "Turla Service Install", "flagged": false, "reasons": []}
+{"rule_id": "1228f8e2-7e79-4dea-b0ad-c91f1d5016c1", "title": "Turla PNG Dropper Service", "flagged": false, "reasons": []}
+{"rule_id": "a2e97350-4285-43f2-a63f-d0daff291738", "title": "Fortinet CVE-2018-13379 Exploitation", "flagged": false, "reasons": []}
+{"rule_id": "9aa01d62-7667-4d3b-acb8-8cb5103e2014", "title": "APT27 - Emissary Panda Activity", "flagged": false, "reasons": []}
+{"rule_id": "ba778144-5e3d-40cf-8af9-e28fb1df1e20", "title": "Sofacy Trojan Loader Activity", "flagged": false, "reasons": []}
+{"rule_id": "3a3f81ca-652c-482b-adeb-b1c804727f74", "title": "APT29 2018 Phishing Campaign File Indicators", "flagged": false, "reasons": []}
+{"rule_id": "7453575c-a747-40b9-839b-125a0aae324b", "title": "APT29 2018 Phishing Campaign CommandLine Indicators", "flagged": false, "reasons": []}
+{"rule_id": "4ac5fc44-a601-4c06-955b-309df8c4e9d4", "title": "OceanLotus Registry Activity", "flagged": false, "reasons": []}
+{"rule_id": "36222790-0d43-4fe8-86e4-674b27809543", "title": "Potential MuddyWater APT Activity", "flagged": false, "reasons": []}
+{"rule_id": "958d81aa-8566-4cea-a565-59ccd4df27b0", "title": "Defrag Deactivation", "flagged": false, "reasons": []}
+{"rule_id": "c5a178bf-9cfb-4340-b584-e4df39b6a3e7", "title": "Defrag Deactivation - Security", "flagged": false, "reasons": []}
+{"rule_id": "8c7090c3-e0a0-4944-bd08-08c3a0cecf79", "title": "TropicTrooper Campaign November 2018", "flagged": false, "reasons": []}
+{"rule_id": "8400629e-79a9-4737-b387-5db940ab2367", "title": "Scanner PoC for CVE-2019-0708 RDP RCE Vuln", "flagged": false, "reasons": []}
+{"rule_id": "aaa5b30d-f418-420b-83a0-299cb6024885", "title": "Potential RDP Exploit CVE-2019-0708", "flagged": false, "reasons": []}
+{"rule_id": "2dbc10d7-a797-49a8-8776-49efa6442e60", "title": "Pulse Secure Attack CVE-2019-11510", "flagged": false, "reasons": []}
+{"rule_id": "1c373b6d-76ce-4553-997d-8c1da9a6b5f5", "title": "Exploiting SetupComplete.cmd CVE-2019-1378", "flagged": false, "reasons": []}
+{"rule_id": "02e0b2ea-a597-428e-b04a-af6a1a403e5c", "title": "Exploiting CVE-2019-1388", "flagged": false, "reasons": []}
+{"rule_id": "7fcc54cb-f27d-4684-84b7-436af096f858", "title": "Sudo Privilege Escalation CVE-2019-14287 - Builtin", "flagged": false, "reasons": []}
+{"rule_id": "f74107df-b6c6-4e80-bf00-4170b658162b", "title": "Sudo Privilege Escalation CVE-2019-14287", "flagged": false, "reasons": []}
+{"rule_id": "ac5a6409-8c89-44c2-8d64-668c29a2d756", "title": "Citrix Netscaler Attack CVE-2019-19781", "flagged": false, "reasons": []}
+{"rule_id": "2b30fa36-3a18-402f-a22d-bf4ce2189f35", "title": "Potential Baby Shark Malware Activity", "flagged": false, "reasons": []}
+{"rule_id": "fb502828-2db0-438e-93e6-801c7548686d", "title": "Chafer Malware URL Pattern", "flagged": false, "reasons": []}
+{"rule_id": "f1531fa4-5b84-4342-8f68-9cf3fdbd83d4", "title": "Potential Dtrack RAT Activity", "flagged": false, "reasons": []}
+{"rule_id": "032f5fb3-d959-41a5-9263-4173c802dc2b", "title": "Formbook Process Creation", "flagged": false, "reasons": []}
+{"rule_id": "74db3488-fd28-480a-95aa-b7af626de068", "title": "LockerGoga Ransomware Activity", "flagged": false, "reasons": []}
+{"rule_id": "c37510b8-2107-4b78-aa32-72f251e7a844", "title": "Potential Ryuk Ransomware Activity", "flagged": false, "reasons": []}
+{"rule_id": "932ac737-33ca-4afd-9869-0d48b391fcc9", "title": "Ursnif Malware C2 URL Pattern", "flagged": false, "reasons": []}
+{"rule_id": "a36ce77e-30db-4ea0-8795-644d7af5dfb4", "title": "Ursnif Malware Download URL Pattern", "flagged": true, "reasons": [{"reason": "sigma_in_text", "detail": null}]}
+{"rule_id": "21f17060-b282-4249-ade0-589ea3591558", "title": "Potential Ursnif Malware Activity - Registry", "flagged": false, "reasons": []}
+{"rule_id": "10152a7b-b566-438f-a33c-390b607d1c8d", "title": "Potential EmpireMonkey Activity", "flagged": false, "reasons": []}
+{"rule_id": "2d87d610-d760-45ee-a7e6-7a6f2a65de00", "title": "Mustang Panda Dropper", "flagged": false, "reasons": []}
+{"rule_id": "7c64e577-d72e-4c3d-9d75-8de6d1f9146a", "title": "CVE-2020-0688 Exploitation Attempt", "flagged": false, "reasons": []}
+{"rule_id": "fce2c2e2-0fb5-41ab-a14c-5391e1fd70a5", "title": "CVE-2020-0688 Exchange Exploitation via Web Log", "flagged": false, "reasons": []}
+{"rule_id": "d6266bf5-935e-4661-b477-78772735a7cb", "title": "CVE-2020-0688 Exploitation via Eventlog", "flagged": false, "reasons": []}
+{"rule_id": "5a35116f-43bc-4901-b62d-ef131f42a9af", "title": "CVE-2020-10148 SolarWinds Orion API Auth Bypass", "flagged": false, "reasons": []}
+{"rule_id": "846b866e-2a57-46ee-8e16-85fa92759be7", "title": "Exploited CVE-2020-10189 Zoho ManageEngine", "flagged": false, "reasons": []}
+{"rule_id": "cc08d590-8b90-413a-aff6-31d1a99678d7", "title": "Suspicious PrinterPorts Creation (CVE-2020-1048)", "flagged": false, "reasons": []}
+{"rule_id": "7ec912f2-5175-4868-b811-ec13ad0f8567", "title": "CVE-2020-1048 Exploitation Attempt - Suspicious New Printer Ports - Registry", "flagged": false, "reasons": []}
+{"rule_id": "b5281f31-f9cc-4d0d-95d0-45b91c45b487", "title": "DNS RCE CVE-2020-1350", "flagged": false, "reasons": []}
+{"rule_id": "dcc6a01e-9471-44a0-a699-71ea96f8ed8b", "title": "Exploitation Attempt Of CVE-2020-1472 - Execution of ZeroLogon PoC", "flagged": true, "reasons": [{"reason": "sigma_in_text", "detail": null}, {"reason": "poc_downloads_rule", "detail": "https://github.com/SigmaHQ/sigma/blob/a502f316efdcc8c174b7cf412029dfae5b3552c8/rules/windows/builtin/security/win_pass_the_hash_2.yml"}, {"reason": "poc_downloads_rule", "detail": "https://github.com/SigmaHQ/sigma/blob/940f89d43dbac5b7108610a5bde47cda0d2a643b/rules/windows/registry/registry_set/registry_set_powershell_as_service.yml"}, {"reason": "poc_downloads_rule", "detail": "https://github.com/SigmaHQ/sigma/blob/940f89d43dbac5b7108610a5bde47cda0d2a643b/rules/windows/registry/registry_set/registry_set_cobaltstrike_service_installs.yml"}]}
+{"rule_id": "85d466b0-d74c-4514-84d3-2bdd3327588b", "title": "Oracle WebLogic Exploit CVE-2020-14882", "flagged": false, "reasons": []}
+{"rule_id": "15c312b9-00d0-4feb-8870-7d940a4bdc5e", "title": "TerraMaster TOS CVE-2020-28188", "flagged": false, "reasons": []}
+{"rule_id": "aba47adc-4847-4970-95c1-61dce62a8b29", "title": "Cisco ASA FTD Exploit CVE-2020-3452", "flagged": false, "reasons": []}
+{"rule_id": "0d0d9a8a-a49e-4e27-b061-7ce4b936cfb7", "title": "Citrix ADS Exploitation CVE-2020-8193 CVE-2020-8195", "flagged": false, "reasons": []}
+{"rule_id": "54e57ce3-0672-46eb-a402-2c0948d5e3e9", "title": "Potential Emotet Rundll32 Execution", "flagged": false, "reasons": []}
+{"rule_id": "5118765f-6657-4ddb-a487-d7bd673abbf1", "title": "FlowCloud Registry Markers", "flagged": false, "reasons": []}
+{"rule_id": "7b544661-69fc-419f-9a59-82ccc328f205", "title": "Potential Ke3chang/TidePool Malware Activity", "flagged": false, "reasons": []}
+{"rule_id": "29fd07fc-9cfd-4331-b7fd-cc18dfa21052", "title": "Potential Maze Ransomware Activity", "flagged": false, "reasons": []}
+{"rule_id": "8acf3cfa-1e8c-4099-83de-a0c4038e18f0", "title": "EvilNum APT Golden Chickens Deployment Via OCX Files", "flagged": false, "reasons": []}
+{"rule_id": "440a56bf-7873-4439-940a-1c8a671073c2", "title": "GALLIUM IOCs", "flagged": true, "reasons": [{"reason": "reference_is_rule", "detail": "https://github.com/Azure/Azure-Sentinel/blob/a02ce85c96f162de6f8cc06f07a53b6525f0ff7f/Solutions/Legacy%20IOC%20based%20Threat%20Protection/Analytic%20Rules/GalliumIOCs.yaml"}]}
+{"rule_id": "3db10f25-2527-4b79-8d4b-471eb900ee29", "title": "GALLIUM Artefacts - Builtin", "flagged": false, "reasons": []}
+{"rule_id": "3711eee4-a808-4849-8a14-faf733da3612", "title": "Greenbug Espionage Group Indicators", "flagged": false, "reasons": []}
+{"rule_id": "24c4d154-05a4-4b99-b57d-9b977472443a", "title": "Lazarus Group Activity", "flagged": false, "reasons": []}
+{"rule_id": "70d43542-cd2d-483c-8f30-f16b436fd7db", "title": "Leviathan Registry Key Activity", "flagged": false, "reasons": []}
+{"rule_id": "9be34ad0-b6a7-4fbd-91cf-fc7ec1047f5f", "title": "UNC2452 Process Creation Patterns", "flagged": false, "reasons": []}
+{"rule_id": "b7155193-8a81-4d8f-805d-88de864ca50c", "title": "UNC2452 PowerShell Pattern", "flagged": false, "reasons": []}
+{"rule_id": "20c3f09d-c53d-4e85-8b74-6aa50e2f1b61", "title": "Suspicious VBScript UN2452 Pattern", "flagged": false, "reasons": []}
+{"rule_id": "a2cee20b-eacc-459f-861d-c02e5d12f1db", "title": "Solarwinds SUPERNOVA Webshell Access", "flagged": false, "reasons": []}
+{"rule_id": "3121461b-5aa0-4a41-b910-66d25524edbb", "title": "Winnti Malware HK University Campaign", "flagged": false, "reasons": []}
+{"rule_id": "73d70463-75c9-4258-92c6-17500fe972f2", "title": "Winnti Pipemon Characteristics", "flagged": false, "reasons": []}
+{"rule_id": "5b2bbc47-dead-4ef7-8908-0cf73fcbecbf", "title": "Potential PrintNightmare Exploitation Attempt", "flagged": false, "reasons": []}
+{"rule_id": "2131cfb3-8c12-45e8-8fa0-31f5924e9f07", "title": "CVE-2021-1675 Print Spooler Exploitation Filename Pattern", "flagged": false, "reasons": []}
+{"rule_id": "02fb90de-c321-4e63-a6b9-25f4b03dfd14", "title": "Windows Spooler Service Suspicious Binary Load", "flagged": false, "reasons": []}
+{"rule_id": "ba6b9e43-1d45-4d3c-a504-1043a64c8469", "title": "PrinterNightmare Mimikatz Driver Name", "flagged": false, "reasons": []}
+{"rule_id": "7b33baef-2a75-4ca3-9da4-34f9a15382d8", "title": "Possible PrintNightmare Print Driver Install - CVE-2021-1675", "flagged": false, "reasons": []}
+{"rule_id": "f0500377-bc70-425d-ac8c-e956cd906871", "title": "Arcadyan Router Exploitations", "flagged": false, "reasons": []}
+{"rule_id": "179ed852-0f9b-4009-93a7-68475910fd86", "title": "CVE-2021-21972 VSphere Exploitation", "flagged": false, "reasons": []}
+{"rule_id": "b014ea07-8ea0-4859-b517-50a4e5b7ecec", "title": "VMware vCenter Server File Upload CVE-2021-22005", "flagged": false, "reasons": []}
+{"rule_id": "f425637f-891c-4191-a6c4-3bb1b70513b4", "title": "Fortinet CVE-2021-22123 Exploitation", "flagged": false, "reasons": []}
+{"rule_id": "5525edac-f599-4bfd-b926-3fa69860e766", "title": "Pulse Connect Secure RCE Attack CVE-2021-22893", "flagged": false, "reasons": []}
+{"rule_id": "245f92e3-c4da-45f1-9070-bc552e06db11", "title": "Potential Atlassian Confluence CVE-2021-26084 Exploitation Attempt", "flagged": false, "reasons": []}
+{"rule_id": "38825179-3c78-4fed-b222-2e2166b926b1", "title": "Potential CVE-2021-26084 Exploitation Attempt", "flagged": false, "reasons": []}
+{"rule_id": "cd479ccc-d8f0-4c66-ba7d-e06286f3f887", "title": "Potential CVE-2021-26857 Exploitation Attempt", "flagged": false, "reasons": []}
+{"rule_id": "b06335b3-55ac-4b41-937e-16b7f5d57dfd", "title": "CVE-2021-26858 Exchange Exploitation", "flagged": false, "reasons": []}
+{"rule_id": "0bbcd74b-0596-41a4-94a0-4e88a76ffdb3", "title": "Potential CVE-2021-27905 Exploitation Attempt", "flagged": false, "reasons": []}
+{"rule_id": "56973b50-3382-4b56-bdf5-f51a3183797a", "title": "CVE-2021-33766 Exchange ProxyToken Exploitation", "flagged": false, "reasons": []}
+{"rule_id": "ad7085ac-92e4-4b76-8ce2-276d2c0e68ef", "title": "CVE-2021-31979 CVE-2021-33771 Exploits by Sourgum", "flagged": false, "reasons": []}
+{"rule_id": "32b5db62-cb5f-4266-9639-0fa48376ac00", "title": "CVE-2021-31979 CVE-2021-33771 Exploits", "flagged": false, "reasons": []}
+{"rule_id": "75578840-9526-4b2a-9462-af469a45e767", "title": "Serv-U Exploitation CVE-2021-35211 by DEV-0322", "flagged": false, "reasons": []}
+{"rule_id": "ab6b1a39-a9ee-4ab4-b075-e83acf6e346b", "title": "OMIGOD HTTP No Authentication RCE - CVE-2021-38647", "flagged": false, "reasons": []}
+{"rule_id": "894397c6-da03-425c-a589-3d09e7d1f750", "title": "Potential CVE-2021-40444 Exploitation Attempt", "flagged": false, "reasons": []}
+{"rule_id": "fcbb4a77-f368-4945-b046-4499a1da69d1", "title": "CVE-2021-40539 Zoho ManageEngine ADSelfService Plus Exploit", "flagged": false, "reasons": []}
+{"rule_id": "3007fec6-e761-4319-91af-e32e20ac43f5", "title": "CVE-2021-41773 Exploitation Attempt", "flagged": true, "reasons": [{"reason": "reference_is_rule", "detail": "https://github.com/projectdiscovery/nuclei-templates/blob/9d2889356eebba661c8407038e430759dfd4ec31/cves/2021/CVE-2021-41773.yaml"}, {"reason": "poc_downloads_rule", "detail": "https://github.com/projectdiscovery/nuclei-templates/blob/9d2889356eebba661c8407038e430759dfd4ec31/cves/2021/CVE-2021-41773.yaml"}, {"reason": "poc_downloads_rule", "detail": "https://github.com/projectdiscovery/nuclei-templates/blob/9d2889356eebba661c8407038e430759dfd4ec31/cves/2021/CVE-2021-41773.yaml"}]}
+{"rule_id": "20c6ed1c-f7f0-4ea3-aa65-4f198e6acb0f", "title": "Sitecore Pre-Auth RCE CVE-2021-42237", "flagged": false, "reasons": []}
+{"rule_id": "44bbff3e-4ca3-452d-a49a-6efa4cafa06f", "title": "Potential CVE-2021-42278 Exploitation Attempt", "flagged": false, "reasons": []}
+{"rule_id": "e80a0fee-1a62-4419-b31e-0d0db6e6013a", "title": "Potential CVE-2021-42287 Exploitation Attempt", "flagged": false, "reasons": []}
+{"rule_id": "7b72b328-5708-414f-9a2a-6a6867c26e16", "title": "Grafana Path Traversal Exploitation CVE-2021-43798", "flagged": false, "reasons": []}
+{"rule_id": "7b501acf-fa98-4272-aa39-194f82edc8a3", "title": "CVE-2021-44077 POC Default Dropped File", "flagged": true, "reasons": [{"reason": "poc_downloads_rule", "detail": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_powershell_download.yml"}, {"reason": "poc_downloads_rule", "detail": "https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_susp_ps_downloadfile.yml"}]}
+{"rule_id": "5ea8faa8-db8b-45be-89b0-151b84c82702", "title": "Log4j RCE CVE-2021-44228 Generic", "flagged": false, "reasons": []}
+{"rule_id": "9be472ed-893c-4ec0-94da-312d2765f654", "title": "Log4j RCE CVE-2021-44228 in Fields", "flagged": false, "reasons": []}
+{"rule_id": "83314318-052a-4c90-a1ad-660ece38d276", "title": "Blackbyte Ransomware Registry", "flagged": false, "reasons": []}
+{"rule_id": "2f47f1fd-0901-466e-a770-3b7092834a1b", "title": "Potential Conti Ransomware Database Dumping Activity Via SQLCmd", "flagged": false, "reasons": []}
+{"rule_id": "965fff6c-1d7e-4e25-91fd-cdccd75f7d2c", "title": "DarkSide Ransomware Pattern", "flagged": false, "reasons": []}
+{"rule_id": "640dc51c-7713-4faa-8a0e-e7c0d9d4654c", "title": "FoggyWeb Backdoor DLL Loading", "flagged": false, "reasons": []}
+{"rule_id": "a1507d71-0b60-44f6-b17c-bf53220fdd88", "title": "Moriya Rootkit File Created", "flagged": false, "reasons": []}
+{"rule_id": "1d218616-71b0-4c40-855b-9dbe75510f7f", "title": "Potential NetWire RAT Activity - Registry", "flagged": false, "reasons": []}
+{"rule_id": "bbb2dedd-a0e3-46ab-ba6c-6c82ae7a9aa7", "title": "HAFNIUM Exchange Exploitation Activity", "flagged": false, "reasons": []}
+{"rule_id": "67bce556-312f-4c81-9162-c3c9ff2599b2", "title": "Exchange Exploitation Used by HAFNIUM", "flagged": false, "reasons": []}
+{"rule_id": "5de632bc-7fbd-4c8a-944a-fce55c59eae5", "title": "REvil Kaseya Incident Malware Patterns", "flagged": false, "reasons": []}
+{"rule_id": "7ba08e95-1e0b-40cd-9db5-b980555e42fd", "title": "SOURGUM Actor Behaviours", "flagged": true, "reasons": [{"reason": "reference_is_rule", "detail": "https://github.com/Azure/Azure-Sentinel/blob/43e9be273dca321295190bfc4902858e009d4a35/Detections/MultipleDataSources/SOURGUM_IOC.yaml"}, {"reason": "poc_downloads_rule", "detail": "https://github.com/Azure/Azure-Sentinel/blob/43e9be273dca321295190bfc4902858e009d4a35/Detections/MultipleDataSources/SOURGUM_IOC.yaml"}, {"reason": "poc_downloads_rule", "detail": "https://github.com/Azure/Azure-Sentinel/blob/43e9be273dca321295190bfc4902858e009d4a35/Detections/MultipleDataSources/SOURGUM_IOC.yaml"}]}
+{"rule_id": "fdf96c90-42d5-4406-8a9c-14a2c9a016b5", "title": "DEWMODE Webshell Access", "flagged": false, "reasons": []}
+{"rule_id": "53207cc2-0745-4c19-bc72-80be1cc16b3f", "title": "Potential CVE-2023-21554 QueueJumper Exploitation", "flagged": false, "reasons": []}
+{"rule_id": "d033cb8a-8669-4a8e-a974-48d4185a8503", "title": "Potential CVE-2022-21587 Exploitation Attempt", "flagged": false, "reasons": []}
+{"rule_id": "52a85084-6989-40c3-8f32-091e12e17692", "title": "Potential Exploitation of CVE-2022-21919 or CVE-2021-34484 for LPE", "flagged": false, "reasons": []}
+{"rule_id": "5660d8db-6e25-411f-b92f-094420168a5d", "title": "Potential CVE-2022-22954 Exploitation Attempt - VMware Workspace ONE Access Remote Code Execution", "flagged": false, "reasons": []}
+{"rule_id": "e0a41412-c69a-446f-8e6e-0e6d7483dad7", "title": "CVE-2022-24527 Microsoft Connected Cache LPE", "flagged": false, "reasons": []}
+{"rule_id": "7fb14105-530e-4e2e-8cfb-99f7d8700b66", "title": "Atlassian Confluence CVE-2022-26134", "flagged": false, "reasons": []}
+{"rule_id": "a7cd7306-df8b-4398-b711-6f3e4935cf16", "title": "Potential CVE-2022-26809 Exploitation Attempt", "flagged": false, "reasons": []}
+{"rule_id": "dd218fb6-4d02-42dc-85f0-a0a376072efd", "title": "Zimbra Collaboration Suite Email Server Unauthenticated RCE", "flagged": false, "reasons": []}
+{"rule_id": "9a4ccd1a-3526-4d99-b980-9f9c5d3a6ee3", "title": "Potential CVE-2022-29072 Exploitation Attempt", "flagged": true, "reasons": [{"reason": "poc_downloads_rule", "detail": "https://github.com/kagancapar/CVE-2022-29072/blob/main/7z_CVE-2022-29072.yml"}]}
+{"rule_id": "7ba05b43-adad-4c02-b5e9-c8c35cdf9fa8", "title": "Potential Nimbuspwn Exploit CVE-2022-29799 and CVE-2022-27800", "flagged": false, "reasons": []}
+{"rule_id": "2d9403d5-7927-46b7-8216-37ab7c9ec5e3", "title": "Suspicious Set Value of MSDT in Registry (CVE-2022-30190)", "flagged": false, "reasons": []}
+{"rule_id": "c8a5f584-cdc8-42cc-8cce-0398e4265de3", "title": "Apache Spark Shell Command Injection - ProcessCreation", "flagged": false, "reasons": []}
+{"rule_id": "1a9a04fd-02d1-465c-abad-d733fd409f9c", "title": "Apache Spark Shell Command Injection - Weblogs", "flagged": false, "reasons": []}
+{"rule_id": "65c0a0ab-d675-4441-bd6b-d3db226a2685", "title": "Atlassian Bitbucket Command Injection Via Archive API", "flagged": false, "reasons": []}
+{"rule_id": "e6f81941-b1cd-4766-87db-9fc156f658ee", "title": "Potential KDC RC4-HMAC Downgrade Exploit - CVE-2022-37966", "flagged": false, "reasons": []}
+{"rule_id": "1ddf4596-1908-43c9-add2-1d2c2fcc4797", "title": "Potential OWASSRF Exploitation Attempt - Proxy", "flagged": false, "reasons": []}
+{"rule_id": "fdd7e904-7304-4616-a46a-e32f917c4be4", "title": "OWASSRF Exploitation Attempt Using Public POC - Proxy", "flagged": false, "reasons": []}
+{"rule_id": "181f49fa-0b21-4665-a98c-a57025ebb8c7", "title": "Potential OWASSRF Exploitation Attempt - Webserver", "flagged": false, "reasons": []}
+{"rule_id": "92d78c63-5a5c-4c40-9b60-463810ffb082", "title": "OWASSRF Exploitation Attempt Using Public POC - Webserver", "flagged": false, "reasons": []}
+{"rule_id": "293ccb8c-bed8-4868-8296-bef30e303b7e", "title": "Exploitation Indicator Of CVE-2022-42475", "flagged": false, "reasons": []}
+{"rule_id": "1b2eeb27-949b-4704-8bfa-d8e5cfa045a1", "title": "Potential Centos Web Panel Exploitation Attempt - CVE-2022-44877", "flagged": false, "reasons": []}
+{"rule_id": "738cb115-881f-4df3-82cc-56ab02fc5192", "title": "Potential CVE-2022-46169 Exploitation Attempt", "flagged": false, "reasons": []}
+{"rule_id": "eee8311f-a752-44f0-bf2f-6b007db16300", "title": "BlueSky Ransomware Artefacts", "flagged": false, "reasons": []}
+{"rule_id": "994cac2b-92c2-44bf-8853-14f6ca39fbda", "title": "Potential Bumblebee Remote Thread Creation", "flagged": true, "reasons": [{"reason": "sigma_in_text", "detail": null}, {"reason": "poc_downloads_rule", "detail": "https://github.com/The-DFIR-Report/Sigma-Rules/blob/main/14373/bumblebee_wmiprvse_execution_pattern.yaml"}]}
+{"rule_id": "0a74c5a9-1b71-4475-9af2-7829d320d5c2", "title": "ChromeLoader Malware Execution", "flagged": true, "reasons": [{"reason": "poc_downloads_rule", "detail": "https://github.com/tsale/Sigma_rules/blob/main/malware/ChromeLoader.yml"}]}
+{"rule_id": "1f32d820-1d5c-43fe-8fe2-feef0c952eb7", "title": "Emotet Loader Execution Via .LNK File", "flagged": false, "reasons": []}
+{"rule_id": "2f974656-6d83-4059-bbdf-68ac5403422f", "title": "Hermetic Wiper TG Process Patterns", "flagged": false, "reasons": []}
+{"rule_id": "a35c97c8-d9c4-4c89-a3e7-533dc0bcb73a", "title": "Potential Raspberry Robin Dot Ending File", "flagged": false, "reasons": []}
+{"rule_id": "d5eb7432-fda4-4bba-a37f-ffa74d9ed639", "title": "Serpent Backdoor Payload Execution Via Scheduled Task", "flagged": false, "reasons": []}
+{"rule_id": "e1118a8f-82f5-44b3-bb6b-8a284e5df602", "title": "Potential ACTINIUM Persistence Activity", "flagged": true, "reasons": [{"reason": "poc_downloads_rule", "detail": "https://github.com/Azure/Azure-Sentinel/blob/master/Detections/MultipleDataSources/ActiniumFeb2022.yaml"}, {"reason": "poc_downloads_rule", "detail": "https://github.com/Azure/Azure-Sentinel/blob/master/Detections/SecurityAlert/ActiniumAVHits.yaml"}]}
+{"rule_id": "a62298a3-1fe0-422f-9a68-ffbcbc5a123d", "title": "MERCURY APT Activity", "flagged": true, "reasons": [{"reason": "poc_downloads_rule", "detail": "https://github.com/Azure/Azure-Sentinel/blob/master/Detections/MultipleDataSources/Mercury_Log4j_August2022.yaml"}, {"reason": "poc_downloads_rule", "detail": "https://github.com/Azure/Azure-Sentinel/blob/master/Detections/MultipleDataSources/PotentialMercury_Webshell.yaml"}, {"reason": "poc_downloads_rule", "detail": "https://github.com/Azure/Azure-Sentinel/blob/master/Detections/MultipleDataSources/powershell_mercury.yaml"}]}
+{"rule_id": "6c7defa9-69f8-4c34-b815-41fce3931754", "title": "CVE-2023-1389 Potential Exploitation Attempt - Unauthenticated Command Injection In TP-Link Archer AX21", "flagged": false, "reasons": []}
+{"rule_id": "2ece8816-b7a0-4d9b-b0e8-ae7ad18bc02b", "title": "Exploitation Indicators Of CVE-2023-20198", "flagged": false, "reasons": []}
+{"rule_id": "f8987c03-4290-4c96-870f-55e75ee377f4", "title": "CVE-2023-22518 Exploitation Attempt - Suspicious Confluence Child Process (Linux)", "flagged": false, "reasons": []}
+{"rule_id": "1ddaa9a4-eb0b-4398-a9fe-7b018f9e23db", "title": "CVE-2023-22518 Exploitation Attempt - Suspicious Confluence Child Process (Windows)", "flagged": false, "reasons": []}
+{"rule_id": "27d2cdde-9778-490e-91ec-9bd0be6e8cc6", "title": "CVE-2023-22518 Exploitation Attempt - Vulnerable Endpoint Connection (Proxy)", "flagged": false, "reasons": []}
+{"rule_id": "a902d249-9b9c-4dc4-8fd0-fbe528ef965c", "title": "CVE-2023-22518 Exploitation Attempt - Vulnerable Endpoint Connection (Webserver)", "flagged": false, "reasons": []}
+{"rule_id": "8b244735-5833-4517-a45b-28d8c63924c0", "title": "Potential CVE-2023-2283 Exploitation", "flagged": false, "reasons": []}
+{"rule_id": "fc06e655-d98c-412f-ac76-05c2698b1cb2", "title": "Outlook Task/Note Reminder Received", "flagged": false, "reasons": []}
+{"rule_id": "73c59189-6a6d-4b9f-a748-8f6f9bbed75c", "title": "CVE-2023-23397 Exploitation Attempt", "flagged": true, "reasons": [{"reason": "sigma_in_text", "detail": null}]}
+{"rule_id": "de96b824-02b0-4241-9356-7e9b47f04bac", "title": "Potential CVE-2023-23397 Exploitation Attempt - SMB", "flagged": false, "reasons": []}
+{"rule_id": "c0341543-5ed0-4475-aabc-7eea8c52aa66", "title": "Potential CVE-2023-25157 Exploitation Attempt", "flagged": false, "reasons": []}
+{"rule_id": "043c1609-0e32-4462-a6f2-5a0c2da3fafe", "title": "Potential CVE-2023-25717 Exploitation Attempt", "flagged": false, "reasons": []}
+{"rule_id": "9cae055f-e1d2-4f81-b8a5-1986a68cdd84", "title": "Potential CVE-2023-27363 Exploitation - HTA File Creation By FoxitPDFReader", "flagged": false, "reasons": []}
+{"rule_id": "31e4e649-7394-4fd2-9ae7-dbc61eebb550", "title": "Potential CVE-2023-27997 Exploitation Indicators", "flagged": false, "reasons": []}
+{"rule_id": "c3b2a774-3152-4989-83c1-7afc48fd1599", "title": "Potential MOVEit Transfer CVE-2023-34362 Exploitation - File Activity", "flagged": false, "reasons": []}
+{"rule_id": "39ac1fb0-07f1-474b-b97e-c5c0eace0d79", "title": "Potential MOVEit Transfer CVE-2023-34362 Exploitation - Dynamic Compilation Via Csc.EXE", "flagged": false, "reasons": []}
+{"rule_id": "435e41f2-48eb-4c95-8a2b-ed24b50ec30b", "title": "MOVEit CVE-2023-34362 Exploitation Attempt - Potential Web Shell Request", "flagged": false, "reasons": []}
+{"rule_id": "92389a99-5215-43b0-a09f-e334453b2ed3", "title": "Potential CVE-2023-36874 Exploitation - Uncommon Report.Wer Location", "flagged": false, "reasons": []}
+{"rule_id": "ad0960eb-0015-4d16-be13-b3d9f18f1342", "title": "Potential CVE-2023-36874 Exploitation - Fake Wermgr.Exe Creation", "flagged": false, "reasons": []}
+{"rule_id": "50dbc08b-60ce-40f1-a6b6-346497e34c88", "title": "Potential CVE-2023-36874 Exploitation - Fake Wermgr Execution", "flagged": false, "reasons": []}
+{"rule_id": "8023d3a2-dcdc-44da-8fa9-5c7906e55b38", "title": "Potential CVE-2023-36884 Exploitation Dropped File", "flagged": false, "reasons": []}
+{"rule_id": "0066d244-c277-4c3e-88ec-9e7b777cc8bc", "title": "Potential CVE-2023-36884 Exploitation Pattern", "flagged": false, "reasons": []}
+{"rule_id": "d9365e39-febd-4a4b-8441-3ca91bb9d333", "title": "Potential CVE-2303-36884 URL Request Pattern Traffic", "flagged": false, "reasons": []}
+{"rule_id": "6af1617f-c179-47e3-bd66-b28034a1052d", "title": "Potential CVE-2023-36884 Exploitation - File Downloads", "flagged": false, "reasons": []}
+{"rule_id": "e59f71ff-c042-4f7a-8a82-8f53beea817e", "title": "Potential CVE-2023-36884 Exploitation - URL Marker", "flagged": false, "reasons": []}
+{"rule_id": "3df95076-9e78-4e63-accb-16699c3b74f8", "title": "Potential CVE-2023-36884 Exploitation - Share Access", "flagged": false, "reasons": []}
+{"rule_id": "e4556676-fc5c-4e95-8c39-5ef27791541f", "title": "CVE-2023-38331 Exploitation Attempt - Suspicious Double Extension File", "flagged": false, "reasons": []}
+{"rule_id": "ec3a3c2f-9bb0-4a9b-8f4b-5ec386544343", "title": "CVE-2023-38331 Exploitation Attempt - Suspicious WinRAR Child Process", "flagged": false, "reasons": []}
+{"rule_id": "c3bd6c55-d495-4c34-918e-e03e8828c074", "title": "CVE-2023-40477 Potential Exploitation - .REV File Creation", "flagged": false, "reasons": []}
+{"rule_id": "e5a29b54-6fe7-4258-8a23-82960e31231a", "title": "CVE-2023-40477 Potential Exploitation - WinRAR Application Crash", "flagged": false, "reasons": []}
+{"rule_id": "f48f5368-355c-4a1b-8bf5-11c13d589eaa", "title": "Potential Information Disclosure CVE-2023-43261 Exploitation - Proxy", "flagged": false, "reasons": []}
+{"rule_id": "a2bcca38-9f3a-4d5e-b603-0c587e8569d7", "title": "Potential Information Disclosure CVE-2023-43261 Exploitation - Web", "flagged": false, "reasons": []}
+{"rule_id": "04017cd5-621e-4ec4-a762-1f042fe3d3e5", "title": "Potential CVE-2023-46214 Exploitation Attempt", "flagged": false, "reasons": []}
+{"rule_id": "ba5268de-4dd4-4d5c-8a90-2b5e6dc1aff8", "title": "Exploitation Attempt Of CVE-2023-46214 Using Public POC Code", "flagged": false, "reasons": []}
+{"rule_id": "f195b2ff-e542-41bf-8d91-864fb81e5c20", "title": "CVE-2023-46747 Exploitation Activity - Proxy", "flagged": true, "reasons": [{"reason": "reference_is_rule", "detail": "https://github.com/0xorOne/nuclei-templates/blob/2fef4270ec6e5573d0a1732cb18bcfc4b1580a88/http/cves/2023/CVE-2023-46747.yaml"}, {"reason": "poc_downloads_rule", "detail": "https://github.com/0xorOne/nuclei-templates/blob/2fef4270ec6e5573d0a1732cb18bcfc4b1580a88/http/cves/2023/CVE-2023-46747.yaml"}, {"reason": "poc_downloads_rule", "detail": "https://github.com/0xorOne/nuclei-templates/blob/2fef4270ec6e5573d0a1732cb18bcfc4b1580a88/http/cves/2023/CVE-2023-46747.yaml"}]}
+{"rule_id": "e9928831-ba14-42ea-a4bc-33d352b9929a", "title": "CVE-2023-46747 Exploitation Activity - Webserver", "flagged": true, "reasons": [{"reason": "reference_is_rule", "detail": "https://github.com/0xorOne/nuclei-templates/blob/2fef4270ec6e5573d0a1732cb18bcfc4b1580a88/http/cves/2023/CVE-2023-46747.yaml"}, {"reason": "poc_downloads_rule", "detail": "https://github.com/0xorOne/nuclei-templates/blob/2fef4270ec6e5573d0a1732cb18bcfc4b1580a88/http/cves/2023/CVE-2023-46747.yaml"}, {"reason": "poc_downloads_rule", "detail": "https://github.com/0xorOne/nuclei-templates/blob/2fef4270ec6e5573d0a1732cb18bcfc4b1580a88/http/cves/2023/CVE-2023-46747.yaml"}]}
+{"rule_id": "aee7681f-b53d-4594-a9de-ac51e6ad3362", "title": "CVE-2023-4966 Exploitation Attempt - Citrix ADC Sensitive Information Disclosure - Proxy", "flagged": false, "reasons": []}
+{"rule_id": "ff349b81-617f-4af4-924f-dbe8ea9bab41", "title": "CVE-2023-4966 Potential Exploitation Attempt - Citrix ADC Sensitive Information Disclosure - Proxy", "flagged": false, "reasons": []}
+{"rule_id": "87c83d8e-5390-44ce-aa4a-d3b37e54d0a0", "title": "CVE-2023-4966 Potential Exploitation Attempt - Citrix ADC Sensitive Information Disclosure - Webserver", "flagged": false, "reasons": []}
+{"rule_id": "a4e068b5-e27c-4f21-85b3-e69e5a4f7ce1", "title": "CVE-2023-4966 Exploitation Attempt - Citrix ADC Sensitive Information Disclosure - Webserver", "flagged": false, "reasons": []}
+{"rule_id": "6d5b8176-d87d-4402-8af4-53aee9db7b5d", "title": "Potential Exploitation Attempt Of Undocumented WindowsServer RCE", "flagged": true, "reasons": [{"reason": "reference_is_rule", "detail": "https://github.com/SigmaHQ/sigma/pull/3946"}]}
+{"rule_id": "1a433e1d-03d2-47a6-8063-ece992cf4e73", "title": "DarkGate - Autoit3.EXE File Creation By Uncommon Process", "flagged": false, "reasons": []}
+{"rule_id": "f8e9aa1c-14f2-4dbd-aa59-b98968ed650d", "title": "DarkGate - Autoit3.EXE Execution Parameters", "flagged": false, "reasons": []}
+{"rule_id": "bcc6f179-11cd-4111-a9a6-0fab68515cf7", "title": "Griffon Malware Attack Pattern", "flagged": false, "reasons": []}
+{"rule_id": "2bd8e100-5b3b-4b6a-bbb5-b129d3ddddc5", "title": "IcedID Malware Suspicious Single Digit DLL Execution Via Rundll32", "flagged": false, "reasons": []}
+{"rule_id": "698d4431-514f-4c82-af4d-cf573872a9f5", "title": "Potential Pikabot Discovery Activity", "flagged": false, "reasons": []}
+{"rule_id": "1bf0ba65-9a39-42a2-9271-31d31bf2f0bf", "title": "Pikabot Fake DLL Extension Execution Via Rundll32.EXE", "flagged": false, "reasons": []}
+{"rule_id": "0033cf83-fb87-446d-9cac-43d63ad4d5a9", "title": "Qakbot Regsvr32 Calc Pattern", "flagged": false, "reasons": []}
+{"rule_id": "cf879ffb-793a-4753-9a14-bc8f37cc90df", "title": "Potential Qakbot Rundll32 Execution", "flagged": false, "reasons": []}
+{"rule_id": "339ed3d6-5490-46d0-96a7-8abe33078f58", "title": "Qakbot Rundll32 Exports Execution", "flagged": false, "reasons": []}
+{"rule_id": "bfd34392-c591-4009-b938-9fd985a28b85", "title": "Qakbot Rundll32 Fake DLL Extension Execution", "flagged": false, "reasons": []}
+{"rule_id": "bc309b7a-3c29-4937-a4a3-e232473f9168", "title": "Qakbot Uninstaller Execution", "flagged": false, "reasons": []}
+{"rule_id": "5cdbc2e8-86dd-43df-9a1a-200d4745fba5", "title": "Rhadamanthys Stealer Module Launch Via Rundll32.EXE", "flagged": false, "reasons": []}
+{"rule_id": "0e9e6c63-1350-48c4-9fa1-7ccb235edc68", "title": "Rorschach Ransomware Execution Activity", "flagged": false, "reasons": []}
+{"rule_id": "70761fe8-6aa2-4f80-98c1-a57049c08e66", "title": "Potential SocGholish Second Stage C2 DNS Query", "flagged": false, "reasons": []}
+{"rule_id": "d0b65ad3-e945-435e-a7a9-438e62dd48e9", "title": "Malicious DLL Load By Compromised 3CXDesktopApp", "flagged": false, "reasons": []}
+{"rule_id": "63f3605b-979f-48c2-b7cc-7f90523fed88", "title": "Potential Suspicious Child Process Of 3CXDesktopApp", "flagged": false, "reasons": []}
+{"rule_id": "e7581747-1e44-4d4b-85a6-0db0b4a00f2a", "title": "Potential Compromised 3CXDesktopApp Update Activity", "flagged": false, "reasons": []}
+{"rule_id": "76bc1601-9546-4b75-9419-06e0e8d10651", "title": "Potential Compromised 3CXDesktopApp ICO C2 File Download", "flagged": false, "reasons": []}
+{"rule_id": "fba38e0f-4607-4344-bb8f-a4b50cdeef7f", "title": "Diamond Sleet APT DNS Communication Indicators", "flagged": false, "reasons": []}
+{"rule_id": "e1212b32-55ff-4dfb-a595-62b572248056", "title": "Diamond Sleet APT File Creation Indicators", "flagged": false, "reasons": []}
+{"rule_id": "d1b65d98-37d7-4ff6-b139-2d87c1af3042", "title": "Diamond Sleet APT DLL Sideloading Indicators", "flagged": false, "reasons": []}
+{"rule_id": "b5495d8d-24ad-4a44-8caf-ceae9a07a5c2", "title": "Diamond Sleet APT Process Activity Indicators", "flagged": false, "reasons": []}
+{"rule_id": "9f9f92ba-5300-43a4-b435-87d1ee571688", "title": "Diamond Sleet APT Scheduled Task Creation - Registry", "flagged": false, "reasons": []}
+{"rule_id": "3b8e5084-4de9-449a-a40d-0e11014f2e2d", "title": "Diamond Sleet APT Scheduled Task Creation", "flagged": false, "reasons": []}
+{"rule_id": "7fc30d63-728d-48d9-ad6f-14d14f4accf7", "title": "Potential Operation Triangulation C2 Beaconing Activity - DNS", "flagged": false, "reasons": []}
+{"rule_id": "aa03c712-75c6-438b-8d42-de88f2427e09", "title": "Potential Operation Triangulation C2 Beaconing Activity - Proxy", "flagged": false, "reasons": []}
+{"rule_id": "a88d9f45-ec8a-4b0e-85ee-c9f6a65e9128", "title": "Potential APT FIN7 Related PowerShell Script Created", "flagged": false, "reasons": []}
+{"rule_id": "71c432c4-e4da-4eab-ba49-e60ea9a81bca", "title": "Potential APT FIN7 POWERHOLD Execution", "flagged": false, "reasons": []}
+{"rule_id": "4e19528a-f081-40dd-be09-90c39352bd64", "title": "Potential POWERTRASH Script Execution", "flagged": false, "reasons": []}
+{"rule_id": "911389c7-5ae3-43ea-bab3-a947ebdeb85e", "title": "Potential APT FIN7 Reconnaissance/POWERTRASH Related Activity", "flagged": false, "reasons": []}
+{"rule_id": "e94486ea-2650-4548-bf25-88cbd0bb32d7", "title": "Lace Tempest File Indicators", "flagged": false, "reasons": []}
+{"rule_id": "b377ddab-502d-4519-9e8c-5590033d2d70", "title": "Lace Tempest PowerShell Evidence Eraser", "flagged": false, "reasons": []}
+{"rule_id": "37dc5463-f7e3-4f61-ad76-ba59cd02a651", "title": "Lace Tempest PowerShell Launcher", "flagged": false, "reasons": []}
+{"rule_id": "aa5b0a40-ed88-46aa-9fdc-0337b379ca9d", "title": "Lace Tempest Cobalt Strike Download", "flagged": false, "reasons": []}
+{"rule_id": "745ea50b-9673-4ba7-9426-cb45cf4a8e6d", "title": "Lace Tempest Malware Loader Execution", "flagged": false, "reasons": []}
+{"rule_id": "24007168-a26b-4049-90d0-ce138e13a5cf", "title": "Lazarus APT DLL Sideloading Activity", "flagged": false, "reasons": []}
+{"rule_id": "91048c0d-5b81-4b85-a099-c9ee4fb87979", "title": "Mint Sandstorm - AsperaFaspex Suspicious Process Execution", "flagged": false, "reasons": []}
+{"rule_id": "7c97c625-0350-4f0a-8943-f6cadc88125e", "title": "Mint Sandstorm - Log4J Wstomcat Process Execution", "flagged": false, "reasons": []}
+{"rule_id": "58d8341a-5849-44cd-8ac8-8b020413a31b", "title": "Mint Sandstorm - ManageEngine Suspicious Process Execution", "flagged": false, "reasons": []}
+{"rule_id": "7806bb49-f653-48d3-a915-5115c1a85234", "title": "Potential APT Mustang Panda Activity Against Australian Gov", "flagged": false, "reasons": []}
+{"rule_id": "00a8e92a-776b-425f-80f2-82d8f8fab2e5", "title": "Okta 2023 Breach Indicator Of Compromise", "flagged": false, "reasons": []}
+{"rule_id": "2fef4fd9-7206-40d1-b4f5-ad6441d0cd9b", "title": "Onyx Sleet APT File Creation Indicators", "flagged": false, "reasons": []}
+{"rule_id": "de1bd0b6-6d59-417c-86d9-a44114aede3b", "title": "PaperCut MF/NG Exploitation Related Indicators", "flagged": true, "reasons": [{"reason": "sigma_in_text", "detail": null}]}
+{"rule_id": "0934ac71-a331-4e98-a034-d49c491fbbcb", "title": "PaperCut MF/NG Potential Exploitation", "flagged": true, "reasons": [{"reason": "reference_is_rule", "detail": "https://github.com/huntresslabs/threat-intel/blob/3bad6b0fadfcca3ff5680923e74e39edd72f32da/2023/2023-04/20-PaperCut/win_susp_papercut_code_execution.yml"}, {"reason": "poc_downloads_rule", "detail": "https://github.com/huntresslabs/threat-intel/blob/3bad6b0fadfcca3ff5680923e74e39edd72f32da/2023/2023-04/20-PaperCut/win_susp_papercut_code_execution.yml"}, {"reason": "poc_downloads_rule", "detail": "https://github.com/huntresslabs/threat-intel/blob/3bad6b0fadfcca3ff5680923e74e39edd72f32da/2023/2023-04/20-PaperCut/win_susp_papercut_code_execution.yml"}]}
+{"rule_id": "0785f462-60b0-4031-9ff4-b4f3a0ba589a", "title": "UNC4841 - Email Exfiltration File Pattern", "flagged": false, "reasons": []}
+{"rule_id": "5627c337-a9b2-407a-a82d-5fd97035ff39", "title": "UNC4841 - Barracuda ESG Exploitation Indicators", "flagged": false, "reasons": []}
+{"rule_id": "60911c07-f989-4362-84af-c609828ef829", "title": "UNC4841 - SSL Certificate Exfiltration Via Openssl", "flagged": false, "reasons": []}
+{"rule_id": "60d050c4-e253-4d9a-b673-5ac100cfddfb", "title": "UNC4841 - Download Compressed Files From Temp.sh Using Wget", "flagged": false, "reasons": []}
+{"rule_id": "23835beb-ec38-4e74-a5d4-b99af6684e91", "title": "UNC4841 - Download Tar File From Untrusted Direct IP Via Wget", "flagged": false, "reasons": []}
+{"rule_id": "f6a711f3-d032-4f9e-890b-bbe776236c84", "title": "UNC4841 - Potential SEASPY Execution", "flagged": false, "reasons": []}
+{"rule_id": "eafb8bd5-7605-4bfe-a9ec-0442bc151f15", "title": "CVE-2024-1212 Exploitation - Progress Kemp LoadMaster Unauthenticated Command Injection", "flagged": false, "reasons": []}
+{"rule_id": "44d7af7e-88e6-4490-be11-55f7ff4d9fc1", "title": "CVE-2024-1708 - ScreenConnect Path Traversal Exploitation", "flagged": false, "reasons": []}
+{"rule_id": "4c198a60-7d05-4daf-8bf7-4136fb6f5c62", "title": "CVE-2024-1708 - ScreenConnect Path Traversal Exploitation - Security", "flagged": false, "reasons": []}
+{"rule_id": "1a821580-588b-4323-9422-660f7e131020", "title": "ScreenConnect User Database Modification", "flagged": false, "reasons": []}
+{"rule_id": "d27eabad-9068-401a-b0d6-9eac744d6e67", "title": "CVE-2024-1709 - ScreenConnect Authentication Bypass Exploitation", "flagged": false, "reasons": []}
+{"rule_id": "4109cb6a-a4af-438a-9f0c-056abba41c6f", "title": "ScreenConnect User Database Modification - Security", "flagged": false, "reasons": []}
+{"rule_id": "9aa27839-e8ba-4d7a-ac1a-746c22c3d1e5", "title": "Potential Exploitation of CVE-2024-3094 - Suspicious SSH Child Process", "flagged": false, "reasons": []}
+{"rule_id": "bcd95697-e3e7-4c6f-8584-8e3503e6929f", "title": "Potential CVE-2024-3400 Exploitation - Palo Alto GlobalProtect OS Command Injection - File Creation", "flagged": false, "reasons": []}
+{"rule_id": "f130a5f1-73ba-42f0-bf1e-b66a8361cb8f", "title": "Potential CVE-2024-3400 Exploitation - Palo Alto GlobalProtect OS Command Injection", "flagged": true, "reasons": [{"reason": "poc_downloads_rule", "detail": "https://github.com/rapid7/Rapid7-Labs/blob/main/Sigma/CVE-2024-3400.yml"}]}
+{"rule_id": "17ce9373-2163-4a2c-90ba-f91e9ef7a8c1", "title": "Potential CVE-2024-35250 Exploitation Activity", "flagged": false, "reasons": []}
+{"rule_id": "c408acfe-2870-41df-8d2f-9f4daa4555ed", "title": "Potential Exploitation of CVE-2024-37085 - Suspicious Creation Of ESX Admins Group", "flagged": false, "reasons": []}
+{"rule_id": "47a1658b-67a4-48e2-8ab1-c10437fc0148", "title": "Potential Exploitation of CVE-2024-37085 - Suspicious ESX Admins Group Activity", "flagged": false, "reasons": []}
+{"rule_id": "3f2c93c7-7b2a-4d58-bb8d-6f39422d8148", "title": "CVE-2024-49113 Exploitation Attempt - LDAP Nightmare", "flagged": false, "reasons": []}
+{"rule_id": "f007b877-02e3-45b7-8501-1b78c2864029", "title": "CVE-2024-50623 Exploitation Attempt - Cleo", "flagged": false, "reasons": []}
+{"rule_id": "6f6afac3-8e7a-4e4b-9588-2608ffe08f82", "title": "Potential CSharp Streamer RAT Loading .NET Executable Image", "flagged": false, "reasons": []}
+{"rule_id": "df49c691-8026-48dd-94d3-4ba6a79102a8", "title": "DarkGate - Drop DarkGate Loader In C:\\Temp Directory", "flagged": false, "reasons": []}
+{"rule_id": "24474469-bd80-46cc-9e08-9fbe81bfaaca", "title": "Potential KamiKakaBot Activity - Lure Document Execution", "flagged": false, "reasons": []}
+{"rule_id": "fe9e8ba9-4419-41e6-a574-bd9f7b3af961", "title": "Potential KamiKakaBot Activity - Shutdown Schedule Task Creation", "flagged": false, "reasons": []}
+{"rule_id": "c9b86500-1ec2-4de6-9120-d744c8fb5caf", "title": "Potential KamiKakaBot Activity - Winlogon Shell Persistence", "flagged": false, "reasons": []}
+{"rule_id": "19b3806e-46f2-4b4c-9337-e3d8653245ea", "title": "Lummac Stealer Activity - Execution Of More.com And Vbc.exe", "flagged": false, "reasons": []}
+{"rule_id": "0f3a9db2-c17a-480e-a723-d1f1c547ab6a", "title": "Potential Raspberry Robin Aclui Dll SideLoading", "flagged": false, "reasons": []}
+{"rule_id": "92020b88-9caf-464f-bad8-cd0fb0aa2a81", "title": "Potential Raspberry Robin CPL Execution Activity", "flagged": false, "reasons": []}
+{"rule_id": "20228d05-dd68-435d-8b4e-e7e64938880c", "title": "Potential Kapeka Decrypted Backdoor Indicator", "flagged": false, "reasons": []}
+{"rule_id": "a7e6b1f9-8d2c-4f1e-9a7d-63e4c8a2bf4c", "title": "Kapeka Backdoor Loaded Via Rundll32.EXE", "flagged": false, "reasons": []}
+{"rule_id": "64a871dd-83f6-4e5f-80fc-5a7ca3a8a819", "title": "Kapeka Backdoor Persistence Activity", "flagged": false, "reasons": []}
+{"rule_id": "e98f741c-6a5b-4c83-bc2a-1f4e58d07b12", "title": "Kapeka Backdoor Execution Via RunDLL32.EXE", "flagged": false, "reasons": []}
+{"rule_id": "c0c67b21-eb8a-4c84-a395-40473ec3b482", "title": "Kapeka Backdoor Autorun Persistence", "flagged": false, "reasons": []}
+{"rule_id": "cbaa3ef3-07a9-4c8e-82d1-9e40578da7fd", "title": "Kapeka Backdoor Configuration Persistence", "flagged": false, "reasons": []}
+{"rule_id": "6c130acd-0adb-4545-bcc4-2e85d0883c9a", "title": "Kapeka Backdoor Scheduled Task Creation", "flagged": false, "reasons": []}
+{"rule_id": "6676896b-2cce-422d-82af-5a1abe65e241", "title": "Potential APT FIN7 Exploitation Activity", "flagged": false, "reasons": []}
+{"rule_id": "b92d1d19-f5c9-4ed6-bbd5-7476709dc389", "title": "Forest Blizzard APT - File Creation Activity", "flagged": false, "reasons": []}
+{"rule_id": "ec7c4e9b-9bc9-47c7-a32f-b53b598da642", "title": "Forest Blizzard APT - JavaScript Constrained File Creation", "flagged": false, "reasons": []}
+{"rule_id": "07db928c-8632-488e-ac7d-3db847489175", "title": "Forest Blizzard APT - Process Creation Activity", "flagged": false, "reasons": []}
+{"rule_id": "5cdeb555-65de-4767-99fe-e26807465148", "title": "Forest Blizzard APT - Custom Protocol Handler Creation", "flagged": false, "reasons": []}
+{"rule_id": "d807056b-0e00-4cec-b7f8-b8b7518e382b", "title": "Forest Blizzard APT - Custom Protocol Handler DLL Registry Set", "flagged": false, "reasons": []}
+{"rule_id": "05164d17-8e11-4d7d-973e-9e4962436b87", "title": "ScreenConnect - SlashAndGrab Exploitation Indicators", "flagged": false, "reasons": []}
+{"rule_id": "6c76b3d0-afe4-4870-9443-ffe6773c5fef", "title": "Potential Exploitation of GoAnywhere MFT Vulnerability", "flagged": false, "reasons": []}
+{"rule_id": "5a7132c0-86db-4e6b-95c0-f0e9d7f461aa", "title": "Suspicious Creation of .library-ms File \u2014 Potential CVE-2025-24054 Exploit", "flagged": false, "reasons": []}
+{"rule_id": "2d79e371-2a27-42de-87a4-b4213fc72a6a", "title": "Suspicious Process Spawned by CentreStack Portal AppPool", "flagged": false, "reasons": []}
+{"rule_id": "459628e3-1b00-4e9b-9e5b-7da8961aea35", "title": "Suspicious CrushFTP Child Process", "flagged": false, "reasons": []}
+{"rule_id": "5b91409c-cb18-4ab6-ac75-c5759f998409", "title": "Potential SAP NetWeaver Webshell Creation - Linux", "flagged": false, "reasons": []}
+{"rule_id": "86a7c91f-98c3-4f14-a58d-d989421e1234", "title": "Potential SAP NetWeaver Webshell Creation", "flagged": false, "reasons": []}
+{"rule_id": "69dea60b-2deb-4c9e-a685-ad542f4367f9", "title": "Suspicious Child Process of SAP NetWeaver - Linux", "flagged": false, "reasons": []}
+{"rule_id": "5b304bcb-ac33-49d0-87af-fa1b3ca94333", "title": "Suspicious Child Process of SAP NetWeaver", "flagged": false, "reasons": []}
+{"rule_id": "94e12f41-6cb3-45c5-97b1-c783a7bf2e72", "title": "Potential SAP NetViewer Webshell Command Execution", "flagged": false, "reasons": []}
+{"rule_id": "639b893f-f93a-4e53-a7c8-f08cf73fe7f7", "title": "Potential Java WebShell Upload in SAP NetViewer Server", "flagged": false, "reasons": []}
+{"rule_id": "04fc4b22-91a6-495a-879d-0144fec5ec03", "title": "Potential Exploitation of RCE Vulnerability CVE-2025-33053 - Image Load", "flagged": false, "reasons": []}
+{"rule_id": "9a2d8b3e-f5a1-4c68-9e21-7d9e1cf8a123", "title": "Potential Exploitation of RCE Vulnerability CVE-2025-33053 - Process Access", "flagged": false, "reasons": []}
+{"rule_id": "abe06362-a5b9-4371-8724-ebd00cd48a04", "title": "Potential Exploitation of RCE Vulnerability CVE-2025-33053", "flagged": false, "reasons": []}
+{"rule_id": "8c7f4a2d-3b9e-4f1c-9a6d-2e8f5c3d9a1b", "title": "Suspicious Child Process of SolarWinds WebHelpDesk", "flagged": false, "reasons": []}
+{"rule_id": "41956f7c-7a6b-46d6-b6bb-da6eb2e83fbe", "title": "Potential Exploitation of CVE-2025-4427/4428 Ivanti EPMM Pre-Auth RCE", "flagged": false, "reasons": []}
+{"rule_id": "ba479447-721f-42a9-9af2-6dcd517bbdb3", "title": "Potential SharePoint ToolShell CVE-2025-53770 Exploitation - File Create", "flagged": false, "reasons": []}
+{"rule_id": "7477881c-ec3b-49d6-aced-7255944e5c59", "title": "Potential SharePoint ToolShell CVE-2025-53770 Exploitation Indicators", "flagged": false, "reasons": []}
+{"rule_id": "48d053db-6a56-4866-b60d-0975647050ed", "title": "SharePoint ToolShell CVE-2025-53770 Exploitation - Web IIS", "flagged": false, "reasons": []}
+{"rule_id": "0fdc7c7f-c690-4217-9ae3-31f5156eed72", "title": "Potential Exploitation of CrushFTP RCE Vulnerability (CVE-2025-54309)", "flagged": true, "reasons": [{"reason": "sigma_in_text", "detail": null}]}
+{"rule_id": "c70834fa-fb9d-4aa0-9e7d-45ceed36f3f7", "title": "Linux Suspicious Child Process from Node.js - React2Shell", "flagged": false, "reasons": []}
+{"rule_id": "271de298-cc0e-4842-acd8-079a0a99ea65", "title": "Windows Suspicious Child Process from Node.js - React2Shell", "flagged": false, "reasons": []}
+{"rule_id": "917789e1-2c1f-4bf5-8c91-6f71a017f469", "title": "Commvault QLogin with PublicSharingUser and GUID Password (CVE-2025-57788)", "flagged": false, "reasons": []}
+{"rule_id": "bd3b3fff-a018-4994-9876-68af5809160f", "title": "Commvault QOperation Path Traversal Webshell Drop (CVE-2025-57790)", "flagged": false, "reasons": []}
+{"rule_id": "ff0225a0-1d9a-4bae-ab26-6038b18bb6d4", "title": "Commvault QLogin Argument Injection Authentication Bypass (CVE-2025-57791)", "flagged": false, "reasons": []}
+{"rule_id": "43259cc4-1b80-4931-bd98-baea01afc196", "title": "Exploitation Activity of CVE-2025-59287 - WSUS Suspicious Child Process", "flagged": false, "reasons": []}
+{"rule_id": "e5f66e87-7d6b-404f-92fe-7aa67814b5cd", "title": "Exploitation Activity of CVE-2025-59287 - WSUS Deserialization", "flagged": false, "reasons": []}
+{"rule_id": "e710a880-1f18-4417-b6a0-b5afdf7e3023", "title": "Atomic MacOS Stealer - Persistence Indicators", "flagged": true, "reasons": [{"reason": "reference_is_rule", "detail": "https://github.com/bobby-tablez/TTP-Threat-Feeds/blob/45398914e631f8372c3a9fbcd339ff65ffff1b17/results/2025/10/20251001-161956-trendmicro-atomic-macos-stealer-(amos).yml#L44"}]}
+{"rule_id": "e710a880-1f18-4417-b6a0-b5afdf7e33da", "title": "Atomic MacOS Stealer - FileGrabber Activity", "flagged": true, "reasons": [{"reason": "reference_is_rule", "detail": "https://github.com/bobby-tablez/TTP-Threat-Feeds/blob/45398914e631f8372c3a9fbcd339ff65ffff1b17/results/2025/10/20251001-161956-trendmicro-atomic-macos-stealer-(amos).yml#L36"}]}
+{"rule_id": "af688c76-4ce4-4309-bfdd-e896f01acf27", "title": "Grixba Malware Reconnaissance Activity", "flagged": false, "reasons": []}
+{"rule_id": "0aba5685-6db6-486f-88ef-29a99c545cfd", "title": "Shai-Hulud Malicious GitHub Workflow Creation", "flagged": false, "reasons": []}
+{"rule_id": "69fa9174-4370-4646-8d48-6a22e2853402", "title": "Shai-Hulud NPM Attack GitHub Activity", "flagged": false, "reasons": []}
+{"rule_id": "efd2eb09-b72e-4a61-8dc7-b1382a1e8983", "title": "Shai-Hulud NPM Package Malicious Exfiltration via Curl", "flagged": false, "reasons": []}
+{"rule_id": "2c76a22b-702d-48fd-8fa9-e41e2fe203b3", "title": "FunkLocker Ransomware File Creation", "flagged": false, "reasons": []}
+{"rule_id": "e99375eb-3ee0-407a-9f90-79569cc6a01c", "title": "Kalambur Backdoor Curl TOR SOCKS Proxy Execution", "flagged": true, "reasons": [{"reason": "sigma_in_text", "detail": null}]}

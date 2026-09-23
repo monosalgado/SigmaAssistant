@@ -344,6 +344,8 @@ def run_case(agent, case: dict, config: dict, no_web_enrich: bool,
         "product": case["product"],
         "urls": case["urls"],
         "text_chars": case["text_chars"],
+        # None = not in the flag list (unknown), never assumed clean (plan 1.3b).
+        "contamination": case.get("contamination"),
         "config": config,
         "run_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -468,6 +470,9 @@ def main() -> None:
     parser.add_argument("--github-manifest", default="eval/github_manifest.jsonl",
                         help="Snapshots of the PoC stage's GitHub fetches "
                              "(build with eval/build_poc_snapshots.py).")
+    parser.add_argument("--contamination", default="eval/contamination.jsonl",
+                        help="Per-case flag: does a detection rule reach the pipeline "
+                             "(build with eval/flag_contamination.py).")
     parser.add_argument("--dry-run", action="store_true",
                         help="Report the case selection without calling any LLM.")
     args = parser.parse_args()
@@ -501,6 +506,19 @@ def main() -> None:
                     continue
         if done:
             print(f"  resuming: {len(done)} cases already in {out_path}")
+
+    flags_path = repo_root / args.contamination
+    flags = {}
+    if flags_path.exists():
+        for line in flags_path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                entry = json.loads(line)
+                flags[entry["rule_id"]] = {"flagged": entry["flagged"], "reasons": entry["reasons"]}
+    for case in cases:
+        case["contamination"] = flags.get(case["rule_id"])
+    n_flagged = sum(1 for c in cases if (c["contamination"] or {}).get("flagged"))
+    print(f"  contamination: {n_flagged} of {len(cases)} selected cases flagged "
+          f"({sum(1 for c in cases if c['contamination'] is None)} without a flag)")
 
     todo = [c for c in cases if c["rule_id"] not in done]
     print(f"  {len(todo)} cases to run")

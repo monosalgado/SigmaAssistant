@@ -478,3 +478,20 @@ def test_crash_with_every_call_ok_is_written_as_an_error_row():
 def test_the_stop_message_says_how_to_resume():
     (_, _, stopped), _, _ = _run({"a": (0, 2, None)}, ["a"])
     assert "rerun the same command" in stopped.lower()
+
+
+def test_row_carries_the_cases_contamination_flag():
+    """plan 1.3b: the summariser reports clean and flagged cases separately."""
+    case = _case()
+    case["contamination"] = {"flagged": True,
+                             "reasons": [{"reason": "sigma_in_text", "detail": None}]}
+    agent = _Agent(_Orchestrator(result={"rule": "no rule", "context": {},
+                                         "pipeline_metadata": {}}))
+    row = run_case(agent, case, config={}, no_web_enrich=True)
+    assert row["contamination"]["flagged"] is True
+
+
+def test_a_case_without_a_flag_is_recorded_as_unknown():
+    agent = _Agent(_Orchestrator(result={"rule": "no rule", "context": {},
+                                         "pipeline_metadata": {}}))
+    assert run_case(agent, _case(), config={}, no_web_enrich=True)["contamination"] is None

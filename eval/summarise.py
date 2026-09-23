@@ -94,6 +94,32 @@ def summarise(rows: list) -> dict:
     }
 
 
+def split_by_contamination(rows: list, flags: dict = None) -> dict:
+    """Split rows into clean / flagged / unknown (plan 1.3b).
+
+    A row's own `contamination` field wins; rows written before the flag existed
+    are looked up in `flags` (rule_id -> bool, from eval/contamination.jsonl). A
+    case found in neither is `unknown`, never assumed clean.
+    """
+    flags = flags or {}
+    split = {"clean": [], "flagged": [], "unknown": []}
+    for row in rows:
+        flagged = (row.get("contamination") or {}).get("flagged")
+        if flagged is None:
+            flagged = flags.get(row.get("rule_id"))
+        key = "unknown" if flagged is None else ("flagged" if flagged else "clean")
+        split[key].append(row)
+    return split
+
+
+def load_flags(path: Path) -> dict:
+    """rule_id -> flagged, from the committed contamination list."""
+    if not path.exists():
+        return {}
+    return {e["rule_id"]: e["flagged"] for e in
+            (json.loads(l) for l in path.read_text(encoding="utf-8").splitlines() if l.strip())}
+
+
 def _fmt(value, digits: int = 3) -> str:
     if value is None:
         return "n/a"
@@ -153,7 +179,10 @@ def compare(a: dict, b: dict, name_a: str, name_b: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("results", nargs="+", help="One or two JSONL result files.")
+    parser.add_argument("--contamination", default="eval/contamination.jsonl",
+                        help="Flag list applied to rows that carry no flag of their own.")
     args = parser.parse_args()
+    flags = load_flags(Path(args.contamination))
 
     paths = [Path(p) for p in args.results]
     for path in paths:
@@ -163,6 +192,16 @@ def main() -> None:
     summaries = [summarise(load(p)) for p in paths]
     for path, summary in zip(paths, summaries):
         report(path.name, summary)
+        split = split_by_contamination(load(path), flags)
+        # Headline on the clean cases; flagged cases on their own line (plan 1.3b).
+        if split["flagged"] or split["clean"]:
+            report(f"{path.name} - clean cases (no detection rule in the input)",
+                   summarise(split["clean"]))
+            report(f"{path.name} - flagged cases (a detection rule reaches the pipeline)",
+                   summarise(split["flagged"]))
+        if split["unknown"]:
+            print(f"\n  NOTE: {len(split['unknown'])} case(s) have no contamination flag "
+                  "(not in the flag list) and appear in neither subset.")
 
     if len(summaries) == 2:
         compare(summaries[0], summaries[1], paths[0].name, paths[1].name)

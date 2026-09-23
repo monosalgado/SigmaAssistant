@@ -97,16 +97,18 @@ say *why* logsource is at chance.
       successful LLM calls, replacing the external guard. *(offline)* **Done, Change 16:**
       broadened to *any* failed call (the evidence has a 1-of-5 case); the run stops,
       exit status 2, and resumes from that case. Refuses exactly 14/21 evidence rows.
-- [>] **1.3** Defect 16: the PoC stage's GitHub fetches go through the snapshots
+- [x] **1.3** Defect 16: the PoC stage's GitHub fetches go through the snapshots
       too, or are disclosed as a live input. *(decide, then offline)* Measured:
       43/303 cases (10/60) fetch GitHub live. Split, **decision needed first**:
   - [x] **1.3a** Reproducibility: save the PoC stage's GitHub fetches into the
         snapshots (recommended), or block them during evaluation. **Done, Change 17:**
         chosen A; 40 stored + 10 recorded 404s; gate 1 now covers PoC fetches.
-  - [ ] **1.3b** Contamination: 23/303 cases (5/60) put a detection rule in front
+  - [x] **1.3b** Contamination: 23/303 cases (5/60) put a detection rule in front
         of the pipeline (PoC downloads, rule-file references, Sigma rules printed
         in the page). Keep and report separately (recommended), drop them, or
-        disclose only.
+        disclose only. **Done, Change 18:** chosen a; committed flag list; the
+        summariser reports all / clean / flagged. Baseline v1 headline unchanged
+        on the clean cases (at most 0.008).
 - [ ] **1.4** One-command preflight: tunnel, model warm, server context ≥ 32k,
       tests, 2-case smoke. *(offline to write)*
       Also: `summarise.py` prints the gates (it reports none today; they have been
