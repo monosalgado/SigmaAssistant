@@ -2269,3 +2269,45 @@ category would be right in 29 of 57, not 16 — a bound on what the generation-s
 
 ### Status
 Plan 2.1 done. The next change waits for the user's choice of order.
+
+---
+
+## 2026-09-24 — Change 22 (plan 2.2a): the attack-vector telemetry reaches later stages in Sigma's vocabulary
+
+### Motivation (plan 2.1)
+The attack-vector stage chooses `primary_telemetry` from 13 labels of its own. The
+analysis and generation stages read it through `format_vector_summary` and copied it:
+in baseline v2 the rule's category was the label verbatim in 24 of 41 wrong rules, and
+17 of 41 used a category no SigmaHQ rule uses (`webserver_access_log` 15). The analysis
+stage also put the label in its suggestion's `service` (8 cases).
+
+### Design decisions
+| Decision | Why |
+|---|---|
+| Translate in the summary the later stages read, not in the attack-vector prompt | The stage's *choices* stay the same (the web bias is step d, measured separately); only the words change. One variable. |
+| 7 labels map to a Sigma category: `webserver_access_log`→`webserver`, `web_proxy`→`proxy`, `firewall`, `dns`, `process_creation`, `file_event`, `registry_event` | Each target is used by SigmaHQ rules (checked against the local corpus, pinned by a test). `dns` → `dns` (network DNS logs), not `dns_query` (Windows Sysmon): the stage's list is network-oriented. |
+| 6 labels have no single Sigma category (`waf`, `network_ids`, `cloud_audit`, `email_gateway`, `auth_log`, `other`) → described in plain words, "(no single Sigma logsource category)" | Such logsources are defined by product/service or do not exist; no snake_case text is left to copy. Sigma's `authentication` category appears only in one deprecated rule, so `auth_log` is not mapped to it. |
+| The raw label is kept in `context["attack_vector"]` and in evaluation rows | Plan 2.1's diagnosis reads it; the record should say what the stage chose. |
+| The taxonomy retrieval query still uses the raw label | Keeps retrieval unchanged, so the measurement isolates what the model reads. |
+
+### Verification (offline)
+Tests written first, seen failing: **18 tests** (`tests/test_telemetry_vocabulary.py`)
+— the table covers exactly the 13 labels the prompt offers (parsed from the prompt); each
+mapped label is shown as its Sigma category and its own text disappears; unmapped labels
+are described in words with no backtick or underscore; an unknown label is shown in
+words; a missing one as "unknown"; the stored attack vector is unchanged; mapped
+categories are used by SigmaHQ rules (skipped without `data/sigma`). Full suite **242
+passed**.
+
+### Measurement plan (fixed before the run)
+Same 60 cases, recipe as baseline v2, arm `p2a_vocabulary`, file
+`eval/results/p2a_vocabulary60.jsonl`; compared paired with baseline v2.
+- Primary: first rules whose category no SigmaHQ rule uses (v2: 17 of 57 scored).
+- Secondary: S3 (and S1, S4, S5) paired; the 2.1 buckets rerun with
+  `eval/diagnose_logsource.py`.
+- Not predicted: the effect on S3. Most of the 17 had a non-web gold rule, so a real
+  category name can still be the wrong one; this change removes an impossibility, it
+  does not choose better.
+
+### Status
+Code and tests done; the measurement run follows.

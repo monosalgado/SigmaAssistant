@@ -70,6 +70,11 @@ Options to discuss, not decided:
   a semester of time. Open question: which rules to detonate — see the Inbox
   note on EVTX coverage
 - **C.** Keep the original three — not viable as they stand (2 blocked, 3 dropped)
+- **D. (raised by the user 2026-09-24)** The assistant's output goes past Sigma:
+  (i) it states plainly what the rule is for — Windows, Linux, web, cloud… — and
+  (ii) it converts the rule into queries a SIEM or EDR can run (e.g. Splunk SPL,
+  Microsoft Sentinel KQL, Elastic). Rationale (user): organisations deploy native
+  queries, not Sigma files. Notes for the discussion are in the Parking lot entry.
 
 The evidence behind "measured grounding failures" is already in the log: bare
 URLs skipped grounding in 57% of cases (defect 8); 4/60 cases lost their page
@@ -148,16 +153,21 @@ and report it as a finding rather than keep tuning.
       analysis's top category is right in 29/57, generation overrides 14 of those
       (10 with the attack-vector label); 17/41 wrong rules use a non-Sigma category
       (`webserver_access_log`); the suggestion verbatim would score 0/57 (its
-      service is `sysmon`). **Proposed order, awaiting the user:** (a) one
-      vocabulary — attack-vector telemetry in Sigma categories; (b) fix the
-      suggestion's service; (c) 2.2 precedence; (d) 2.3 web bias; 2.4 not indicated.
-- [ ] **2.2** Change: make the (suggested or confirmed) logsource an explicit
-      constraint in generation, checked after generation (defect 11). Measure.
-- [ ] **2.3** Change: remove the attack-vector prompt's web bias (21/48 non-web
-      cases labelled web-server telemetry). Measure with the probe, then the
-      harness.
-- [ ] **2.4** Only if 2.1 shows it matters: strip page boilerplate in extraction
-      (defect 9). Measure.
+      service is `sysmon`). **Order agreed with the user:** (a) one vocabulary —
+      attack-vector telemetry in Sigma categories; (b) fix the suggestion's
+      service; (c) 2.2 precedence; (d) 2.3 web bias; 2.4 dropped. One run each.
+- [>] **2.2a** One vocabulary: the attack-vector stage's telemetry reaches the
+      analysis and generation stages in Sigma's terms. Measure: categories no
+      SigmaHQ rule uses (17/41 wrong rules in v2), S3 paired against v2.
+- [ ] **2.2b** The analysis suggestion's `service` (44/57 `sysmon`). Measure.
+- [ ] **2.2** (step c) Change: make the (suggested or confirmed) logsource an explicit
+      constraint in generation, checked after generation (defect 11); resolve the
+      conflict with generation rule 2 ("initial access MANDATORY"). Measure.
+- [ ] **2.3** (step d) Change: remove the attack-vector prompt's web bias (21/48 non-web
+      cases labelled web-server telemetry; 16/46 in v2). Measure with the probe, then
+      the harness.
+- [-] **2.4** Strip page boilerplate (defect 9) — dropped 2026-09-24: 2.1 showed
+      nothing pointing to it.
 
 2.1 decides the order of 2.2–2.4.
 
@@ -321,7 +331,22 @@ so removing one is reversible; untracked and ignored files have no such safety n
 - Defects 4 (substring coverage check), 5 (`json_mode` on generation), 6 (dead
   `fast` tier) — unless Phase 2 data shows they matter.
 - S6 backend compilability.
-- Foundation-Sec / other models — dropped for now.
+- **Platform and SIEM/EDR queries** (user, 2026-09-24; Phase 0 option D). What
+  exists: the review stage already converts every rule with one pySigma backend,
+  InsightIDR (LEQL) — the only backend installed. What it would take:
+  - *Platform* is the rule's logsource (`product` windows/linux/…, `category`
+    process_creation/webserver/…): the assistant's report can state it in plain
+    words from fields the pipeline already produces. It is only as right as the
+    logsource — which is why Phase 2 comes first (product right in 26/57 today).
+  - *Queries*: more pySigma backends (Splunk, Microsoft Sentinel/Defender,
+    Elastic…) — **new dependencies, need the user's approval**. Conversion also
+    needs a processing pipeline mapping Sigma's field names to each product's
+    schema; a wrong logsource becomes a query against the wrong table or index.
+  - *Evaluation*: S6 (does each backend compile the rule) is cheap; whether the
+    query *detects* anything needs data in that product — the detonation question.
+  - Wording for the thesis: Sigma is rarely deployed as-is but is widely used as
+    the portable format that detections are written in and converted from —
+    "not used at all" would draw an examiner's objection.
 - Fine-tuning — out of scope; argued in Chapter 7.
 
 ---
@@ -340,3 +365,5 @@ so removing one is reversible; untracked and ignored files have no such safety n
 | 2026-09-23 | `eval/snapshots/` stays on this computer only, no backup (H4) | user |
 | 2026-09-24 | `thesis/DEFENSE_NOTES.md` stays local only (gitignored; the repository is public) | user |
 | 2026-09-24 | Keep Change 12 (whole source): token and time cost is not a concern — everything is local and unbilled; rule quality is the priority, and full context matters for it | user |
+| 2026-09-24 | Phase 2 order from 2.1: (a) one vocabulary, (b) the suggestion's service, (c) 2.2 precedence, (d) 2.3 web bias; 2.4 dropped | user |
+| 2026-09-24 | One 60-case run per Phase 2 change, so each change's effect can be attributed | user |

@@ -23,6 +23,44 @@ from backend.pipeline.base_stage import PipelineStage
 from backend.pipeline import prompts
 
 
+# The stage picks `primary_telemetry` from its own 13 labels (ATTACK_VECTOR_EXTRACTION),
+# which are not Sigma's. Later stages copied them into `logsource.category` - in
+# baseline v2, 17 of 41 wrong rules used a category no SigmaHQ rule uses (plan 2.1).
+# So the summary the analysis and generation stages read shows each label in Sigma's
+# terms. The stage's own record (context["attack_vector"]) keeps the raw label.
+SIGMA_CATEGORY_FOR_TELEMETRY = {
+    "webserver_access_log": "webserver",
+    "web_proxy": "proxy",
+    "firewall": "firewall",
+    "dns": "dns",
+    "process_creation": "process_creation",
+    "file_event": "file_event",
+    "registry_event": "registry_event",
+}
+# Labels with no single Sigma category (a Sigma logsource for these is set by
+# product/service, or does not exist): described in plain words instead.
+TELEMETRY_IN_WORDS = {
+    "waf": "web application firewall logs",
+    "network_ids": "network intrusion-detection alerts",
+    "cloud_audit": "cloud audit logs",
+    "email_gateway": "email gateway logs",
+    "auth_log": "authentication logs",
+    "other": "other",
+}
+
+
+def describe_telemetry(label) -> str:
+    """The attack-vector telemetry label in Sigma's terms, for downstream prompts."""
+    if not label:
+        return "unknown"
+    label = str(label).strip().lower()
+    if label in SIGMA_CATEGORY_FOR_TELEMETRY:
+        return f"Sigma logsource category `{SIGMA_CATEGORY_FOR_TELEMETRY[label]}`"
+    if label in TELEMETRY_IN_WORDS:
+        return f"{TELEMETRY_IN_WORDS[label]} (no single Sigma logsource category)"
+    return f"{label.replace('_', ' ')} (not mapped to a Sigma logsource category)"
+
+
 class AttackVectorStage(PipelineStage):
     name = "attack_vector"
     description = "Identifying the primary attack vector"
@@ -131,7 +169,7 @@ class AttackVectorStage(PipelineStage):
             f"- Entry point: {attack_vector.get('entry_point') or 'n/a'}",
             f"- Attacker-controlled input: {attack_vector.get('attacker_controlled_input') or 'n/a'}",
             f"- Preconditions: {attack_vector.get('preconditions', 'unknown')}",
-            f"- Primary telemetry: {attack_vector.get('primary_telemetry', 'unknown')}",
+            f"- Primary telemetry: {describe_telemetry(attack_vector.get('primary_telemetry'))}",
             f"- Kill-chain stages evidenced: {', '.join(attack_vector.get('kill_chain_stages', [])) or 'n/a'}",
             f"- Extractor confidence: {attack_vector.get('confidence', 0.0):.2f}",
         ]
