@@ -273,6 +273,13 @@ is a decision, not a default.
 - A silent connection costs up to ~30 min before the stop rule sees it (OpenAI
   client defaults: 600 s per request × 3 attempts). A shorter timeout for local
   runs would lose less time; the stop rule already keeps the data clean.
+- The Ollama client sets no output limit (`max_tokens`): a generation that never
+  stops runs until the timeout — one hypothesis for baseline v2's hung analysis
+  call. An output cap is a pipeline change (it could cut long legitimate answers),
+  so it needs its own measurement.
+- GlobalProtect's auto-restore ends at "select a gateway … manually", so a VPN drop
+  needs the user; the relaunch wrapper gives up after ~12 min. Options: wait longer,
+  or the user sets a default gateway in the app (their setting, not ours).
 
 ## Security — do first (the user's action)
 

@@ -125,9 +125,10 @@ limitation in the log belongs here too.
 32. **Baseline v1 → v2 is not a single-variable comparison**: Changes 11 and 12, PoC
     inputs from snapshots instead of live, and run-to-run variation all differ. A
     difference could not be attributed to one of them (none was found). (baseline v2 entry)
-33. **One manual intervention in baseline v2**: during a network outage the tunnel was
-    rebuilt by hand; the relaunch wrapper has not yet recovered a run on its own (its
-    rebuild works when tested in isolation). (baseline v2 entry)
+33. **One manual intervention in baseline v2**: after a VPN drop (the user reconnected) the
+    tunnel was rebuilt by hand; the relaunch wrapper has not yet recovered a run on its own
+    (its rebuild works when tested in isolation). A separate hung LLM call in the same case
+    is unexplained. (baseline v2 entry and its correction)
 34. ~~The v1 → v2 paired tests ran from a scratch script.~~ **Resolved 2026-09-24**
     (Change 23): `eval/compare_runs.py`, committed and tested, reproduces them; its
     intervals differ from the scratch ones in the last digits and are the ones to cite.

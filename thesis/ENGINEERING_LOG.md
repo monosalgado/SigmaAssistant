@@ -2350,3 +2350,41 @@ reproduced exactly. The intervals differ in the last digits (another random gene
 
 No conclusion changes. The limitation logged with baseline v2 (paired tests from a
 scratch script) is resolved.
+
+---
+
+## 2026-09-24 — Correction: the baseline v2 interruption was two separate events
+
+The baseline v2 entry (above) described one network outage and said the VPN route "was
+unchanged throughout". Both are wrong. The user reported reconnecting the VPN, and the
+GlobalProtect client logs (read-only, on this laptop) show what happened:
+
+```
+10:11:55  IPSec tunnel creation finished with Gateway vpn.usf.edu.
+13:24:48  (no answer from the gateway from here on — "tunnel downtime 54117 ms")
+13:25:42  Tunnel is down due to keep-alive timeout.
+          ("Too many outstanding keepalive and no response from GP gateway")
+13:26:10  Select a gateway that you want to manually connect.   (auto-restore stops here)
+13:31:10  IPSec tunnel creation finished with Gateway vpn.usf.edu.   (the user reconnected)
+```
+
+The reconnect gave back the same interface (`utun4`) and address, which is why the
+route check during the run did not show it.
+
+**Event 1 — one LLM call hung (cause unknown).** Case 52's first analysis call never
+answered and ended in a client timeout (600 s per attempt, 2 retries). The network was
+up: the case's other calls, made *after* that timeout, succeeded (the stop message counts
+1 failed call of 4), and the VPN did not fail until 13:24:48. On the rerun the case passed
+in 166 s. Hypothesis, not shown: a generation that did not stop — the Ollama client sets no
+output limit (`max_tokens`), so a repetition loop runs until the timeout. The Spark's
+Ollama log needs admin rights to check.
+
+**Event 2 — the VPN dropped** (13:24:48–13:31:10): the USF gateway stopped answering the
+tunnel's keep-alives. Not a session time limit — no logout or lifetime message, and 3 h 13
+min after connecting is not a round number — but this is one event. The client's automatic
+restore ends at "select a gateway … manually", so **a drop needs the user to reconnect**;
+the relaunch wrapper gives up after ~12 minutes.
+
+Unchanged: the stop rule refused the affected rows both times, and the file is CITABLE.
+Corrected in CH5 §5.6 and CH7 item 33. Two findings go to the plan's Inbox (an output cap
+for LLM calls; how long the wrapper should wait for a manual VPN reconnect).

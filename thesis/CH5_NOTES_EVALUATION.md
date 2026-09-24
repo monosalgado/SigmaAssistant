@@ -469,16 +469,21 @@ CITABLE, matching every earlier hand check.
    (exit status 2), at most 5 times.
 4. `eval/summarise.py <file>` — the verdict must be CITABLE.
 
-`[MEASURED] 2026-09-24` **First real use (baseline v2) — the guards under a real outage.**
-At case 52 of 60 the connection to the Spark went silent mid-request. The pipeline
-continued on an empty analysis ("0 indicators, 0 TTPs") and still produced 2 rules — the
-exact defect-12 pattern — and **Change 16 refused the row** and stopped the run. The
-wrapper relaunched twice; the second time the Spark stayed unreachable for ~5 min. Once
-it answered again, the tunnel was rebuilt by hand and the wrapper continued; case 52 then
-passed in 166 s. Result: CITABLE, all 60 rows complete.
-`[DISCLOSE]` One manual intervention (the tunnel rebuild). The wrapper's own rebuild was
-checked afterwards and works (0.7 s on a spare port), but it has not yet recovered a run
-by itself. Outage cause unknown.
+`[MEASURED] 2026-09-24` **First real use (baseline v2) — the guards under two real failures**
+(corrected the same day from the GlobalProtect logs; log entry "Correction: … two separate
+events"):
+1. At case 52 of 60 one analysis call never answered (client timeout, 600 s × 3 attempts)
+   while the network was up — the case's later calls succeeded. The pipeline continued on
+   an empty analysis ("0 indicators, 0 TTPs") and still produced 2 rules — the exact
+   defect-12 pattern — and **Change 16 refused the row** and stopped the run. Cause
+   unknown; hypothesis: an unbounded generation (the client sets no `max_tokens`).
+2. On the relaunch, the **VPN dropped** (13:25, keep-alive timeout — the USF gateway stopped
+   answering; not a session time limit). GlobalProtect's auto-restore needs a manual gateway
+   choice, so the user reconnected (13:31); the tunnel was then rebuilt by hand and the
+   wrapper continued. Case 52 passed in 166 s. Result: CITABLE, all 60 rows complete.
+`[DISCLOSE]` One manual intervention (the tunnel rebuild, after the user's VPN reconnect).
+The wrapper's own rebuild works (0.7 s on a spare port) but has not yet recovered a run by
+itself; it gives up after ~12 min, shorter than a drop that needs the user.
 Worth one paragraph in the thesis: the stop rule was designed after defect 12 and here
 it caught a real instance — that is the evidence it earns its place.
 
