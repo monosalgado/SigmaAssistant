@@ -2472,3 +2472,36 @@ empty analysis and still show rules — the defect-12 pattern, in production.
 Open. A fix is a pipeline change (it breaks the Change 22 code freeze), so it waits for the
 user's decision. The probe is a scratch script; if its numbers are cited, a committed
 version must reproduce them.
+
+---
+
+## 2026-09-24 — Change 22's stopped run: what the 33 finished cases show (interim, descriptive)
+
+`eval/results/p2a_vocabulary60.jsonl` (33 rows, stopped by defect 19; committed as
+evidence). All seven gates pass on its rows. Compared with baseline v2's rows for the
+same 33 cases, using only committed scripts (`compare_runs.py`, `diagnose_logsource.py`
+on the v2 subset). **Interim and descriptive:** 33 of 60 cases, no test is claimed; the
+pre-registered measurement is the full rerun (with Change 24), which supersedes these rows.
+
+| | v2, same cases | Change 22 |
+|---|---|---|
+| Wrong rules whose category no SigmaHQ rule uses (pre-registered primary) | 12 | **1** (`security`) |
+| Rule category right | 4 / 32 | 7 / 31 |
+| Correct top suggestion overridden | 10 | 4 |
+| Rule category = the attack-vector label verbatim | 16 | 5 |
+| Rule on web telemetry (`webserver`/`proxy`) when gold is not web | 2 | 9 |
+| S3 exact, paired | 2 / 30 | 4 / 30 (2 gained, 0 lost; p = 0.50) |
+| S4, S5, tokens, seconds (paired) | — | differences within noise |
+
+Reading:
+- The change does what it was built for: impossible categories nearly vanish (12 → 1).
+- Part of them become right; part become a real but wrong category — `webserver_access_log`
+  is now `webserver` on host rules. The attack-vector stage's web bias is unchanged (web
+  telemetry on 9 non-web cases in both runs); it now reaches the rule under a valid name.
+  That is step (d).
+- The analysis stage copies the new wording too: its top suggestion's `service` is
+  `webserver` in 4 cases (was `webserver_access_log`). Step (b).
+- S3 barely moves: product and service are still wrong in most cases.
+- The partial file's unpaired means (S4 0.068, S5 0.156) are far below v2's full-run means
+  only because these 33 cases are harder — v2 scores 0.127 and 0.136 on the same cases.
+  Another instance of why runs are compared paired.
