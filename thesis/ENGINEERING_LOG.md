@@ -2423,3 +2423,52 @@ run is complete.
   can stall while others use the server. Token counts are unaffected.
 - A run interrupted and resumed spans two periods; the per-case results do not depend on
   it (each case runs whole on one code version), the timing might.
+
+---
+
+## 2026-09-24 — Defect 19: an unbounded generation loops and never finishes (correcting the "shared Spark" explanation)
+
+### What happened
+The Change 22 run was resumed at 18:12 with the Spark idle (GPU 0%, no model loaded, the
+other user's clients idle). Case 34 (`9a2d8b3e`, Check Point "Stealth Falcon") stalled
+again in the same analysis call: 3 attempts × 600 s, then the stop rule; the wrapper
+relaunched and it stalled a third time. The run was stopped at 18:48 (33 rows, intact).
+
+### Diagnosis (a scratch probe — a diagnostic, not a measurement)
+The case was run through the real pipeline (same code, same snapshots), and the analysis
+stage's LLM request was sent **streamed, with an output cap of 30,000 tokens**, to see
+whether tokens flow or never arrive:
+- first token after **5.3 s** — the request was not queued behind anyone;
+- tokens flowed at ~40/s and never stopped: **116,776 characters in 722 s**, ended by the
+  cap (`finish_reason = length`), JSON never closed;
+- the output lists 13 real ATT&CK techniques, then **336 invented sub-techniques in
+  sequence: `T1562.001`, `.004`, `.006` … `T1562.339`** (the real T1562 has about a dozen).
+  88% of the output is the loop.
+
+In baseline v2 the same call ended normally (4,637 tokens, 92 s). Under Change 22's
+slightly different prompt the model falls into the loop on every attempt (at least five,
+across two runs, and the probe) — at temperature 0 a retry repeats it.
+
+### Mechanism
+No LLM call sets an output limit (`OllamaLLMClient.generate` passes no `max_tokens`), and
+the analysis prompt asks for a list of technique mappings with no maximum length. A loop
+therefore runs until the client timeout (600 s) on each of its 3 attempts. The stop rule
+(Change 16) treats the timeout as an infrastructure failure, so the run halts at the same
+case every time — the risk recorded as CH7 item 28, now observed.
+
+### Corrections to earlier entries
+- "The Change 22 run paused at 33 of 60: the Spark's Ollama is shared" named contention as
+  the likeliest cause of the case-34 stall. **Wrong for case 34**: it is this loop. The
+  shared server remains a fact and a timing limitation (CH7 item 37).
+- Likely, not shown: the hung analysis call of baseline v2's case 52, and the two analysis
+  calls that took ~690 s but produced only ~4,200 tokens (`b7155193` in v2, `ad7085ac` in
+  this run — a first attempt timing out, then a normal retry) were the same kind of loop.
+
+### What the product does today
+In the web app a user would wait ~30 minutes, and the pipeline would then continue on an
+empty analysis and still show rules — the defect-12 pattern, in production.
+
+### Status
+Open. A fix is a pipeline change (it breaks the Change 22 code freeze), so it waits for the
+user's decision. The probe is a scratch script; if its numbers are cited, a committed
+version must reproduce them.

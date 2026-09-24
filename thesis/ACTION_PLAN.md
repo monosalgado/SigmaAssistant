@@ -159,6 +159,8 @@ and report it as a finding rather than keep tuning.
 - [>] **2.2a** One vocabulary: the attack-vector stage's telemetry reaches the
       analysis and generation stages in Sigma's terms. Measure: categories no
       SigmaHQ rule uses (17/41 wrong rules in v2), S3 paired against v2.
+      **Blocked 2026-09-24 at 33/60:** case `9a2d8b3e` loops in the analysis
+      stage on every attempt (defect 19). Needs a decision on defect 19 first.
 - [ ] **2.2b** The analysis suggestion's `service` (44/57 `sysmon`). Measure.
 - [ ] **2.2** (step c) Change: make the (suggested or confirmed) logsource an explicit
       constraint in generation, checked after generation (defect 11); resolve the

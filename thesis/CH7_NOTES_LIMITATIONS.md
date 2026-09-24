@@ -104,7 +104,9 @@ limitation in the log belongs here too.
 27. **The PoC stage never fetches GitHub links to tags containing a dot** (`v1.2`) — an
     existing quirk, pinned by a test, not changed. (Change 17)
 28. **A deterministic LLM-call failure would stop a run at the same case every time**
-    (Change 16's rule). Not observed; would need a decision if it happens.
+    (Change 16's rule). **Observed 2026-09-24** (defect 19: an analysis output that loops
+    and never finishes, case `9a2d8b3e` under Change 22). The decision on how to treat
+    such cases is open — see the log entry "Defect 19".
 29. **Baseline v1 carries two caveats**: its PoC inputs were fetched live, and a crash
     would not have been recorded as one. (Change 19)
 
@@ -144,8 +146,8 @@ limitation in the log belongs here too.
     chances to hit. (2.1 entry)
 
 37. **The Spark is shared with other users.** Another user's application uses the same Ollama
-    server; requests compete, and runs have stalled for 40+ minutes (case 52 in v2, case 34 in
-    the Change 22 run — contention likely, not shown). Time per case (C2) therefore partly
+    server, and requests compete. (The two long stalls first blamed on it — case 52 in v2,
+    case 34 in the Change 22 run — are more likely defect 19, an output loop.) Time per case (C2) therefore partly
     measures other people's load; token counts do not. Checked: no prompt was cut by a
     smaller context. (log: "The Change 22 run paused…")
 

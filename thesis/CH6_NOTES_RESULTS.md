@@ -248,10 +248,28 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
 - All three landed before measurement was possible; write them as *defects identified by
   audit*, not as improvements, unless an ablation measures them.
 
-### 6.4.8 Open, not yet measured
+### 6.4.8 A generation that never ends (defect 19) `[MEASURED — diagnostic]` 2026-09-24, open
+- Case `9a2d8b3e` (Check Point "Stealth Falcon") under Change 22: the analysis call never
+  finished — 3 × 600 s timeouts, on every attempt across two runs. A streamed probe of the
+  same request (first token after 5.3 s, so not queued) produced **116,776 characters in
+  722 s** until a 30,000-token cap: 13 real ATT&CK techniques, then **336 invented ones in
+  sequence, `T1562.001` … `T1562.339`**. In baseline v2 the same call ended at 4,637 tokens.
+- Mechanism: no LLM call sets an output limit, and the prompt asks for an unbounded list.
+  At temperature 0 a retry repeats the loop, so the run stops at the same case every time
+  (CH7 item 28, now observed). In the web app the user waits ~30 min, then gets rules built
+  on an empty analysis.
+- `[UNMEASURED]` Likely the same loop, not shown: baseline v2's hung case 52, and two
+  analysis calls of ~690 s (a timed-out first attempt, then a normal retry).
+- For the thesis: another silent failure, this time of the model rather than the code — and
+  a small, meaning-preserving prompt change (Change 22) was enough to trigger it on one case.
+- `[DISCLOSE]` The probe is a scratch diagnostic; a committed version must reproduce it
+  before its numbers are cited.
+
+### 6.4.9 Open, not yet measured
 - Defect 9: page extraction yields near-zero text on some pages; navigation boilerplate
   survives extraction (the extractor removes `nav`/`header` tags, but many sites build
-  menus from generic elements). Plan 2.4, only if 2.1 shows it matters.
+  menus from generic elements). Plan 2.4 — dropped 2026-09-24 (2.1 found nothing pointing
+  to it).
 - Defect 4: the coverage check that triggers regeneration is substring matching.
 - Defect 5: `json_mode=True` on the generation stage (Tam et al. predicts a reasoning
   cost).
