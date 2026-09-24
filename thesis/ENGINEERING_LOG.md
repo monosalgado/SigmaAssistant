@@ -1985,3 +1985,39 @@ step that raises is a failure, not a crash. Full suite **198 passed**.
 Live, off the VPN: the real script failed at **tunnel**, printed the rebuild
 command, ran nothing further, and exited **1**. The passing path (steps 2–5)
 needs the VPN; its first real run is the start of plan task 1.5.
+
+---
+
+## 2026-09-23 — Change 21 (plan 1.4c): a relaunch wrapper replaces the external watchdog
+
+### Motivation
+The 2026-09-19 baseline ran under a watchdog script kept in `/tmp` — so it was
+lost between sessions, and uncommitted. Its main job was to spot garbage rows
+after the fact and purge them. Since Change 16 the harness refuses such rows
+itself and exits with status 2, so the remaining job is small: bring the tunnel
+back and continue.
+
+### Design
+`eval/run_resilient.py` runs `eval/run_eval.py` with the arguments given after
+`--` and reacts to its exit status: **0** finished; **2** (stopped at a failed LLM
+call, usually a VPN or tunnel drop) → rebuild the SSH tunnel with keepalives,
+confirm it answers HTTP, rerun the same command — resume continues at the
+unwritten case; **anything else** → stop, since a harness failure is a bug that
+repeating will not fix. At most 5 relaunches. Before every run the tunnel must
+answer; if it cannot be brought back within ~10 minutes (VPN down), the wrapper
+gives up with status 3 rather than start a run that would stop immediately.
+
+### Verification
+Tests written first. **5 offline tests** (`tests/test_run_resilient.py`): a
+finished run is not relaunched; status 2 is relaunched after a tunnel check
+before every run; it gives up after the relaunch limit (first run + 3 relaunches
+with a limit of 3); any other status is not retried; no run starts without a
+working tunnel. Full suite **203 passed**.
+
+Live, off the VPN, with one attempt: the real tunnel function tried to rebuild,
+returned False after 13 s, and left no `ssh` process behind. The success path —
+rebuilding after a real drop mid-run — needs the VPN; its first use is plan 1.5.
+
+### Status
+Plan task 1.4 complete (Changes 19–21). The run recipe is now two commands:
+`eval/preflight.py`, then `eval/run_resilient.py -- <run_eval arguments>`.

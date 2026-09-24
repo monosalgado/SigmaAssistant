@@ -109,15 +109,19 @@ say *why* logsource is at chance.
         disclose only. **Done, Change 18:** chosen a; committed flag list; the
         summariser reports all / clean / flagged. Baseline v1 headline unchanged
         on the clean cases (at most 0.008).
-- [>] **1.4** One-command preflight: tunnel, model warm, server context ≥ 32k,
+- [x] **1.4** One-command preflight: tunnel, model warm, server context ≥ 32k,
       tests, 2-case smoke. *(offline to write)*
       Also: `summarise.py` prints the gates (it reports none today; they have been
       checked by hand), including the new `poc_snapshots_missed`; and a relaunch
       wrapper for exit status 2 (replaces the old watchdog).
       **1.4a done (Change 19):** gates + verdict in `summarise.py`.
       **1.4b done (Change 20):** `eval/preflight.py`, stops at the first failure.
+      **1.4c done (Change 21):** `eval/run_resilient.py` relaunches on exit status 2.
 - [ ] **1.5** Run baseline v2: 60 cases, same sample. **Needs ~2 h on the VPN.**
       Exit: all five gates pass, results + log entry committed.
+      Recipe: USF VPN on, OpenVPN off → `eval/preflight.py` → `eval/run_resilient.py --
+      --sample 60 --seed 0 --arm baseline_v2 --no-web-enrich --out eval/results/baseline60_v2.jsonl`
+      → `eval/summarise.py eval/results/baseline60.jsonl eval/results/baseline60_v2.jsonl`.
 
 **Exit criteria:** baseline v2 committed with intermediate outputs; S1–S5 and
 cost read against both the null baselines and baseline v1.
