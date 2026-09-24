@@ -331,3 +331,5 @@ so removing one is reversible; untracked and ignored files have no such safety n
 | 2026-09-23 | No schedule tracking; defence next semester; meetings handled by the user | user |
 | 2026-09-23 | Web-search provider, when scheduled: Ollama API (key obtained) | user |
 | 2026-09-23 | `eval/snapshots/` stays on this computer only, no backup (H4) | user |
+| 2026-09-24 | `thesis/DEFENSE_NOTES.md` stays local only (gitignored; the repository is public) | user |
+| 2026-09-24 | Keep Change 12 (whole source): token and time cost is not a concern — everything is local and unbilled; rule quality is the priority, and full context matters for it | user |
