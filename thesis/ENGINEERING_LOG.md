@@ -2311,3 +2311,42 @@ Same 60 cases, recipe as baseline v2, arm `p2a_vocabulary`, file
 
 ### Status
 Code and tests done; the measurement run follows.
+
+---
+
+## 2026-09-24 — Change 23: a committed paired-comparison script (`eval/compare_runs.py`)
+
+### Motivation
+The baseline v1 → v2 paired tests came from a scratch script using scipy/numpy, which
+the project does not declare; the log said they were not citable until a committed
+script reproduced them. With one run per Phase 2 change (user decision), every change
+needs this comparison.
+
+### Design
+Standard library only (`math.comb`, `random`). Cases matched by `rule_id`; each metric
+on the cases scored in both runs. S1/S3: exact McNemar (two-sided binomial on the
+discordant cases, capped at 1). S4, S5, tokens, seconds, rules: mean difference with a
+paired bootstrap 95% interval (10,000 resamples, seed 0, percentile with linear
+interpolation as numpy's default). Reports cases present in only one file.
+
+### Verification
+Tests first, seen failing: **11 tests** (`tests/test_compare_runs.py`) — McNemar against
+hand-computed values, including 8 vs 1 → p = 0.0390625, the logged Change 12 result;
+linear-interpolation percentiles; a reproducible bootstrap; only cases scored in both
+runs are paired; and a regression test that reproduces the baseline v1 → v2 comparison
+from the committed result files. Full suite **253 passed**.
+
+Reproduction: every count, mean, difference and p-value logged for v1 → v2 is
+reproduced exactly. The intervals differ in the last digits (another random generator);
+**cite these, from the committed script**:
+
+| | Scratch (logged) | Committed |
+|---|---|---|
+| S4 difference, 95% CI | [−0.048, +0.090] | **[−0.048, +0.086]** |
+| S5 difference, 95% CI | [−0.074, +0.078] | **[−0.072, +0.075]** |
+| Tokens per case | [+11,705, +21,553] | **[+11,752, +21,451]** |
+| Seconds per case | [+42.2, +99.0] | **[+42.0, +98.9]** |
+| Rules per case | [+0.43, +1.38] | **[+0.42, +1.38]** |
+
+No conclusion changes. The limitation logged with baseline v2 (paired tests from a
+scratch script) is resolved.

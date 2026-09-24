@@ -265,9 +265,8 @@ is a decision, not a default.
   committed script before citing it.
 - `.env.example` lacks `ALLOWED_ORIGINS`, which `backend/main.py` reads. Trivial;
   fold into H5.
-- The v1 → v2 paired tests ran from a scratch script (scipy/numpy, undeclared).
-  Proposed: `eval/compare_runs.py`, standard library only, tests first, must
-  reproduce the logged numbers. Needed before any run comparison is cited.
+- ~~The v1 → v2 paired tests ran from a scratch script.~~ Done 2026-09-24:
+  `eval/compare_runs.py` (Change 23, user-approved) reproduces them.
 - Example copying persists in the full pipeline: in baseline v2 a Windows
   kernel-rootkit case got Example A's `/saml/login`. Count it over v2's recorded
   attack vectors with the probe's markers. Relevant to 2.1/2.3.

@@ -128,10 +128,10 @@ limitation in the log belongs here too.
 33. **One manual intervention in baseline v2**: during a network outage the tunnel was
     rebuilt by hand; the relaunch wrapper has not yet recovered a run on its own (its
     rebuild works when tested in isolation). (baseline v2 entry)
-34. **The v1 → v2 paired tests ran from a scratch script** (scipy/numpy, installed but not
-    declared). Until a committed script reproduces them, they are working numbers, not
-    citable ones — the same standard as the Foundation-Sec probe (item 22). (baseline v2
-    entry)
+34. ~~The v1 → v2 paired tests ran from a scratch script.~~ **Resolved 2026-09-24**
+    (Change 23): `eval/compare_runs.py`, committed and tested, reproduces them; its
+    intervals differ from the scratch ones in the last digits and are the ones to cite.
+    Kept here so item numbers stay stable.
 35. **The logsource diagnosis (plan 2.1) is category-level, one run, n = 57**, with counts
     and no inference. Product, a second failure, is not diagnosed. Its three post-hoc
     measures were chosen after reading the data. "No SigmaHQ rule uses this category" is

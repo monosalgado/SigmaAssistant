@@ -487,10 +487,10 @@ Two runs on the same cases must be compared **case by case**: each metric only o
 scored in both runs; exact McNemar for S1/S3 (discordant pairs), paired bootstrap 95% CI
 of the mean difference for S4/S5 and cost. Reason, measured on v1 → v2: the unpaired S4
 mean rose 0.123 → 0.175, but on the same 35 cases the difference was +0.014, CI
-[−0.048, +0.090]. S2–S5 are computed only on cases whose first rule parses, so a change in
-*which* rules parse changes *which* cases are averaged. `[DISCLOSE]` These tests so far ran
-from a scratch script; a committed one (`eval/compare_runs.py`, proposed) must reproduce
-them before any p-value is cited.
+[−0.048, +0.086]. S2–S5 are computed only on cases whose first rule parses, so a change in
+*which* rules parse changes *which* cases are averaged.
+Tool: `eval/compare_runs.py <A> <B>` (Change 23) — standard library only; 11 tests,
+including one that reproduces the v1 → v2 comparison from the committed result files.
 
 ## 5.7 Status — what exists vs. what is claimed (2026-09-24)
 
@@ -499,11 +499,12 @@ them before any p-value is cited.
 | Dataset (303 cases, frozen page + PoC snapshots) | built, verified; contamination flagged (23 cases) |
 | Scorers S1–S5 | built; self-comparison + null baseline done |
 | Telemetry | built; Ollama path verified live; stage labels; Gemini path never verified |
-| Runner, summariser, gates, preflight, relaunch wrapper | built; 203 offline tests |
+| Runner, summariser, gates, preflight, relaunch wrapper | built; offline tests |
 | **Results** | **baseline v2** (n=60, 2026-09-24, **CITABLE**) = the reference; baseline v1 (citable with 2 caveats) kept for comparison — see `CH6_NOTES_RESULTS.md` |
-| Paired comparison of two runs | method fixed (§5.6); scratch script only — committed version proposed |
+| Paired comparison of two runs | `eval/compare_runs.py` (Change 23) |
+| Logsource diagnosis | `eval/diagnose_logsource.py` (plan 2.1) |
 
-`[MEASURED] 2026-09-23` Full suite **203 passed**, fully offline.
+`[MEASURED] 2026-09-24` Full suite **253 passed**, fully offline.
 
 `[DISCLOSE]` Changes 1–3 (pySigma validation, RAG exemplar format, full-corpus ingestion)
 landed **before** the harness existed, so their effect on quality is **unmeasured**.
@@ -515,7 +516,7 @@ Write them as defects identified by code audit, not as improvements.
 - [x] ~~First live run assertions~~ — replaced by `check_gates` (Change 19).
 - [x] ~~Contamination handling~~ — flagged and reported separately (Change 18).
 - [x] ~~Baseline v2~~ — run 2026-09-24, CITABLE (plan 1.5).
-- [ ] **Committed paired-comparison script** — reproduce the v1 → v2 tests before citing them.
+- [x] ~~Committed paired-comparison script~~ — `eval/compare_runs.py`, Change 23; reproduces v1 → v2.
 - [ ] **Naive baseline arm** (most-common logsource, no LLM) — a stronger comparator than
       the null control alone.
 - [ ] Per-category vs weighted reporting, given the `process_creation` skew.

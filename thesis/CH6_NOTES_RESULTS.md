@@ -73,11 +73,14 @@ Verdict **CITABLE** — all seven gates pass; the first file without caveats.
 | S1 valid Sigma | 0.950 (57/60) | 60 | — | 55 → 57; p = 0.73 |
 | S2 issues per rule | 1.11 | 57 | — | — |
 | **S3 logsource exact** | **0.123** | 57 | **0.173** | 8 → 5 of 52; p = 0.45 |
-| S4 ATT&CK exact F1 | 0.175 | 40 | 0.092 | +0.014, 95% CI [−0.048, +0.090], n = 35 |
-| S5 detection-field F1 | 0.239 | 56 | 0.133 | +0.003, 95% CI [−0.074, +0.078], n = 51 |
-| Rules per case | 4.15 | 60 | — | +0.88, CI [+0.43, +1.38] |
-| Tokens per case | 53,803 | 60 | — | **+45%**, CI [+11.7k, +21.6k] |
+| S4 ATT&CK exact F1 | 0.175 | 40 | 0.092 | +0.014, 95% CI [−0.048, +0.086], n = 35 |
+| S5 detection-field F1 | 0.239 | 56 | 0.133 | +0.003, 95% CI [−0.072, +0.075], n = 51 |
+| Rules per case | 4.15 | 60 | — | +0.88, CI [+0.42, +1.38] |
+| Tokens per case | 53,803 | 60 | — | **+45%**, CI [+11.8k, +21.5k] |
 | Seconds per case (mean / median) | 169.3 / 142 | 60 | — | **+65%**, CI [+42, +99] s |
+
+Paired column: `eval/compare_runs.py eval/results/baseline60.jsonl eval/results/baseline60_v2.jsonl`
+(Change 23; reproduces the scratch analysis exactly except the intervals' last digits).
 
 - **No change in rule quality detectable at n = 60** between v1 and v2 — and a measured
   cost of +45% tokens and +65% time per case. S3 is still at chance.
@@ -89,8 +92,6 @@ Verdict **CITABLE** — all seven gates pass; the first file without caveats.
   inputs from snapshots instead of live, and run-to-run variation.
 - `[DISCLOSE]` Not claimed: that the changes have *no* effect. 60 cases cannot detect
   small effects; the S4/S5 intervals allow about ±0.08.
-- `[DISCLOSE]` The p-values and intervals come from a scratch script; a committed script
-  must reproduce them before they are cited (log, "Limitations to disclose").
 - Clean cases only (55): S3 0.113, S4 0.189, S5 0.238. Flagged (5): too few to read.
 - Cost detail: sum of per-case time 169 min (v1: 103 min). The run itself took about
   3 h 30 min of wall time, of which ~41 min was a network outage (CH5 notes).
