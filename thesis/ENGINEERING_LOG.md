@@ -1945,3 +1945,43 @@ The baseline-run entry (2026-09-19) says all five gates pass. Under the checks
 as they stand now, baseline v1 is citable **with two caveats**, which should be
 stated with its numbers: its PoC inputs were fetched live, and a pipeline crash
 would not have been recorded as one.
+
+---
+
+## 2026-09-23 — Change 20 (plan 1.4b): a one-command pre-run checklist
+
+### Motivation
+Before every run the same checks were done by hand from memory: is the tunnel
+really forwarding (a running `ssh` is not evidence — a dropped tunnel keeps its
+listener), does the model return token counts, is the server context large
+enough, do the tests pass, does a small run come out clean. Skipping one has cost
+runs before (a stale tunnel on 2026-09-13/14). Since Change 12 there is a new
+risk: prompts reach ~25k tokens and the code sets no context size, so a server
+that loaded the model with a small context would truncate silently.
+
+### Design
+`eval/preflight.py` runs five steps in order and **stops at the first failure,
+printing the fix**; exit status 0 only if all pass.
+
+| Step | Passes when |
+|---|---|
+| tunnel | `GET /api/version` returns 200 (the fix printed is the tunnel command with keepalives) |
+| model | a one-line chat completion returns positive prompt and completion token counts |
+| context | `ollama ps` on the Spark shows the model with CONTEXT >= 32,768 (run after `model`, so it is loaded) |
+| tests | the offline suite passes |
+| smoke | a 2-case run (`--sample 2 --seed 7 --arm preflight`) exits 0 and `check_gates` (Change 19) says **CITABLE** |
+
+The smoke run writes a fresh file under `eval/results/preflight/` (gitignored:
+scratch, not evidence), so resume never skips it. `ollama ps` is parsed at the
+header's fixed column positions, since the PROCESSOR column contains a space.
+
+### Verification
+Tests written first. **6 offline tests** (`tests/test_preflight.py`): context read
+from the real `ollama ps` line captured on 2026-09-23 (262,144); a model not
+loaded has no context; token counts must be present and positive; all steps
+passing exits 0; the first failure stops the run (later steps never execute); a
+step that raises is a failure, not a crash. Full suite **198 passed**.
+
+Live, off the VPN: the real script failed at **tunnel**, printed the rebuild
+command, ran nothing further, and exited **1**. The passing path (steps 2–5)
+needs the VPN; its first real run is the start of plan task 1.5.

@@ -45,3 +45,6 @@ eval/snapshots/
 .mypy_cache/
 .ruff_cache/
 *.egg-info/
+
+# Preflight smoke runs (eval/preflight.py): scratch output, not evidence
+eval/results/preflight/

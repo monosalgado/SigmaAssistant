@@ -115,6 +115,7 @@ say *why* logsource is at chance.
       checked by hand), including the new `poc_snapshots_missed`; and a relaunch
       wrapper for exit status 2 (replaces the old watchdog).
       **1.4a done (Change 19):** gates + verdict in `summarise.py`.
+      **1.4b done (Change 20):** `eval/preflight.py`, stops at the first failure.
 - [ ] **1.5** Run baseline v2: 60 cases, same sample. **Needs ~2 h on the VPN.**
       Exit: all five gates pass, results + log entry committed.
 
