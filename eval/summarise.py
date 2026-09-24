@@ -94,6 +94,69 @@ def summarise(rows: list) -> dict:
     }
 
 
+def _gate(name: str, rows: list, key: str, bad):
+    """One check. `bad(row)` says whether a row fails it; rows without `key` did
+    not record it. NOT RECORDED only when no row has the field at all."""
+    present = [r for r in rows if key in r]
+    if not present:
+        return {"name": name, "status": "NOT RECORDED", "detail": f"no row has `{key}`"}
+    failing = [r for r in present if bad(r)]
+    return {"name": name, "status": "FAIL" if failing else "PASS",
+            "detail": f"{len(failing)} of {len(present)} rows fail"}
+
+
+def check_gates(rows: list) -> dict:
+    """Is a result file citable? (plan 1.4a)
+
+    The checks every run has had to pass, computed by hand until now. Gate 1
+    covers both the page snapshots and, since Change 17, the PoC stage's GitHub
+    fetches. A file written before a check existed says NOT RECORDED for it rather
+    than passing it: the PoC counters arrived with Change 17, and case-level
+    errors were invisible to the harness before Change 14 (defect 17), which is
+    detected by the absence of the `pipeline` field added right after it.
+    """
+    if not rows:
+        return {"checks": [], "verdict": "NOT CITABLE"}
+    tel = lambda r: r.get("telemetry") or {}
+    checks = [
+        _gate("page snapshots all served", rows, "snapshots_missed",
+              lambda r: r["snapshots_missed"]),
+        _gate("PoC GitHub snapshots all served", rows, "poc_snapshots_missed",
+              lambda r: r["poc_snapshots_missed"]),
+        _gate("token data on every call", rows, "telemetry",
+              lambda r: tel(r).get("calls_without_token_data", 0)),
+        _gate("no failed LLM calls", rows, "telemetry",
+              lambda r: tel(r).get("n_errors", 0)),
+    ]
+    if any("pipeline" in r for r in rows):
+        checks.append(_gate("no case-level errors", rows, "error", lambda r: r["error"]))
+    else:
+        checks.append({"name": "no case-level errors", "status": "NOT RECORDED",
+                       "detail": "file predates Change 14; crashes were not visible"})
+    checks.append(_gate("no suspiciously fast cases (< 30 s)", rows, "elapsed_s",
+                        lambda r: r["elapsed_s"] < 30))
+    ids = [r.get("rule_id") for r in rows]
+    dupes = len(ids) - len(set(ids))
+    checks.append({"name": "no duplicate cases", "status": "FAIL" if dupes else "PASS",
+                   "detail": f"{len(rows)} rows, {len(set(ids))} unique"})
+
+    statuses = [c["status"] for c in checks]
+    if "FAIL" in statuses:
+        verdict = "NOT CITABLE"
+    elif "NOT RECORDED" in statuses:
+        verdict = f"CITABLE WITH CAVEATS ({statuses.count('NOT RECORDED')} not recorded)"
+    else:
+        verdict = "CITABLE"
+    return {"checks": checks, "verdict": verdict}
+
+
+def report_gates(result: dict) -> None:
+    print("  gates:")
+    for c in result["checks"]:
+        print(f"    {c['status']:<13} {c['name']}  ({c['detail']})")
+    print(f"  verdict: {result['verdict']}")
+
+
 def split_by_contamination(rows: list, flags: dict = None) -> dict:
     """Split rows into clean / flagged / unknown (plan 1.3b).
 
@@ -192,6 +255,7 @@ def main() -> None:
     summaries = [summarise(load(p)) for p in paths]
     for path, summary in zip(paths, summaries):
         report(path.name, summary)
+        report_gates(check_gates(load(path)))
         split = split_by_contamination(load(path), flags)
         # Headline on the clean cases; flagged cases on their own line (plan 1.3b).
         if split["flagged"] or split["clean"]:

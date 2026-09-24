@@ -18,7 +18,7 @@ See thesis/ENGINEERING_LOG.md, Change 6.
 
 from __future__ import annotations
 
-from eval.summarise import NULL_BASELINES, split_by_contamination, summarise
+from eval.summarise import NULL_BASELINES, check_gates, split_by_contamination, summarise
 
 
 def _row(*, parses=True, issues=0, logsource=None, attack=None,
@@ -186,3 +186,61 @@ def test_older_rows_are_split_with_the_committed_list():
 def test_a_case_in_neither_place_is_unknown_not_clean():
     split = split_by_contamination([_tagged("z", None)], flags={})
     assert [r["rule_id"] for r in split["unknown"]] == ["z"] and split["clean"] == []
+
+
+# --------------------------------------------------------------------------
+# Gates: is a result file citable? (plan 1.4a)
+# --------------------------------------------------------------------------
+# Until now these were computed by hand after every run.
+
+def _gated(rule_id="r", **overrides):
+    """A row as run_eval.py writes it since Changes 14-17."""
+    row = {"rule_id": rule_id, "error": None, "elapsed_s": 90.0,
+           "snapshots_missed": 0, "poc_snapshots_missed": 0, "pipeline": {},
+           "telemetry": {"n_errors": 0, "calls_without_token_data": 0}}
+    row.update(overrides)
+    return row
+
+
+def _status(result, name):
+    return next(c["status"] for c in result["checks"] if c["name"] == name)
+
+
+def test_a_clean_file_is_citable():
+    result = check_gates([_gated("a"), _gated("b")])
+    assert result["verdict"] == "CITABLE"
+    assert all(c["status"] == "PASS" for c in result["checks"])
+
+
+def test_each_failure_is_detected():
+    cases = {
+        "page snapshots all served": _gated(snapshots_missed=1),
+        "PoC GitHub snapshots all served": _gated(poc_snapshots_missed=2),
+        "token data on every call": _gated(telemetry={"n_errors": 0, "calls_without_token_data": 1}),
+        "no failed LLM calls": _gated(telemetry={"n_errors": 1, "calls_without_token_data": 0}),
+        "no case-level errors": _gated(error="ValueError: x"),
+        "no suspiciously fast cases (< 30 s)": _gated(elapsed_s=6.1),
+    }
+    for name, bad_row in cases.items():
+        result = check_gates([_gated("ok"), bad_row])
+        assert _status(result, name) == "FAIL", name
+        assert result["verdict"] == "NOT CITABLE", name
+
+
+def test_duplicate_cases_fail():
+    assert _status(check_gates([_gated("a"), _gated("a")]), "no duplicate cases") == "FAIL"
+
+
+def test_older_files_say_what_they_did_not_record():
+    """Baseline v1 predates the PoC snapshots (Change 17) and was written when
+    crashes were hidden from the harness (before Change 14)."""
+    old = _gated()
+    del old["poc_snapshots_missed"], old["pipeline"]
+    result = check_gates([old])
+    assert _status(result, "PoC GitHub snapshots all served") == "NOT RECORDED"
+    assert _status(result, "no case-level errors") == "NOT RECORDED"
+    assert result["verdict"] == "CITABLE WITH CAVEATS (2 not recorded)"
+
+
+def test_an_empty_file_is_not_citable():
+    assert check_gates([])["verdict"] == "NOT CITABLE"

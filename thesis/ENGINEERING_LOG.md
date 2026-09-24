@@ -1894,3 +1894,54 @@ cases and does not hold on 5.
 ### Status
 Plan 1.3 complete: defect 16 fixed (Change 17), contamination flagged and
 reported (Change 18).
+
+---
+
+## 2026-09-23 — Change 19 (plan 1.4a): the summariser checks whether a result file is citable
+
+### Motivation
+Every run's gates were computed by hand, in one-off scripts, after the fact.
+That is error-prone — this log already records one such check (defect 12's
+count) needing a second look — and it could not know which checks an older
+file never recorded.
+
+### Design
+`check_gates(rows)` in `eval/summarise.py` returns each check with a status and
+a verdict; `summarise.py` prints them for every file.
+
+| Check | Fails when |
+|---|---|
+| page snapshots all served | any `snapshots_missed` > 0 |
+| PoC GitHub snapshots all served | any `poc_snapshots_missed` > 0 (Change 17) |
+| token data on every call | any call without token counts |
+| no failed LLM calls | any telemetry error |
+| no case-level errors | any `row["error"]` |
+| no suspiciously fast cases (< 30 s) | the defect-12 signature |
+| no duplicate cases | a `rule_id` appears twice (a resume mishap) |
+
+Three outcomes: **CITABLE**; **CITABLE WITH CAVEATS (n not recorded)** when a
+check could not be evaluated for that file; **NOT CITABLE** on any failure or an
+empty file. A check is NOT RECORDED only when no row has its field. Case-level
+errors are marked NOT RECORDED for files written before Change 14 (detected by
+the absence of the `pipeline` field, added directly after it), because crashes
+were invisible to the harness then (defect 17).
+
+### Verification
+Tests written first. **5 offline tests** (`tests/test_eval_summarise.py`): a clean
+file is citable; each of the six failure types is detected and makes the file
+not citable; duplicates fail; an older file reports the two checks it did not
+record and gets the caveated verdict; an empty file is not citable. Full suite
+**192 passed**.
+
+Against the real files, matching every earlier hand check:
+- `baseline60.jsonl` → **CITABLE WITH CAVEATS (2 not recorded)**: PoC fetches
+  were live (before Change 17) and crashes were invisible (before Change 14).
+- `baseline60.jsonl.corrupt.bak` → **NOT CITABLE**: failed LLM calls in 14 of 21
+  rows (exactly defect 12's count), 13 of 21 under 30 s, 1 missed page.
+- `baseline60.prefix-fix.bak` → **NOT CITABLE**: 4 missed pages (defect 14).
+
+### A qualification of an earlier claim
+The baseline-run entry (2026-09-19) says all five gates pass. Under the checks
+as they stand now, baseline v1 is citable **with two caveats**, which should be
+stated with its numbers: its PoC inputs were fetched live, and a pipeline crash
+would not have been recorded as one.

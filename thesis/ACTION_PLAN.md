@@ -109,11 +109,12 @@ say *why* logsource is at chance.
         disclose only. **Done, Change 18:** chosen a; committed flag list; the
         summariser reports all / clean / flagged. Baseline v1 headline unchanged
         on the clean cases (at most 0.008).
-- [ ] **1.4** One-command preflight: tunnel, model warm, server context ≥ 32k,
+- [>] **1.4** One-command preflight: tunnel, model warm, server context ≥ 32k,
       tests, 2-case smoke. *(offline to write)*
       Also: `summarise.py` prints the gates (it reports none today; they have been
       checked by hand), including the new `poc_snapshots_missed`; and a relaunch
       wrapper for exit status 2 (replaces the old watchdog).
+      **1.4a done (Change 19):** gates + verdict in `summarise.py`.
 - [ ] **1.5** Run baseline v2: 60 cases, same sample. **Needs ~2 h on the VPN.**
       Exit: all five gates pass, results + log entry committed.
 
