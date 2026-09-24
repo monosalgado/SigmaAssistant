@@ -264,6 +264,11 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
   a small, meaning-preserving prompt change (Change 22) was enough to trigger it on one case.
 - `[DISCLOSE]` The probe is a scratch diagnostic; a committed version must reproduce it
   before its numbers are cited.
+- Fix: Change 24 — every answer bounded at 16,384 tokens (above the longest finished
+  answer in v2, 12,374), a cut answer retried twice, then recorded as the model's failure
+  and measured with the case. Bounds the time; does not prevent the loop. Two follow-ups
+  change finished answers and get their own runs: drop technique IDs that do not exist in
+  ATT&CK (plan 2.2e), and at most 10 techniques per analysis (2.2f).
 
 ### 6.4.9 Open, not yet measured
 - Defect 9: page extraction yields near-zero text on some pages; navigation boilerplate

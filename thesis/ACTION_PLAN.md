@@ -161,7 +161,18 @@ and report it as a finding rather than keep tuning.
       SigmaHQ rule uses (17/41 wrong rules in v2), S3 paired against v2.
       **Blocked 2026-09-24 at 33/60:** case `9a2d8b3e` loops in the analysis
       stage on every attempt (defect 19). Needs a decision on defect 19 first.
+      Decision (user): Change 24, then restart from scratch.
+- [x] **Change 24** (defect 19, found during 2.2a): every LLM answer has a bounded
+      length (16,384 tokens); a cut answer is retried, then recorded as the model's
+      failure and measured with the case. 2.2a restarts from scratch on it
+      (`p2a_vocabulary60_r2.jsonl`).
 - [ ] **2.2b** The analysis suggestion's `service` (44/57 `sysmon`). Measure.
+- [ ] **2.2e** (user, 2026-09-24) ATT&CK ID check: drop technique IDs that do not exist
+      in ATT&CK (the `mitre` collection), like the rule-id check (Change 9). Changes
+      finished answers → its own run. Measure S4 and invented-ID counts.
+- [ ] **2.2f** (user, 2026-09-24) At most 10 techniques in the analysis answer — enough
+      for a rule; loosely related techniques add noise (user). Prompt change → its own
+      run. Measure S4, loop rate (answers cut at the limit).
 - [ ] **2.2** (step c) Change: make the (suggested or confirmed) logsource an explicit
       constraint in generation, checked after generation (defect 11); resolve the
       conflict with generation rule 2 ("initial access MANDATORY"). Measure.
@@ -379,3 +390,4 @@ so removing one is reversible; untracked and ignored files have no such safety n
 | 2026-09-24 | Keep Change 12 (whole source): token and time cost is not a concern — everything is local and unbilled; rule quality is the priority, and full context matters for it | user |
 | 2026-09-24 | Phase 2 order from 2.1: (a) one vocabulary, (b) the suggestion's service, (c) 2.2 precedence, (d) 2.3 web bias; 2.4 dropped | user |
 | 2026-09-24 | One 60-case run per Phase 2 change, so each change's effect can be attributed | user |
+| 2026-09-24 | Defect 19: bound every answer (Change 24), treat a cut answer as a model failure; restart the 2.2a run from scratch; add ATT&CK ID check (2.2e) and ≤ 10 techniques (2.2f) as their own steps | user |

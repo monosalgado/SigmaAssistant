@@ -24,6 +24,22 @@ from backend.telemetry import TELEMETRY, extract_gemini_usage, extract_openai_us
 
 
 # ---------------------------------------------------------------------------
+# Output limit (Change 24, defect 19)
+# ---------------------------------------------------------------------------
+# Without a limit, an answer that loops (seen: 336 invented ATT&CK sub-techniques in
+# sequence) runs until the client timeout, on every retry. The limit sits above every
+# answer that finished in the reference run (longest: 12,374 tokens), so it binds only
+# on answers that would not have finished anyway.
+OUTPUT_TOKEN_LIMIT = 16384
+# A cut answer is retried as often as the OpenAI client retries a timeout (2).
+OUTPUT_LIMIT_RETRIES = 2
+
+
+class OutputLimitReached(Exception):
+    """Every attempt stopped at OUTPUT_TOKEN_LIMIT: the model did not finish."""
+
+
+# ---------------------------------------------------------------------------
 # Rate limiter (token bucket) — prevents self-inflicted 429s on Gemini free tier
 # ---------------------------------------------------------------------------
 
@@ -307,33 +323,41 @@ class OllamaLLMClient(LLMClient):
         messages.append({"role": "user", "content": prompt})
 
         # Tier is always "economy": HybridLLMClient only routes economy calls here.
-        started = time.monotonic()
-        try:
-            response = self._openai.chat.completions.create(
-                model=self.model_name,
-                messages=messages,
-                temperature=temperature,
-            )
-        except Exception as exc:
-            # Recorded before re-raising so that a Spark outage is visible in the
-            # telemetry as a failed economy call, rather than appearing only as an
-            # unexplained extra Gemini call from the hybrid fallback.
+        for _attempt in range(1 + OUTPUT_LIMIT_RETRIES):
+            started = time.monotonic()
+            try:
+                response = self._openai.chat.completions.create(
+                    model=self.model_name,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=OUTPUT_TOKEN_LIMIT,
+                )
+            except Exception as exc:
+                # Recorded before re-raising so that a Spark outage is visible in the
+                # telemetry as a failed economy call, rather than appearing only as an
+                # unexplained extra Gemini call from the hybrid fallback.
+                TELEMETRY.record(
+                    backend="ollama", tier="economy", model=self.model_name,
+                    operation="generate", latency_s=time.monotonic() - started,
+                    prompt_chars=len(prompt), ok=False,
+                    error=f"{type(exc).__name__}: {exc}",
+                )
+                raise
+
+            choice = response.choices[0]
+            content = choice.message.content
+            cut = getattr(choice, "finish_reason", None) == "length"
             TELEMETRY.record(
                 backend="ollama", tier="economy", model=self.model_name,
                 operation="generate", latency_s=time.monotonic() - started,
-                prompt_chars=len(prompt), ok=False,
-                error=f"{type(exc).__name__}: {exc}",
+                prompt_chars=len(prompt), response_chars=len(content or ""),
+                usage=extract_openai_usage(response), output_limited=cut,
             )
-            raise
-
-        content = response.choices[0].message.content
-        TELEMETRY.record(
-            backend="ollama", tier="economy", model=self.model_name,
-            operation="generate", latency_s=time.monotonic() - started,
-            prompt_chars=len(prompt), response_chars=len(content or ""),
-            usage=extract_openai_usage(response),
-        )
-        return content
+            if not cut:
+                return content
+        raise OutputLimitReached(
+            f"answer stopped at the {OUTPUT_TOKEN_LIMIT}-token output limit on "
+            f"{1 + OUTPUT_LIMIT_RETRIES} attempts")
 
     def make_image_part(self, file_path: str, mime_type: str):
         """Image transcription not supported for text-only local models."""

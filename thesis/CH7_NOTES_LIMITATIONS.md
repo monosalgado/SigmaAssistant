@@ -151,6 +151,14 @@ limitation in the log belongs here too.
     measures other people's load; token counts do not. Checked: no prompt was cut by a
     smaller context. (log: "The Change 22 run paused…")
 
+38. **The output limit (Change 24) rests on one run's longest answer** (12,374 tokens in
+    baseline v2; limit 16,384). It bounds a loop's time but does not prevent the loop: at
+    temperature 0 a retry can repeat it. On a loaded shared Spark an attempt could still hit
+    the 600 s timeout first and count as an infrastructure failure. (Change 24)
+39. **Model failures are scored, infrastructure failures are not** (Change 24's rule). A case
+    whose answer is cut on every attempt is written with the stage's empty fallback and
+    scored — the pipeline's real behaviour. The count is reported with every result. (Change 24)
+
 ---
 
 ## Future work (collected, not prioritised)

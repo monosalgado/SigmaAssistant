@@ -2505,3 +2505,49 @@ Reading:
 - The partial file's unpaired means (S4 0.068, S5 0.156) are far below v2's full-run means
   only because these 33 cases are harder — v2 scores 0.127 and 0.136 on the same cases.
   Another instance of why runs are compared paired.
+
+---
+
+## 2026-09-24 — Change 24 (defect 19): every LLM answer has a bounded length; a cut answer is the model's failure
+
+### Motivation
+Defect 19: an answer that loops never finishes. With no output limit, each attempt ran to
+the 600 s client timeout; the stop rule (Change 16) read the timeout as an infrastructure
+failure and halted the run at the same case every time. In the web app the user would wait
+~30 minutes and then get rules built on an empty analysis.
+
+### Design decisions
+| Decision | Why |
+|---|---|
+| Every Ollama call asks for at most **16,384** output tokens (`OUTPUT_TOKEN_LIMIT`) | Above every answer that finished in baseline v2 (longest 12,374 tokens, pinned by a test), so it binds only on answers that would not have finished. At ~40 tokens/s a looping attempt now ends in ~7 min instead of 10. |
+| A cut answer (`finish_reason = "length"`) is retried up to **2** times | The same number of attempts the OpenAI client gives a timeout today; two of the ~690 s analysis calls in the logs show a retry can escape a loop. |
+| If every attempt is cut → `OutputLimitReached`, an ordinary exception | The stage handles it as it handles any error today: it uses its empty default. No new behaviour in the stages. |
+| A cut attempt is recorded with `output_limited = True` and `ok = True` | The call worked; the model did not finish. **The stop rule stays for infrastructure failures** (connection, timeout, server errors). A model failure is a result of the pipeline and is measured with the case — the case is written and scored as what the pipeline produced. |
+| The summariser prints "answers cut at limit: N calls in K cases" | Visible in every report; not a citability gate, because it is a finding, not a measurement fault. |
+| Not changed: the analysis prompt's unbounded technique list; invented technique IDs | Both change finished answers too, so each gets its own measured step (plan, below). |
+
+### Verification
+Tests first, seen failing: **10 tests** (`tests/test_output_limit.py`) — every call asks for
+the limit; a finished answer returns after one call; a response without `finish_reason`
+counts as finished; a cut answer is retried and a finished retry is used; cut on every
+attempt → `OutputLimitReached` after 3 attempts, each recorded `output_limited`, none as
+failed; the error is an ordinary `Exception`; telemetry counts cut calls; a cut answer does
+not trigger the stop rule; the summariser reports it and the verdict stays CITABLE; the
+limit exceeds the longest finished answer in the committed baseline v2 rows. Full suite
+**263 passed**.
+
+Live, on the Spark: a non-streamed call with `max_tokens = 5` returned `finish_reason =
+"length"`, 5 completion tokens — Ollama's OpenAI endpoint honours the limit and reports it.
+
+### Limitations to disclose
+- The limit's value rests on one reference run's longest answer (12,374 tokens).
+- At temperature 0 a retry may repeat a loop (case `9a2d8b3e` did, every time): the limit
+  bounds the time, it does not prevent the loop.
+- Under heavy load on the shared Spark, 16,384 tokens could take longer than the 600 s
+  timeout; that attempt would then count as a timeout (infrastructure) again.
+
+### Next
+The Change 22 measurement restarts from scratch on Changes 22 + 24:
+`eval/results/p2a_vocabulary60_r2.jsonl`, arm `p2a_vocabulary_r2`. Measurement plan as fixed
+for Change 22 (primary: first rules whose category no SigmaHQ rule uses, v2 17/57;
+secondary: S3 paired, the 2.1 buckets), plus the count of answers cut at the limit.

@@ -417,6 +417,16 @@ written **only if every LLM call succeeded**; otherwise the run stops at that ca
 the failed stages, and exits with status 2; rerunning resumes from that case. Verified
 live (no VPN): exit 2, zero rows written.
 
+`[DESIGN]` **Infrastructure failure vs model failure** (Change 24, 2026-09-24). The stop rule
+is for the *infrastructure* — connection errors, timeouts, server errors — because a row
+written then measures a broken backend, not the pipeline. A *model* failure is different: an
+answer that loops and stops at the output limit (16,384 tokens; defect 19) is what the
+pipeline really does on that case. Such a call is recorded `output_limited` (not failed),
+the stage falls back as it would in production, and the case is written and scored. The
+summariser reports "answers cut at limit" in every file. Why it matters: before Change 24 a
+looping case halted the run at the same place every time (observed, case `9a2d8b3e`), and
+excluding it would have biased the result in favour of the pipeline that fails on it.
+
 ### Summariser (`eval/summarise.py`)
 Prints every metric with its own n, next to its null baseline; one file or two (A/B
 delta table). Since 2026-09-23 also: the **gates and a citability verdict** (Change 19,

@@ -91,6 +91,10 @@ class LLMCall:
     ok: bool = True
     error: Optional[str] = None
     stage: Optional[str] = None  # None = made outside any pipeline stage
+    # The answer stopped at the output limit (Change 24). The call itself worked -
+    # `ok` stays True - but the model did not finish: a model failure, not an
+    # infrastructure one.
+    output_limited: bool = False
 
 
 def extract_gemini_usage(response: Any) -> dict:
@@ -146,6 +150,7 @@ class LLMTelemetry:
         usage: Optional[dict] = None,
         ok: bool = True,
         error: Optional[str] = None,
+        output_limited: bool = False,
     ) -> None:
         usage = usage or {}
         call = LLMCall(
@@ -163,6 +168,7 @@ class LLMTelemetry:
             ok=ok,
             error=error,
             stage=_current_stage.get(),
+            output_limited=output_limited,
         )
         with self._lock:
             self._calls.append(call)
@@ -234,6 +240,7 @@ class LLMTelemetry:
         return {
             "n_calls": len(calls),
             "n_errors": sum(1 for c in calls if not c.ok),
+            "calls_output_limited": sum(1 for c in calls if c.output_limited),
             "total_latency_s": round(sum(c.latency_s for c in calls), 3),
             "prompt_tokens": prompt_total if counted else None,
             "completion_tokens": completion_total if counted else None,

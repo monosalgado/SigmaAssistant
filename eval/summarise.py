@@ -61,6 +61,7 @@ def summarise(rows: list) -> dict:
         issues.append((s.get("validity") or {}).get("issue_count", 0))
 
     tokens, thinking, latency, missing = [], [], [], 0
+    limited_calls = limited_cases = 0
     for row in rows:
         tel = row.get("telemetry") or {}
         if tel.get("total_tokens") is not None:
@@ -68,6 +69,10 @@ def summarise(rows: list) -> dict:
         if tel.get("thinking_tokens"):
             thinking.append(tel["thinking_tokens"])
         missing += tel.get("calls_without_token_data", 0)
+        # Answers cut at the output limit (Change 24): a model failure, measured
+        # with the case rather than stopping the run, so it is reported here.
+        limited_calls += tel.get("calls_output_limited", 0)
+        limited_cases += bool(tel.get("calls_output_limited", 0))
         if row.get("elapsed_s") is not None:
             latency.append(row["elapsed_s"])
 
@@ -89,6 +94,8 @@ def summarise(rows: list) -> dict:
         "total_tokens": sum(tokens) if tokens else None,
         "mean_thinking_tokens": _mean(thinking),
         "calls_without_token_data": missing,
+        "calls_output_limited": limited_calls,
+        "cases_output_limited": limited_cases,
         "mean_latency_s": _mean(latency),
         "mean_rules": _mean([r.get("n_rules", 0) for r in rows]),
     }
@@ -215,6 +222,8 @@ def report(name: str, s: dict) -> None:
     print(f"  total tokens         : {_fmt(s['total_tokens'], 0)}")
     print(f"  mean thinking tokens : {_fmt(s['mean_thinking_tokens'], 0)}")
     print(f"  mean latency (s)     : {_fmt(s['mean_latency_s'], 1)}")
+    print(f"  answers cut at limit : {s['calls_output_limited']} calls in "
+          f"{s['cases_output_limited']} cases")
     if s["calls_without_token_data"]:
         print(f"  WARNING: {s['calls_without_token_data']} LLM calls reported no token "
               f"data — cost figures are incomplete")
