@@ -1,0 +1,224 @@
+# Chapter 6 — Results and Discussion: working notes
+
+**Purpose.** Raw material for writing Chapter 6. Not prose. Organised by the sections of
+`OUTLINE.md` §6. The dated, detailed record of each finding is in `ENGINEERING_LOG.md`;
+every item below names its log entry or commit so any number can be traced and re-run.
+The methodology behind the numbers is in `CH5_NOTES_EVALUATION.md`; limitations are in
+`CH7_NOTES_LIMITATIONS.md`.
+
+**Reading rule** (same tags as Chapter 5):
+- `[MEASURED]` — produced by running something; date given.
+- `[DESIGN]` — a decision, with its justification.
+- `[UNMEASURED]` — not yet known. Do not write as fact.
+- `[DISCLOSE]` — must appear in the thesis.
+
+Started 2026-09-23.
+
+---
+
+## Throughline (a suggestion for framing, the user decides)
+
+Most findings so far share one shape: **the pipeline produced a plausible rule without
+having used its source** — the input never reached the stage that needed it (defects 8,
+14, 15), a stage's answer was overridden or invented (defects 10, 11), or a failure was
+swallowed and the run looked normal (defects 12, 13, 17). None of these was visible in
+the output. All surfaced only by measuring. This is the outline's §6.4 argument —
+"static review misses grounding failures" — and it now has numbers.
+
+---
+
+## 6.1 Baseline system performance — baseline v1 `[MEASURED] 2026-09-19`
+
+`eval/results/baseline60.jsonl` · 60 cases, stratified sample (seed 0) of 303 ·
+`qwen3-coder:30b` on every stage, all-local · web enrichment off · log: baseline-run entry
+(2026-09-19) and Change 19 (gates).
+
+| Metric | Result | n | Null baseline (chance) |
+|---|---|---|---|
+| S1 valid Sigma | 0.917 (55/60) | 60 | — |
+| S2 validator issues per rule | 1.00 | 55 | — |
+| **S3 logsource exact** | **0.145** (8/55), Wilson 95% CI 0.076–0.262 | 55 | **0.173** |
+| S4 ATT&CK exact F1 | 0.123 | 37 | 0.092 |
+| S5 detection-field F1 | 0.205 | 53 | 0.133 |
+| Rules per case | 3.27 (196 total) | 60 | — |
+
+- **S3 is indistinguishable from chance** — the interval contains 0.173. The headline
+  weakness; it is what Phase 2 of the plan targets.
+- S4 and S5 are above their baselines by modest margins; n is too small for fine
+  comparisons.
+- Scores use the **first** rule of each response (what a user sees); all rules are
+  stored, so best-of-N can be computed later without a rerun. `[DESIGN]`
+- The 5 S1 failures: 2 responses with no rule at all (86 characters each — see defect 17
+  below), 2 malformed YAML, 1 `contains` modifier on a null value.
+- **Clean vs contaminated cases** (Change 18): on the 55 clean cases every metric is
+  within 0.008 of the full run (S3 0.140, S4 0.120, S5 0.208) → the headline does not
+  depend on the 5 cases whose input already contained a rule.
+- Cost (C1/C2): 321 LLM calls, 2,227,584 tokens (mean 37,126/case); per case median
+  89.1 s, range 38.7–320.7 s; 101.9 min wall time.
+- `[DISCLOSE]` Citability: **CITABLE WITH CAVEATS (2)** under `check_gates`: its PoC
+  GitHub inputs were fetched live (before Change 17), and a pipeline crash would not have
+  been recorded as one (before Change 14). State both with any number from this run.
+- `[DISCLOSE]` It predates Change 12 (the stages now read the whole source), so it
+  measures the pipeline *before* the largest grounding fix. Baseline v2 (plan 1.5) will
+  be the first run of the current pipeline with every guard in place.
+
+---
+
+## 6.2 Ablation findings — `[UNMEASURED]`
+
+No ablation arm is wired yet (`--arm` is only a label). Likely core, pending the
+contributions agreed with the professor: A1 (no RAG), A5 (single prompt vs the pipeline),
+and a naive baseline (most common logsource, no LLM).
+
+One arm-like measurement exists, on one stage only — the source window (§6.4.2).
+
+---
+
+## 6.3 Cost–quality Pareto — blocked `[DISCLOSE]`
+
+Contribution 2 compared cloud (Gemini) and local (Ollama) tiers. The Gemini key was
+suspended (2026-09-11) and deleted (2026-09-23), and the user decided to run every stage
+on `qwen3-coder:30b`. Without a second tier there is no routing trade-off to measure.
+What remains measurable: tokens and time per stage (stage labels since Change 13), and
+the cost of each fix (e.g. +26% time for Change 12).
+
+---
+
+## 6.4 Defects found by systematic evaluation
+
+Grouped by what went wrong. Evaluation-harness problems (defects 12, 14, 16, 17 and the
+contamination finding) are in Chapter 5 §5.9; this section is about the **pipeline**.
+
+### 6.4.1 The input never reached the stage — intent misrouting (defect 8) `[MEASURED] 2026-09-13`
+- A bare URL (28 of 30 real user inputs in `data/sessions.json`) has no instruction verb,
+  and the intent classifier's few-shot examples contained no URL. **17 of 30 (57%)** real
+  CTI URLs were routed to "question"/"chat", which answers **without fetching the page**
+  — yet still emits a plausible Sigma rule, written from the URL string alone
+  (Wilson 95% CI ~36–70%).
+- Fix: a deterministic short-circuit for bare URLs before any LLM call. After: **30/30**
+  routed correctly; 5/5 regression probes (questions, refinements, a question *about* a
+  URL) still classified by the model.
+- Consequence: **every harness number from before `8184050` is invalid.**
+- Log: Change 8 (`8184050`).
+
+### 6.4.2 The stage read navigation, not the article — fixed source windows (defect 15) `[MEASURED] 2026-09-23`
+- The analysis stage read only the first **4,000** characters of the extracted text, the
+  attack-vector stage the first **8,000**. Across all 303 cases the text fits entirely in
+  those windows in **23 (8%)** and **66 (22%)** cases (median length 19,158 characters,
+  max 79,800). On many pages the window held only site navigation (inspected by hand:
+  GitHub page chrome, vendor menus, marketing blocks).
+- Symptom: the attack-vector stage **reproduced its own prompt's worked examples** —
+  e.g. "unauthenticated HTTP POST to /saml/login with a crafted SAMLRequest" for a Windows
+  "defrag" rule whose source never mentions SAML. Pre-registered criteria, same 60 cases:
+  example content absent from the input in **13/60** outputs (21.7%, CI 13.1–33.6%),
+  **11/60 in the attack vector itself**; 37% of cases without PoC code vs 9% with.
+- Fix (Change 12): both stages read the whole source up to a stated bound of 100,000
+  characters. Re-measured on the same cases, paired: copying **into the attack vector
+  11 → 4** (8 fixed, 1 new, **exact McNemar p = 0.039**); anywhere in the output 13 → 10
+  (p = 0.55; the rest mostly patch filenames in an "incidental" list). Cost: +26% time on
+  those stages; median input 8.5k → 22.4k characters.
+- `[DISCLOSE]` Only the attack-vector stage was re-measured; the analysis stage's effect
+  on S1–S5 needs baseline v2.
+- Why the examples were copyable: the worked examples were written from specific past
+  cases — `data/saved_rules.json` holds the real "CVE-2026-3055 Citrix NetScaler SAML …
+  NSC_TASS" rule the SAML example came from.
+- Log: defect-15 measurement entry and Change 12 (`ac725e1`, `f9b64f1`).
+
+### 6.4.3 A bias the window did not fix — web telemetry for host rules `[MEASURED] 2026-09-23`, open
+- After Change 12, the attack-vector stage still names `webserver_access_log` as primary
+  telemetry for **21 of 48** cases whose gold rule is not a web or proxy rule (23 before;
+  p = 0.69, unchanged).
+- `[UNMEASURED]` Hypothesis: two of the three worked examples are web exploits, and the
+  field is defined as where "the initial exploit" is visible, while many gold rules
+  detect post-exploitation behaviour on the host. Plan task 2.3.
+
+### 6.4.4 A correct suggestion overridden — generation ignores the logsource suggestion (defect 11), open
+- `[MEASURED]` Observed live (Bumblebee report, 2026-09-13): the analysis stage suggested
+  `process_creation / windows / sysmon` at 0.95 confidence; the generated rule used
+  `webserver_access_log` and described an attack the report does not contain. Seen again
+  2026-09-14.
+- Mechanism (corrected 2026-09-23): the suggestion *does* reach the generation prompt,
+  but appended to the end of the Sysmon reference block (`stage_generate.py:273`) —
+  buried in reference material, not an instruction.
+- `[UNMEASURED]` How often. Baseline v2 records the suggestion per case (Change 15), so
+  plan task 2.1 can separate "analysis wrong" from "analysis right, generation ignored it"
+  — the likely explanation of S3 at chance, not yet shown.
+
+### 6.4.5 A field invented instead of generated — rule identifiers (defect 10) `[MEASURED]`
+- The model emitted UUID-shaped ids with non-hex characters
+  (`5a3b4c5d-6e7f-8g9h-…`); pySigma rejects the whole rule at parse time, so S1 fails and
+  S2–S5 become undefined for a rule whose detection logic may be fine — a
+  measurement-integrity problem before a product one.
+- Fix: ids validated and assigned in code (Change 9, `73d8446`). One demo run replaced
+  9 of 9 ids.
+- `[UNMEASURED]` The rate: baseline v1 did not record it; since Change 15 every
+  generation call is logged, so baseline v2 gives the denominator.
+
+### 6.4.6 One malformed rule lost the whole answer (defect 13) `[MEASURED]`
+- A malformed condition (`Expected end of text, found '*'`) made pySigma's validator suite
+  raise outside any guard; the request died and all 3 generated rules were lost (Microsoft
+  "Prestige" report, 2026-09-14).
+- The first recorded mechanism was **wrong**; a reproduction showed the raise came from a
+  core validator re-parsing the condition, not from the loop first blamed. Worth one
+  sentence: reproduce before recording a mechanism.
+- Fix: Change 11 (`663f005`). Frequency: 1 live observation; 0 in 60 harness cases.
+
+### 6.4.7 Found by code audit, before the harness existed `[DISCLOSE]`: quality effect unmeasured
+- **pySigma installed but unused** (Change 1, `a1c4f37`): validation was hand-rolled.
+  Differential testing against pySigma showed the old code **rejected valid rules**
+  (it required `level`, which the Sigma spec makes optional) and missed dangling
+  condition references.
+- **RAG exemplars were Python dict reprs, not YAML** (Change 2, `d9d9e3f`): the model was
+  asked for YAML while every retrieved example was `repr` output. Also: 3,103 of 3,104
+  rules carry MITRE tags but the field was never embedded, so no exemplar ever showed one.
+- **Corpus filtered to Windows only** (Change 2): the filter excluded **722 of 3,104
+  parseable rules (23.3%)** — an earlier verbal estimate of "42%" was wrong. Collection
+  2,382 → 3,104 rules.
+- All three landed before measurement was possible; write them as *defects identified by
+  audit*, not as improvements, unless an ablation measures them.
+
+### 6.4.8 Open, not yet measured
+- Defect 9: page extraction yields near-zero text on some pages; navigation boilerplate
+  survives extraction (the extractor removes `nav`/`header` tags, but many sites build
+  menus from generic elements). Plan 2.4, only if 2.1 shows it matters.
+- Defect 4: the coverage check that triggers regeneration is substring matching.
+- Defect 5: `json_mode=True` on the generation stage (Tam et al. predicts a reasoning
+  cost).
+- Defect 6: the `fast` tier is dead code.
+
+---
+
+## 6.5 A negative result — the security-pretrained model (contribution 3, dropped) `[MEASURED] 2026-09-23`
+
+- The installed `foundation-sec:8b` is the **base** model (completion only, no chat
+  template), not Instruct. On the attack-vector stage (3 real cases, the pipeline's own
+  prompt): via the chat endpoint it returned only `<|im_end|>`; via raw completion,
+  1 empty token; with JSON forced by grammar, **the identical 294-token copy of the
+  prompt's first worked example, 3 of 3**, ignoring the source.
+- Both variants document a **4,096-token** sequence length. The pipeline's prompts
+  (baseline v1, 321 calls): median 4,539 tokens, p90 10,492, max 46,199 — **61% exceed
+  4,096**, 24% exceed 8,192. Per stage (18 four-call cases), median prompt: attack vector
+  4,405 · analysis 4,056 · generation 8,339 · review 3,008 tokens.
+- Outcome: user decision to keep every stage on `qwen3-coder:30b`; contribution 3 off
+  the table unless reopened.
+- `[DISCLOSE]` This tested the base model with prompts designed for an instruction
+  model; it is not evidence about Foundation-Sec-8B-Instruct, which was not installed.
+- `[DISCLOSE]` Traceability is weaker than elsewhere: the probe ran from scratch scripts
+  that were **not committed**, and the engineering log mentions it only in passing (the
+  defect-15 measurement entry). The numbers above are the record. If this result goes
+  into the thesis, rerun it from a committed script first (see the plan's Inbox).
+- Prompt sizes come from `eval/results/baseline60.jsonl` (`llm_calls[].prompt_tokens`)
+  and can be recomputed from it.
+
+---
+
+## 6.6 Smaller observations worth a sentence each
+
+- `[MEASURED]` Only **26.6%** (54/203) of the "quotes" the attack-vector stage gives as
+  evidence appear verbatim in its input (25.6% after Change 12). An upper bound on
+  invention — honest paraphrase also misses — but it motivates checking quotes in code
+  (plan 3.3).
+- `[MEASURED]` Link rot during the project: 10 of 45 GitHub files linked from the corpus
+  were already gone (2026-09-23); earlier, 12 of 437 reference pages returned 404.
+- `[MEASURED]` Per-stage cost is now attributable (Change 13): the first stopped live
+  run named `analysis, attack_vector, generation, poc_analysis` as the failing stages.

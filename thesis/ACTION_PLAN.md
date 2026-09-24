@@ -33,8 +33,9 @@ Until these are settled, every finding looks equally urgent. Phase 0 settles the
    triaged at the end of the phase. The only exception: a finding that makes the
    *current* phase's measurement wrong.
 3. **Definition of done for any code task:** tests written first and seen to fail
-   → change → full suite passes offline → engineering-log entry → commit → push
-   → this file updated.
+   → change → full suite passes offline → engineering-log entry → **chapter notes
+   updated if the change or finding affects a thesis claim** (CH5/CH6/CH7, tagged,
+   citing the log) → commit → push → this file updated.
 4. **Behaviour changes are measured, one at a time.** A change that alters what
    the pipeline outputs gets a measurement (the 15-minute attack-vector probe or
    the 60-case harness run) before the next behaviour change starts.
@@ -209,9 +210,11 @@ is a decision, not a default.
 
 ## Phase 6 — Writing support (continuous; the user writes)
 
-- [ ] Keep `CH5_NOTES_EVALUATION.md` current after each measurement
+- [x] **Notes catch-up, 2026-09-23:** `CH5_NOTES_EVALUATION.md` brought up to date (it had
+      stopped at 2026-09-09); `CH6_NOTES_RESULTS.md` and `CH7_NOTES_LIMITATIONS.md` started;
+      `LITERATURE_NOTES.md` and `DEFENSE_NOTES.md` moved into `thesis/`. Keeping them current
+      is now part of the definition of done (rule 3).
 - [ ] Chapter 4 notes (system design) once Phase 3 has settled the architecture
-- [ ] Chapter 6 notes (results and the defects-as-findings section)
 
 ---
 
@@ -236,6 +239,8 @@ is a decision, not a default.
   copied (defect 15). Relevant to 2.3.
 - The PoC stage's GitHub link pattern has no dot in the branch/tag part, so links
   to tags like `v1.2` are never fetched (pinned by a test, not changed).
+- The Foundation-Sec probe (CH6 §6.5) ran from uncommitted scratch scripts; rerun it from a
+  committed script before citing it.
 - `.env.example` lacks `ALLOWED_ORIGINS`, which `backend/main.py` reads. Trivial;
   fold into H5.
 

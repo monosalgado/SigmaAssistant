@@ -11,7 +11,10 @@ this file is organised by *topic* instead, so it can be written from directly.
 - `[UNMEASURED]` — not yet known. Do not write these as facts.
 - `[DISCLOSE]` — a limitation that must appear in the thesis.
 
-Last updated 2026-09-09.
+Last updated 2026-09-23. **Since 2026-09-09:** the first real run exists (baseline v1,
+n=60, 2026-09-19), and running it exposed five ways the harness could produce wrong but
+normal-looking results — each now guarded (§5.9). The measured *results* live in
+`CH6_NOTES_RESULTS.md`; limitations are collected in `CH7_NOTES_LIMITATIONS.md`.
 
 ---
 
@@ -173,6 +176,48 @@ An examiner may still press on this. The honest answer is that robots.txt govern
 crawler politeness, not copyright or access, and the retained snapshots are a private
 research cache.
 
+### The PoC stage's GitHub fetches are frozen too `[DESIGN]` (added 2026-09-23)
+- The PoC stage fetches up to 3 GitHub files and 2 gists linked anywhere in the text.
+  Until 2026-09-23 these went to the live network during evaluation, outside the page
+  snapshots (defect 16, §5.9).
+- `[MEASURED] 2026-09-23` 43 / 303 cases (10 / 60 in the sample) trigger such fetches:
+  72 file + 9 gist fetches, 45 + 5 unique URLs.
+- Frozen the same way as the pages: `eval/build_poc_snapshots.py` fetches each URL once;
+  `eval/github_manifest.jsonl` (committed) records status, size, SHA-256 and time;
+  bodies live in gitignored `eval/snapshots/github/`. 40 stored (575 KB), 10 recorded as
+  404 and replayed as 404. The stage and the builder share one function
+  (`github_fetch_targets`), so what is stored is exactly what the stage asks for.
+- `[DISCLOSE]` Link rot is real and measurable: **10 of the 45 linked GitHub files had
+  already disappeared** when first measured. An unfrozen run would get a different input
+  month to month.
+- Log: Change 17 (`c6c1842`).
+
+### Contamination — a detection rule already in the input `[MEASURED]` `[DISCLOSE]` (added 2026-09-23)
+- In some cases a detection rule reaches the pipeline, so the task is partly "adapt the
+  rule that is already there". Not a product defect (an analyst's source containing a
+  rule is fine to read); a **threat to the evaluation's validity**.
+- Three routes, `[MEASURED] 2026-09-23`, all 303 cases / sample of 60:
+
+  | Route | 303 | 60 |
+  |---|---|---|
+  | The PoC stage downloads a rule-like file (SigmaHQ rules, Rapid7's own Sigma rule for CVE-2024-3400, DFIR Report Sigma rules, Sentinel detections, a nuclei template) | 13 | 4 |
+  | An input URL is itself a rule file or rule repository | 10 | 1 |
+  | A Sigma rule is printed in the page text | 7 | 1 |
+  | **Any** | **23 (7.6%)** | **5** |
+
+- `[DESIGN]` Handling chosen by the user: **keep, flag, report separately**, headline on
+  the clean cases. Dropping would lose data and change the sample; disclosing only would
+  leave "did the input contain the answer?" without a measured answer.
+- `[DESIGN]` Definition in one pure function (`eval/contamination.py`), each reason
+  recorded with its evidence (the URL or file). Committed list of all 303 cases with
+  reasons: `eval/contamination.jsonl`. The summariser prints all / clean / flagged.
+- `[DISCLOSE]` The definition is a heuristic and an **upper bound**: the `.yml` criterion
+  over-counts (one of the 5 sample cases downloads a YAML list of TTPs, not a rule).
+- `[MEASURED]` Baseline v1 split: on the 55 clean cases every metric is within **0.008** of
+  the full run (e.g. S3 0.140 vs 0.145) → **the headline does not depend on the
+  contaminated cases.** The 5 flagged cases are too few to conclude anything about them.
+- Log: Change 18 (`5903239`).
+
 ---
 
 ## 5.2 Scorers (`eval/scorers.py`, 301 lines, 28 tests)
@@ -287,24 +332,38 @@ Missing token data is `None`, never 0. `summary()` exposes
 `calls_without_token_data`, so a silent extraction failure surfaces as a count rather
 than as a plausible-looking cheap result.
 
-`[UNMEASURED]` **Token extraction has never been verified against a live API response.**
-The field names were confirmed offline via `model_fields` on the SDK's response type,
-but no real Gemini call has been observed. **The first live run must assert
-`summary()["calls_without_token_data"] == 0`.** If it is non-zero, extraction is broken
-and every cost number is void.
+`[MEASURED]` **Ollama path verified live**: `calls_without_token_data == 0` on the first
+pilot (2026-09-11) and over all 321 calls of baseline v1 (2026-09-19).
+`thinking_tokens == 0` is correct for qwen3-coder:30b, which does not think.
+
+`[UNMEASURED]` `[DISCLOSE]` **The Gemini thinking-token path was never verified live.**
+The key was suspended on 2026-09-11 and deleted on 2026-09-23. Unless a new key is
+created, the thinking-token argument above remains a design argument, not a measurement.
+
+### Every call records its stage `[DESIGN]` (Change 13, 2026-09-23)
+Every call used to record `operation: "generate"`, so stages could only be told apart by
+call order (which shifts when the PoC stage or a regeneration runs). A context variable
+set in `PipelineStage.llm_call` now labels each call with its stage; the clients are
+unchanged. Verified live: a stopped run reported the real failing stages.
 
 ---
 
 ## 5.5 The runner (`eval/run_eval.py`, 389 lines, 19 tests)
 
 ### Core principle `[DESIGN]`
-The runner drives the **real production pipeline** — `orchestrator.run_sync`
-(`orchestrator.py:122`) — not a reimplementation. It substitutes only the **two sources
-of non-determinism**, each at its boundary:
+The runner drives the **real production pipeline** — `orchestrator.run_sync` — not a
+reimplementation. `[DISCLOSE]` Until Change 14 (2026-09-23) it went through
+`agent.analyze_attack`, whose catch-all returned a crash as ordinary text, so crashed
+cases looked like normal zero-rule rows (defect 17, §5.9). It now calls `run_sync`
+directly; the web app is unchanged.
 
-1. **Network fetches** → `snapshots_instead_of_network` swaps the `requests` reference
+It substitutes only the **sources of non-determinism**, each at its boundary:
+
+1. **Page fetches** → `snapshots_instead_of_network` swaps the `requests` reference
    *inside* `backend.pipeline.stage_preprocess` for a shim serving frozen snapshots.
-2. **Live web search** → `web_enrichment_disabled` stubs `client.web_search`.
+2. **PoC GitHub fetches** (since Change 17) → `poc_snapshots_instead_of_network` does the
+   same inside `stage_poc_analysis`; an unknown URL is a counted miss, never a live fetch.
+3. **Live web search** → `web_enrichment_disabled` stubs `client.web_search`.
 
 Both restore in a `finally` block; pinned by
 `test_requests_restored_even_when_the_body_raises`.
@@ -340,80 +399,124 @@ extracted rule YAML, all scores, `telemetry`, `llm_calls`, `elapsed_s`, `error`.
 Appended with `flush()` after every case and **resumable by `rule_id`** — a run that
 dies at case 47 of 60 does not lose 47 cases of API spend.
 
-### Summariser (`eval/summarise.py`, 172 lines, 21 tests)
-Prints every metric with its own n, next to its null baseline. Accepts one file
-(single arm) or two (A/B delta table).
+### What each row records since 2026-09-23 `[DESIGN]`
+- Every LLM call with its **stage** (Change 13).
+- `row["pipeline"]`: the stages' intermediate results — attack vector, logsource
+  suggestions, indicators, ATT&CK mappings, coverage check, review issues, and a
+  **per-generation-call log** of rules produced and ids replaced (a regeneration used to
+  overwrite the first call's count) (Change 15).
+- `response_text` when no rule was extracted (the two zero-rule cases of baseline v1
+  could not be diagnosed: only their length was kept).
+- `poc_snapshots_served / _missed` (Change 17) and the case's `contamination` flag
+  (Change 18).
+
+### A case with a failed LLM call is never written `[DESIGN]` (Change 16)
+Stages swallow their own failed calls, so with the backend down a case "finished" in
+seconds with zero rules — and resume then skipped it (defect 12, §5.9). Now a row is
+written **only if every LLM call succeeded**; otherwise the run stops at that case, names
+the failed stages, and exits with status 2; rerunning resumes from that case. Verified
+live (no VPN): exit 2, zero rows written.
+
+### Summariser (`eval/summarise.py`)
+Prints every metric with its own n, next to its null baseline; one file or two (A/B
+delta table). Since 2026-09-23 also: the **gates and a citability verdict** (Change 19,
+§5.6) and **all / clean / flagged** blocks for contamination (Change 18).
 
 ---
 
-## 5.6 Cost of running this — must be planned before spending `[DESIGN]`
+## 5.6 Cost of a run, and what makes a result file citable
 
-**Corrects an earlier assumption that "cost is time, not tokens."** That is false in the
-default HYBRID configuration. Per-stage tier attribution (verified, commit `cccbddc`):
-only **economy-tier** calls reach the local Ollama box. `attack_vector`, `analysis` and
-`generation` all use the **Gemini primary tier**.
+### Measured cost `[MEASURED]`
+- Everything runs **all-local** on `qwen3-coder:30b` (user decision, 2026-09-23; the
+  Gemini key is gone anyway), so cost is time, not money.
+- Baseline v1 (2026-09-19, 60 cases): **101.9 min** wall time; per case mean 102.6 s,
+  **median 89.1 s**, range 38.7–320.7 s; **321 LLM calls, 2,227,584 tokens** (mean 37,126
+  per case). The 4 defect-14 cases were rerun separately (7.4 min).
+- `[UNMEASURED]` Wall time after Change 12 (whole source up to 100,000 chars): the
+  attack-vector stages alone went 15.1 → 19.0 min (+26%) on the probe; the full-run effect
+  comes from baseline v2.
+- Superseded figures — **never cite**: "~46 s/case" (pre-defect-8 pilot), "132 s/case"
+  (9 cases of an aborted run), "~900 primary calls" (the old hybrid estimate).
 
-`[UNMEASURED, ESTIMATE]` ≈3 primary calls/case → ≈900 primary calls for a full 303-case
-run, rate-limited at 9 RPM. **Do not state this as fact in the thesis** — it is an
-estimate, and estimates in this project have run consistently optimistic.
+### The gates — computed by `summarise.check_gates` `[DESIGN]` (Change 19)
+A file is citable only if every check passes:
 
-For a genuinely zero-cost run set `LLM_PROVIDER=ollama` (requires VPN + the lab Spark).
+| Check | Guards against |
+|---|---|
+| page snapshots all served | a case silently generated from the URL string alone (defects 8, 14) |
+| PoC GitHub snapshots all served | a live fetch slipping into the run (defect 16) |
+| token data on every call | incomplete cost figures |
+| no failed LLM calls | a stage running on its empty default (defect 12) |
+| no case-level errors | a crash (defect 17 made this blind before Change 14) |
+| no suspiciously fast cases (< 30 s) | the defect-12 signature |
+| no duplicate cases | a resume mishap |
 
-### Commands
-```bash
-.venv/bin/python eval/run_eval.py --sample 60 --seed 0 --arm baseline \
-    --out eval/results/baseline.jsonl --no-web-enrich
-.venv/bin/python eval/summarise.py eval/results/a.jsonl eval/results/b.jsonl
-```
+Verdicts: CITABLE · CITABLE WITH CAVEATS (a check the file never recorded) · NOT CITABLE.
+`[MEASURED]` baseline v1 → **CITABLE WITH CAVEATS (2)**: PoC fetches were live, and crashes
+were invisible (both fixed since). The defect-12 and defect-14 evidence files → NOT
+CITABLE, matching every earlier hand check.
 
-### First live run — mandatory assertions `[DESIGN]`
-1. `calls_without_token_data == 0` → else token extraction is broken, cost numbers void
-2. `snapshots_missed == 0` → else the harness is silently degrading inputs
+### Run recipe `[DESIGN]` (Changes 20–21)
+1. USF VPN on (the lab OpenVPN off — the two together stall).
+2. `eval/preflight.py` — tunnel answers HTTP, model returns token counts, server context
+   ≥ 32k (prompts reach ~25k tokens since Change 12 and the code sets no context size),
+   tests pass, a 2-case smoke run is CITABLE. Stops at the first failure with the fix.
+3. `eval/run_resilient.py -- <run_eval arguments>` — relaunches after a connection drop
+   (exit status 2), at most 5 times.
+4. `eval/summarise.py <file>` — the verdict must be CITABLE.
 
-Non-zero in either case means the run is **not** a valid result, regardless of how the
-scores look.
-
----
-
-## 5.7 Status — what exists vs. what is claimed
+## 5.7 Status — what exists vs. what is claimed (2026-09-23)
 
 | Component | State |
 |---|---|
-| Dataset (303 cases, frozen snapshots) | built, crawled, verified |
-| Scorers S1–S5 | built, 28 tests, self-comparison + null baseline done |
-| Telemetry | built, 17 tests, **token extraction unverified against live API** |
-| Runner + summariser | built, 40 tests, dry run = 303 cases |
-| **Any actual result** | **none — zero evaluation runs have been executed** |
+| Dataset (303 cases, frozen page + PoC snapshots) | built, verified; contamination flagged (23 cases) |
+| Scorers S1–S5 | built; self-comparison + null baseline done |
+| Telemetry | built; Ollama path verified live; stage labels; Gemini path never verified |
+| Runner, summariser, gates, preflight, relaunch wrapper | built; 203 offline tests |
+| **Results** | **baseline v1** (n=60, citable with 2 caveats) — see `CH6_NOTES_RESULTS.md` |
+| Baseline v2 (after Changes 12–21) | **not yet run** (plan task 1.5) |
 
-Full suite: `[MEASURED] 2026-09-09` **85 passed in 0.32s**, fully offline
-(`.venv/bin/python -m pytest tests/ -q`).
+`[MEASURED] 2026-09-23` Full suite **203 passed**, fully offline.
 
-`[DISCLOSE]` **Changes 1–3 all landed with their effect on output quality unmeasured**,
-including A3 (full-corpus ingestion), which may be neutral or harmful. The evaluation
-harness was built *after* those changes specifically so the claim "these fixes helped"
-can be tested rather than asserted. Until a run happens, the thesis cannot claim they
-helped. Write them as *defects identified by code audit*, not as *improvements*, until
-there are numbers.
-
-### Blocked on
-Lab Spark (Ollama economy tier) unreachable — the admin added firewall rules that
-dropped access. `[MEASURED]` SSH port 22 **times out** rather than refusing, which is a
-DROP signature, not an auth failure. VPN, routing and SSH key all verified working.
-Waiting on the admin. Note the VPN pool is dynamic (10.247.x.x), so a single-IP allowlist
-will not survive reconnects.
-
----
+`[DISCLOSE]` Changes 1–3 (pySigma validation, RAG exemplar format, full-corpus ingestion)
+landed **before** the harness existed, so their effect on quality is **unmeasured**.
+Write them as defects identified by code audit, not as improvements.
 
 ## 5.8 Open items for Chapter 5
 
-- [x] ~~Decide and apply the renumbering~~ DONE 2026-09-09 — S/R/C applied across
-      outline, scorers, summariser, telemetry and tests. `33`→`31` also fixed.
-- [ ] Build a **naive baseline arm** (most-common logsource, no LLM) — a stronger
-      comparator than the null control alone
-- [ ] Decide per-category vs. weighted reporting given the process_creation skew
-- [ ] Confirm k≥5 seeds is affordable at ~900 primary calls/full run, or reduce scope
-      and say so
-- [ ] Ablations A1–A7 from `OUTLINE.md` are **not** yet wired to the runner (`--arm` is
-      currently only a label written into the output rows)
-- [ ] Runtime metrics R1/R2 (detonation, Zircolite/EVTX) — novelty claim 1, unbuilt
-- [ ] S6 backend compilability — automatable and cheap, but not implemented
+- [x] ~~Renumbering~~ — S/R/C applied 2026-09-09.
+- [x] ~~First live run assertions~~ — replaced by `check_gates` (Change 19).
+- [x] ~~Contamination handling~~ — flagged and reported separately (Change 18).
+- [ ] **Baseline v2** — the first run with every guard in place (plan 1.5).
+- [ ] **Naive baseline arm** (most-common logsource, no LLM) — a stronger comparator than
+      the null control alone.
+- [ ] Per-category vs weighted reporting, given the `process_creation` skew.
+- [ ] Number of seeds: at ~2 h per 60-case run, k ≥ 5 per arm is a real time budget —
+      decide it, don't default to it.
+- [ ] Ablations A1–A7 not wired (`--arm` is only a label); likely core: A1 (no RAG),
+      A5 (single prompt vs pipeline).
+- [ ] R1/R2 detonation — depends on the contributions agreed with the professor.
+- [ ] S6 backend compilability — cheap, not built.
+
+---
+
+## 5.9 Validity problems found by running the evaluation `[MEASURED]`
+
+**Write this up as a methodology finding in its own right.** Each problem made the
+harness produce *wrong results that looked normal* — no error, plausible numbers. None
+was visible from reading the code; all surfaced only by running it and checking the
+numbers against each other. Each now has a guard and a test.
+
+| # | Problem | How it hid | Size | Guard | Log |
+|---|---|---|---|---|---|
+| 14 | Snapshot lookup kept the URL `#fragment`; the pipeline strips it → 404 | the case still ran, scored, `error: None` | 4 / 60 cases, 2 with **no page at all** | normalised key on both sides | Change 10 |
+| 12 | Backend unreachable → every stage swallows its failed call → "finished" row | resume then skipped the case | 14 / 21 rows of an attempt (13 in ~6 s + 1 that hung 3.6 h) | write only if every call succeeded | Change 16 |
+| 17 | The agent's catch-all turned crashes into normal zero-rule rows | the case-error gate could never fire | baseline v1's 2 zero-rule cases fit a hidden crash (86-char reply; not proven) | harness calls `run_sync` directly | Change 14 |
+| 16 | The PoC stage fetched GitHub live | outside the snapshot gate | 43 / 303 cases; 10 of 45 files already gone | PoC snapshots + counted misses | Change 17 |
+| 18 | A detection rule already in the input | a normal, scoring case | 23 / 303 (5 / 60) | flag + separate reporting | Change 18 |
+
+**The lesson for the chapter:** an LLM pipeline degrades gracefully by design — every
+stage catches its own failure and continues on a default — and that same property makes
+evaluation failures silent. The countermeasure is to count what the harness *should*
+see (snapshots served, calls succeeded, crashes, contamination) and refuse to call a file
+citable unless the counts are clean.

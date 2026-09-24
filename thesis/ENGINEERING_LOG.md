@@ -2021,3 +2021,33 @@ rebuilding after a real drop mid-run — needs the VPN; its first use is plan 1.
 ### Status
 Plan task 1.4 complete (Changes 19–21). The run recipe is now two commands:
 `eval/preflight.py`, then `eval/run_resilient.py -- <run_eval arguments>`.
+
+---
+
+## 2026-09-23 — Thesis notes brought up to date (documentation, no code change)
+
+The user asked whether notes for writing the thesis were being kept. Checked: this log
+was complete, but the chapter notes had fallen behind — `CH5_NOTES_EVALUATION.md` had not
+changed since 2026-09-09 (before the first real run), there were no notes for Chapters 6
+or 7, and the defence and literature notes existed only in the assistant's private notes.
+
+Done:
+- `thesis/CH5_NOTES_EVALUATION.md` updated in place: PoC snapshots and contamination in
+  the dataset section; the Ollama token path now verified; runner changes (Changes 13–18);
+  measured cost; the gates, verdicts and run recipe; status; open items; and a new §5.9,
+  "Validity problems found by running the evaluation" (defects 12, 14, 16, 17 and the
+  contamination finding), framed as a methodology finding.
+- `thesis/CH6_NOTES_RESULTS.md` started, following the outline's §6: baseline v1 with its
+  caveats and clean split; ablations and routing (unmeasured / blocked); the pipeline
+  defects as findings (§6.4); the Foundation-Sec negative result (§6.5).
+- `thesis/CH7_NOTES_LIMITATIONS.md` started: 31 limitations collected from this log's
+  "Limitations to disclose" sections and the Chapter 5 notes, grouped by what they limit,
+  each with its source; plus collected future work.
+- `thesis/LITERATURE_NOTES.md` added (moved and updated; positioning marked as not current).
+- The plan's definition of done now includes updating the chapter notes whenever a change
+  or finding affects a thesis claim, so they cannot fall behind again.
+
+Two things found while writing, recorded in the notes rather than hidden: the
+Foundation-Sec probe ran from uncommitted scratch scripts (plan Inbox), and the
+contamination definition was written during an exploratory measurement before being
+formalised — unlike the defect-15 markers, it was not fixed in advance (CH7 item 31).
