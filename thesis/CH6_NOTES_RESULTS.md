@@ -59,8 +59,41 @@ the output. All surfaced only by measuring. This is the outline's §6.4 argument
   GitHub inputs were fetched live (before Change 17), and a pipeline crash would not have
   been recorded as one (before Change 14). State both with any number from this run.
 - `[DISCLOSE]` It predates Change 12 (the stages now read the whole source), so it
-  measures the pipeline *before* the largest grounding fix. Baseline v2 (plan 1.5) will
-  be the first run of the current pipeline with every guard in place.
+  measures the pipeline *before* the largest grounding fix. Baseline v2 (below) is the
+  first run of the current pipeline with every guard in place.
+
+### Baseline v2 — the current reference `[MEASURED] 2026-09-24`
+
+`eval/results/baseline60_v2.jsonl` · the **same 60 cases** as v1 (paired by rule) · same
+model and settings · PoC GitHub inputs from snapshots · log: "Baseline v2 (plan 1.5)".
+Verdict **CITABLE** — all seven gates pass; the first file without caveats.
+
+| Metric | v2 | n | Null baseline | v1 → v2 on the same cases (paired) |
+|---|---|---|---|---|
+| S1 valid Sigma | 0.950 (57/60) | 60 | — | 55 → 57; p = 0.73 |
+| S2 issues per rule | 1.11 | 57 | — | — |
+| **S3 logsource exact** | **0.123** | 57 | **0.173** | 8 → 5 of 52; p = 0.45 |
+| S4 ATT&CK exact F1 | 0.175 | 40 | 0.092 | +0.014, 95% CI [−0.048, +0.090], n = 35 |
+| S5 detection-field F1 | 0.239 | 56 | 0.133 | +0.003, 95% CI [−0.074, +0.078], n = 51 |
+| Rules per case | 4.15 | 60 | — | +0.88, CI [+0.43, +1.38] |
+| Tokens per case | 53,803 | 60 | — | **+45%**, CI [+11.7k, +21.6k] |
+| Seconds per case (mean / median) | 169.3 / 142 | 60 | — | **+65%**, CI [+42, +99] s |
+
+- **No change in rule quality detectable at n = 60** between v1 and v2 — and a measured
+  cost of +45% tokens and +65% time per case. S3 is still at chance.
+- `[DISCLOSE]` **Read differences between runs paired.** Unpaired, S4 appears to rise
+  0.123 → 0.175; on the same cases it is +0.014 with an interval spanning zero. The gap is
+  which cases get scored: 5 cases score only in v2 (their first rule now parses; mean
+  0.467). A good example for the methodology chapter of why paired analysis matters.
+- `[DISCLOSE]` v1 → v2 is **not a single-variable comparison**: Changes 11 and 12, PoC
+  inputs from snapshots instead of live, and run-to-run variation.
+- `[DISCLOSE]` Not claimed: that the changes have *no* effect. 60 cases cannot detect
+  small effects; the S4/S5 intervals allow about ±0.08.
+- `[DISCLOSE]` The p-values and intervals come from a scratch script; a committed script
+  must reproduce them before they are cited (log, "Limitations to disclose").
+- Clean cases only (55): S3 0.113, S4 0.189, S5 0.238. Flagged (5): too few to read.
+- Cost detail: sum of per-case time 169 min (v1: 103 min). The run itself took about
+  3 h 30 min of wall time, of which ~41 min was a network outage (CH5 notes).
 
 ---
 
@@ -80,7 +113,8 @@ Contribution 2 compared cloud (Gemini) and local (Ollama) tiers. The Gemini key 
 suspended (2026-09-11) and deleted (2026-09-23), and the user decided to run every stage
 on `qwen3-coder:30b`. Without a second tier there is no routing trade-off to measure.
 What remains measurable: tokens and time per stage (stage labels since Change 13), and
-the cost of each fix (e.g. +26% time for Change 12).
+the cost of each fix — e.g. Change 12: +26% time on its two stages alone; end to end,
+v1 → v2 +45% tokens and +65% time per case with no detectable quality change (§6.1).
 
 ---
 
@@ -119,6 +153,10 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
   those stages; median input 8.5k → 22.4k characters.
 - `[DISCLOSE]` Only the attack-vector stage was re-measured; the analysis stage's effect
   on S1–S5 needs baseline v2.
+- `[MEASURED] 2026-09-24` Baseline v2 (whole-source stages, all 60 cases): **no detectable
+  change on S1–S5** (paired; §6.1), at +45% tokens and +65% time per case. Less copying
+  did not measurably improve agreement with the human rules. Copying persists: in v2 a
+  Windows kernel-rootkit report still got the `/saml/login` entry point of Example A.
 - Why the examples were copyable: the worked examples were written from specific past
   cases — `data/saved_rules.json` holds the real "CVE-2026-3055 Citrix NetScaler SAML …
   NSC_TASS" rule the SAML example came from.
@@ -151,8 +189,10 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
   measurement-integrity problem before a product one.
 - Fix: ids validated and assigned in code (Change 9, `73d8446`). One demo run replaced
   9 of 9 ids.
-- `[UNMEASURED]` The rate: baseline v1 did not record it; since Change 15 every
-  generation call is logged, so baseline v2 gives the denominator.
+- `[MEASURED] 2026-09-24` The rate, from baseline v2: **186 of 417 generated rules (45%)**
+  had their id replaced by code, in 44 of 60 cases. The record counts invalid and missing
+  ids together, so how many would have failed to parse without Change 9 is not known (an
+  invalid id fails; a missing one does not — `id` is optional in pySigma).
 
 ### 6.4.6 One malformed rule lost the whole answer (defect 13) `[MEASURED]`
 - A malformed condition (`Expected end of text, found '*'`) made pySigma's validator suite

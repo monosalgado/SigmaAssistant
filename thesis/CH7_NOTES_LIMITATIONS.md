@@ -61,7 +61,9 @@ limitation in the log belongs here too.
 ## C. Statistics
 
 14. **n = 60, one sample, one seed.** Enough to say S3 is indistinguishable from chance;
-    not enough for fine comparisons between S4/S5 and their baselines. (baseline-run entry)
+    not enough for fine comparisons between S4/S5 and their baselines. Measured size of
+    the problem: comparing v1 and v2 paired, the 95% intervals on S4/S5 differences are
+    about ±0.08 — smaller effects are invisible. (baseline-run entry; baseline v2 entry)
 15. **Temperature 0 is not bit-for-bit repeatable** on Ollama; part of any case-level
     churn between two runs is run-to-run variation. (Change 12, defect-15 entries)
 16. **Subgroups are tiny**: e.g. 5 contaminated cases, 3–5 per metric. No conclusion about
@@ -95,8 +97,10 @@ limitation in the log belongs here too.
     It constrains the classifier's input rather than improving the classifier.
 25. **Change 9 repairs the symptom** (invalid ids), not the cause; ids are no longer
     reproducible run to run, so byte-exact comparisons must ignore `id:`.
-26. **Change 12 was re-measured on one stage only** (attack vector); its effect on S1–S5
-    awaits baseline v2. It costs +26% time on those stages.
+26. **Change 12 cut example copying on its stage but showed no detectable effect on
+    S1–S5** in baseline v2 (paired, n = 60), while costing +45% tokens and +65% time per
+    case end to end. Report it as a grounding fix with a cost, not as a quality
+    improvement. (Change 12; baseline v2 entry)
 27. **The PoC stage never fetches GitHub links to tags containing a dot** (`v1.2`) — an
     existing quirk, pinned by a test, not changed. (Change 17)
 28. **A deterministic LLM-call failure would stop a run at the same case every time**
@@ -115,6 +119,19 @@ limitation in the log belongs here too.
     was written during the first, exploratory measurement** and only then formalised in
     code, which reproduced the same counts exactly. Neither was tuned afterwards to move
     a result. (defect-15 entry, Change 18)
+
+## G. Baseline v2 (added 2026-09-24)
+
+32. **Baseline v1 → v2 is not a single-variable comparison**: Changes 11 and 12, PoC
+    inputs from snapshots instead of live, and run-to-run variation all differ. A
+    difference could not be attributed to one of them (none was found). (baseline v2 entry)
+33. **One manual intervention in baseline v2**: during a network outage the tunnel was
+    rebuilt by hand; the relaunch wrapper has not yet recovered a run on its own (its
+    rebuild works when tested in isolation). (baseline v2 entry)
+34. **The v1 → v2 paired tests ran from a scratch script** (scipy/numpy, installed but not
+    declared). Until a committed script reproduces them, they are working numbers, not
+    citable ones — the same standard as the Foundation-Sec probe (item 22). (baseline v2
+    entry)
 
 ---
 

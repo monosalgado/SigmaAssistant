@@ -3,8 +3,9 @@
 Created 2026-09-23. **This file decides what gets worked on.** Anything not in the
 current phase goes to the Inbox or the Parking lot, not into the code.
 
-**Current phase: 1 — Trustworthy measurement.** Phase 0 runs in parallel (it
-needs the professor, not the code).
+**Current phase: 2 — Fix the logsource failure.** Phase 1 complete 2026-09-24
+(its Inbox triage is due, with the user). Phase 0 runs in parallel (it needs the
+professor, not the code).
 
 ---
 
@@ -118,8 +119,11 @@ say *why* logsource is at chance.
       **1.4a done (Change 19):** gates + verdict in `summarise.py`.
       **1.4b done (Change 20):** `eval/preflight.py`, stops at the first failure.
       **1.4c done (Change 21):** `eval/run_resilient.py` relaunches on exit status 2.
-- [ ] **1.5** Run baseline v2: 60 cases, same sample. **Needs ~2 h on the VPN.**
+- [x] **1.5** Run baseline v2: 60 cases, same sample. **Needs ~2 h on the VPN.**
       Exit: all five gates pass, results + log entry committed.
+      **Done 2026-09-24:** CITABLE (all seven gates). Paired against v1: no detectable
+      change on S1–S5; +45% tokens, +65% time per case; S3 0.123, still at chance.
+      One network outage, caught by the stop rule (log: "Baseline v2").
       Recipe: USF VPN on, OpenVPN off → `eval/preflight.py` → `eval/run_resilient.py --
       --sample 60 --seed 0 --arm baseline_v2 --no-web-enrich --out eval/results/baseline60_v2.jsonl`
       → `eval/summarise.py eval/results/baseline60.jsonl eval/results/baseline60_v2.jsonl`.
@@ -202,7 +206,8 @@ Which of these run depends on the contributions agreed in Phase 0.
       only if rules were generated live during an attack
 
 Run budget has to be planned before this phase. Measured: one 60-case run took
-1 h 42 min before Change 12. After Change 12 it will be longer; 1.5 measures it.
+1 h 42 min before Change 12, and **~2 h 50 min of compute after it** (baseline v2,
+2026-09-24; 3 h 30 min of wall time including an outage).
 Seeds × arms × ~2 h adds up fast, so the number of seeds (the outline says k ≥ 5)
 is a decision, not a default.
 
@@ -243,6 +248,15 @@ is a decision, not a default.
   committed script before citing it.
 - `.env.example` lacks `ALLOWED_ORIGINS`, which `backend/main.py` reads. Trivial;
   fold into H5.
+- The v1 → v2 paired tests ran from a scratch script (scipy/numpy, undeclared).
+  Proposed: `eval/compare_runs.py`, standard library only, tests first, must
+  reproduce the logged numbers. Needed before any run comparison is cited.
+- Example copying persists in the full pipeline: in baseline v2 a Windows
+  kernel-rootkit case got Example A's `/saml/login`. Count it over v2's recorded
+  attack vectors with the probe's markers. Relevant to 2.1/2.3.
+- A silent connection costs up to ~30 min before the stop rule sees it (OpenAI
+  client defaults: 600 s per request × 3 attempts). A shorter timeout for local
+  runs would lose less time; the stop rule already keeps the data clean.
 
 ## Security — do first (the user's action)
 

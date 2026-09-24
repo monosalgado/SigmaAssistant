@@ -2051,3 +2051,116 @@ Two things found while writing, recorded in the notes rather than hidden: the
 Foundation-Sec probe ran from uncommitted scratch scripts (plan Inbox), and the
 contamination definition was written during an exploratory measurement before being
 formalised — unlike the defect-15 markers, it was not fixed in advance (CH7 item 31).
+
+---
+
+## 2026-09-24 — Baseline v2 (plan 1.5): the current pipeline, the first fully citable run
+
+### What was run
+- `eval/results/baseline60_v2.jsonl`, arm `baseline_v2`. The **same 60 cases** as baseline
+  v1 (stratified sample, seed 0 — the set was checked to be identical before launch; rows
+  are paired by `rule_id`). `qwen3-coder:30b` on every stage, all-local, web enrichment off,
+  page and PoC GitHub inputs served from snapshots, contamination flags attached.
+- Recipe as designed in Changes 19–21: `eval/preflight.py` passed all five checks (tunnel,
+  model, context 262,144, 203 tests, 2-case smoke CITABLE; 4 min 37 s), then
+  `eval/run_resilient.py -- --sample 60 --seed 0 --arm baseline_v2 --no-web-enrich`.
+- **What differs from v1 (2026-09-19) — this is not a single-variable comparison:**
+  pipeline Change 11 (`663f005`, validator guard) and Change 12 (`f9b64f1`, both stages read
+  the whole source up to 100,000 characters); the PoC stage's GitHub inputs now come from
+  the 2026-09-23 snapshots instead of live fetches; harness Changes 13–21 (recording, stop
+  rule, gates — not meant to change pipeline behaviour); and run-to-run variation, since
+  temperature 0 is not bit-for-bit repeatable on Ollama.
+
+### Gates
+**CITABLE** — all seven checks pass, 0 of 60 rows failing any of them. The first result
+file with no caveat on its citability (v1: CITABLE WITH CAVEATS, 2).
+
+### A network outage during the run, and what the guards did
+- At case 52 of 60 (`a1507d71`, Securelist "Operation TunnelSnake") the connection to the
+  Spark went silent while the analysis stage was waiting for an answer. The OpenAI client
+  gave up (its defaults: 600 s per request, 2 retries); the pipeline carried on with an
+  empty analysis ("0 indicators, 0 TTPs") and still generated 2 rules. **Change 16 refused
+  that row** and stopped the run with status 2. Before Change 16 it would have been
+  written and scored.
+- Relaunch 1: the tunnel check passed, then the calls failed with connection errors →
+  status 2 again. Relaunch 2: the tunnel did not answer for 5 rebuild attempts (~5 min).
+  The VPN route to the Spark was unchanged throughout (GlobalProtect, `utun4`).
+- Once the Spark answered again (~13:31 EDT), **the tunnel was rebuilt by hand**; the
+  wrapper's next check found it and the run continued. Case 52 then passed in 166 s, so the
+  failure was not specific to the case. The cause of the outage is unknown — reading the
+  Spark's Ollama log needs admin rights.
+- Checked afterwards: the wrapper's own rebuild call works when the network is up (the
+  identical command on spare port 11435 returned in 0.7 s with a working tunnel). Its
+  failures were the outage. Its success path is verified in isolation, not yet inside a run.
+- Time: first row 14:25 UTC, last row 17:53 UTC; about 41 minutes of that was the outage
+  and the two failed relaunches. Sum of per-case time: **169 min** (v1: 103 min).
+
+### Results as the summariser prints them (unpaired means)
+
+| Metric | v1 | v2 | Null baseline |
+|---|---|---|---|
+| S1 valid Sigma | 0.917 (n=60) | 0.950 (n=60) | — |
+| S2 issues per rule | 1.00 (n=55) | 1.11 (n=57) | — |
+| S3 logsource exact | 0.145 (n=55) | **0.123** (n=57) | 0.173 |
+| S4 ATT&CK F1 | 0.123 (n=37) | 0.175 (n=40) | 0.092 |
+| S5 detection-field F1 | 0.205 (n=53) | 0.239 (n=56) | 0.133 |
+| Rules per case | 3.27 | 4.15 | — |
+| Tokens per case | 37,126 | 53,803 | — |
+| Seconds per case (mean / median) | 102.6 / 89 | 169.3 / 142 | — |
+
+Clean cases only (55): S3 0.113, S4 0.189, S5 0.238. Flagged cases (5; 3–4 per metric):
+too few for any conclusion.
+
+### Paired comparison — the numbers to cite
+Same cases; each metric only on cases scored in **both** runs. Exact McNemar for S1/S3;
+paired bootstrap 95% CI of the mean difference (10,000 resamples, seed 0) for the rest.
+
+| | n | v1 | v2 | Difference | Test |
+|---|---|---|---|---|---|
+| S1 valid | 60 | 55 | 57 | 3 only v1, 5 only v2 | p = 0.73 |
+| S3 logsource exact | 52 | 8 | 5 | 5 only v1, 2 only v2 | p = 0.45 |
+| S4 ATT&CK F1 | 35 | 0.119 | 0.133 | +0.014, CI [−0.048, +0.090] | 31 of 35 unchanged |
+| S5 detection F1 | 51 | 0.200 | 0.203 | +0.003, CI [−0.074, +0.078] | 38 of 51 unchanged |
+| Tokens per case | 60 | 37,126 | 53,803 | **+16,676 (+45%)**, CI [+11,705, +21,553] | higher in 50 of 60 |
+| Seconds per case | 60 | 102.6 | 169.3 | **+66.7 (+65%)**, CI [+42.2, +99.0] | longer in 50 of 60 |
+| Rules per case | 60 | 3.27 | 4.15 | +0.88, CI [+0.43, +1.38] | |
+
+**The unpaired means mislead.** Unpaired, S4 rises 0.123 → 0.175; on the same cases it is
++0.014 with an interval that spans zero. The gap is composition: 5 cases are scored only in
+v2 (their first rule parsed in v2, not in v1) and happen to score high (mean 0.467), 2 only
+in v1 (mean 0.200). Same for S5 (+0.034 unpaired, +0.003 paired). Differences between runs
+must be read paired; the summariser's own note says so.
+
+### Reading
+- **No change in rule quality is detectable at n = 60** from v1 to v2 on S1–S5. Change 12
+  cut example copying into the attack vector (11 → 4, p = 0.039, measured on that stage
+  alone), but that has not turned into measurably closer agreement with the human rules.
+- **S3 is still at chance** (0.123, n = 57, against 0.173). Phase 2 is still needed, and v2
+  is the reference it starts from.
+- **The cost is measured and significant:** +45% tokens and +65% time per case.
+- Not claimed: that the changes have *no* effect — 60 cases cannot detect small ones; the
+  S4/S5 intervals still allow about ±0.08.
+
+### Measured for the first time (earlier entries deferred these to baseline v2)
+- **Defect 10 rate:** 186 of 417 generated rules (45%) had their `id` replaced by code
+  (invalid or missing — the record does not separate the two), in 44 of 60 cases.
+  Change 9 is doing a lot of work.
+- **Regeneration:** 42 of 60 cases needed a second generation call (review errors or
+  coverage gaps); 102 generation calls in total.
+- **Example copying persists in the full run:** case 52 (a Windows kernel rootkit report)
+  got the attack vector "memory_corruption via http, entry point /saml/login", which is the
+  prompt's Example A. Not counted systematically here; the probe's markers can be run over
+  v2's recorded attack vectors (plan 2.1).
+
+### Limitations to disclose
+- v1 → v2 bundles several changes (above); a difference could not be attributed to one of
+  them, and none was found.
+- The paired tests were computed with a scratch script using scipy/numpy, which are
+  installed in the environment but not declared. Before any of these p-values is cited, a
+  committed script must reproduce them (proposed next: `eval/compare_runs.py`, standard
+  library only, tests first).
+- One manual intervention during the run (the tunnel rebuild).
+
+### Status
+Plan 1.5 done; **Phase 1 complete**. `baseline60_v2.jsonl` replaces v1 as the reference.
+Next in the plan: 2.1, the logsource diagnosis (offline, from v2's recorded suggestions).

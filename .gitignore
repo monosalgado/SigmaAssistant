@@ -48,3 +48,6 @@ eval/snapshots/
 
 # Preflight smoke runs (eval/preflight.py): scratch output, not evidence
 eval/results/preflight/
+
+# Defence preparation: kept local on purpose (the repository is public)
+thesis/DEFENSE_NOTES.md

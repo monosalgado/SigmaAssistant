@@ -432,9 +432,13 @@ delta table). Since 2026-09-23 also: the **gates and a citability verdict** (Cha
 - Baseline v1 (2026-09-19, 60 cases): **101.9 min** wall time; per case mean 102.6 s,
   **median 89.1 s**, range 38.7–320.7 s; **321 LLM calls, 2,227,584 tokens** (mean 37,126
   per case). The 4 defect-14 cases were rerun separately (7.4 min).
-- `[UNMEASURED]` Wall time after Change 12 (whole source up to 100,000 chars): the
-  attack-vector stages alone went 15.1 → 19.0 min (+26%) on the probe; the full-run effect
-  comes from baseline v2.
+- After Change 12 (whole source up to 100,000 chars): the attack-vector stages alone went
+  15.1 → 19.0 min (+26%) on the probe.
+- `[MEASURED] 2026-09-24` Baseline v2 (same 60 cases, current pipeline): sum of per-case
+  time **169 min** (mean 169.3 s, **median 142 s**); **53,803 tokens per case** (+45% on v1,
+  paired). About 3 h 30 min of wall time, of which ~41 min was a network outage. **Budget
+  for planning: ~2 h 50 min of compute per 60-case run** of the current pipeline, before
+  any interruption.
 - Superseded figures — **never cite**: "~46 s/case" (pre-defect-8 pilot), "132 s/case"
   (9 cases of an aborted run), "~900 primary calls" (the old hybrid estimate).
 
@@ -465,7 +469,30 @@ CITABLE, matching every earlier hand check.
    (exit status 2), at most 5 times.
 4. `eval/summarise.py <file>` — the verdict must be CITABLE.
 
-## 5.7 Status — what exists vs. what is claimed (2026-09-23)
+`[MEASURED] 2026-09-24` **First real use (baseline v2) — the guards under a real outage.**
+At case 52 of 60 the connection to the Spark went silent mid-request. The pipeline
+continued on an empty analysis ("0 indicators, 0 TTPs") and still produced 2 rules — the
+exact defect-12 pattern — and **Change 16 refused the row** and stopped the run. The
+wrapper relaunched twice; the second time the Spark stayed unreachable for ~5 min. Once
+it answered again, the tunnel was rebuilt by hand and the wrapper continued; case 52 then
+passed in 166 s. Result: CITABLE, all 60 rows complete.
+`[DISCLOSE]` One manual intervention (the tunnel rebuild). The wrapper's own rebuild was
+checked afterwards and works (0.7 s on a spare port), but it has not yet recovered a run
+by itself. Outage cause unknown.
+Worth one paragraph in the thesis: the stop rule was designed after defect 12 and here
+it caught a real instance — that is the evidence it earns its place.
+
+### Comparing two runs — paired, not unpaired `[DESIGN]` (added 2026-09-24)
+Two runs on the same cases must be compared **case by case**: each metric only on cases
+scored in both runs; exact McNemar for S1/S3 (discordant pairs), paired bootstrap 95% CI
+of the mean difference for S4/S5 and cost. Reason, measured on v1 → v2: the unpaired S4
+mean rose 0.123 → 0.175, but on the same 35 cases the difference was +0.014, CI
+[−0.048, +0.090]. S2–S5 are computed only on cases whose first rule parses, so a change in
+*which* rules parse changes *which* cases are averaged. `[DISCLOSE]` These tests so far ran
+from a scratch script; a committed one (`eval/compare_runs.py`, proposed) must reproduce
+them before any p-value is cited.
+
+## 5.7 Status — what exists vs. what is claimed (2026-09-24)
 
 | Component | State |
 |---|---|
@@ -473,8 +500,8 @@ CITABLE, matching every earlier hand check.
 | Scorers S1–S5 | built; self-comparison + null baseline done |
 | Telemetry | built; Ollama path verified live; stage labels; Gemini path never verified |
 | Runner, summariser, gates, preflight, relaunch wrapper | built; 203 offline tests |
-| **Results** | **baseline v1** (n=60, citable with 2 caveats) — see `CH6_NOTES_RESULTS.md` |
-| Baseline v2 (after Changes 12–21) | **not yet run** (plan task 1.5) |
+| **Results** | **baseline v2** (n=60, 2026-09-24, **CITABLE**) = the reference; baseline v1 (citable with 2 caveats) kept for comparison — see `CH6_NOTES_RESULTS.md` |
+| Paired comparison of two runs | method fixed (§5.6); scratch script only — committed version proposed |
 
 `[MEASURED] 2026-09-23` Full suite **203 passed**, fully offline.
 
@@ -487,12 +514,13 @@ Write them as defects identified by code audit, not as improvements.
 - [x] ~~Renumbering~~ — S/R/C applied 2026-09-09.
 - [x] ~~First live run assertions~~ — replaced by `check_gates` (Change 19).
 - [x] ~~Contamination handling~~ — flagged and reported separately (Change 18).
-- [ ] **Baseline v2** — the first run with every guard in place (plan 1.5).
+- [x] ~~Baseline v2~~ — run 2026-09-24, CITABLE (plan 1.5).
+- [ ] **Committed paired-comparison script** — reproduce the v1 → v2 tests before citing them.
 - [ ] **Naive baseline arm** (most-common logsource, no LLM) — a stronger comparator than
       the null control alone.
 - [ ] Per-category vs weighted reporting, given the `process_creation` skew.
-- [ ] Number of seeds: at ~2 h per 60-case run, k ≥ 5 per arm is a real time budget —
-      decide it, don't default to it.
+- [ ] Number of seeds: at ~2 h 50 min of compute per 60-case run (measured, v2), k ≥ 5
+      per arm is a real time budget — decide it, don't default to it.
 - [ ] Ablations A1–A7 not wired (`--arm` is only a label); likely core: A1 (no RAG),
       A5 (single prompt vs pipeline).
 - [ ] R1/R2 detonation — depends on the contributions agreed with the professor.
