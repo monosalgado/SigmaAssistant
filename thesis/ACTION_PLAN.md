@@ -277,6 +277,10 @@ is a decision, not a default.
   stops runs until the timeout — one hypothesis for baseline v2's hung analysis
   call. An output cap is a pipeline change (it could cut long legitimate answers),
   so it needs its own measurement.
+- **The Spark's Ollama is shared** with another user's application (seen 2026-09-24:
+  4 clients on one server). Requests compete; two runs stalled 40+ min. Options: the
+  preflight reports other clients connected to Ollama before a run starts (a small
+  tool change), and/or the user agrees run times with the other user.
 - GlobalProtect's auto-restore ends at "select a gateway … manually", so a VPN drop
   needs the user; the relaunch wrapper gives up after ~12 min. Options: wait longer,
   or the user sets a default gateway in the app (their setting, not ours).

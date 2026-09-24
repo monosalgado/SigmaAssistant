@@ -143,6 +143,12 @@ limitation in the log belongs here too.
     the any-rule figure next to it — as an upper bound, since more rules also mean more
     chances to hit. (2.1 entry)
 
+37. **The Spark is shared with other users.** Another user's application uses the same Ollama
+    server; requests compete, and runs have stalled for 40+ minutes (case 52 in v2, case 34 in
+    the Change 22 run — contention likely, not shown). Time per case (C2) therefore partly
+    measures other people's load; token counts do not. Checked: no prompt was cut by a
+    smaller context. (log: "The Change 22 run paused…")
+
 ---
 
 ## Future work (collected, not prioritised)

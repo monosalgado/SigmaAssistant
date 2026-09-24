@@ -2388,3 +2388,38 @@ the relaunch wrapper gives up after ~12 minutes.
 Unchanged: the stop rule refused the affected rows both times, and the file is CITABLE.
 Corrected in CH5 §5.6 and CH7 item 33. Two findings go to the plan's Inbox (an output cap
 for LLM calls; how long the wrapper should wait for a manual VPN reconnect).
+
+---
+
+## 2026-09-24 — The Change 22 run paused at 33 of 60: the Spark's Ollama is shared
+
+At case 34 (`research.checkpoint.com` "Stealth Falcon", CVE-2025-33053) the analysis call
+waited more than 40 minutes with the VPN and tunnel working. Read-only checks on the
+Spark at 17:23 showed:
+- another account (`kbanstola`, 2 sessions) running a project (`SOC_Companion`) whose
+  processes use the GPU;
+- **four clients connected to the same Ollama server** (`127.0.0.1:11434`), one of them
+  our SSH tunnel;
+- Ollama showing our model as "Stopping…" (unloading, as when another request needs a
+  different model or setting), GPU at 92–94%.
+
+So requests from another user's application compete with ours for one model server.
+This is the likeliest explanation of the hung call here and of the one in baseline v2
+(case 52) — **not shown**: Ollama's own log needs admin rights.
+
+Checked, read-only, whether contention could have silently cut prompts (a model reloaded
+with a smaller context would truncate without an error): in every recorded call of
+baseline v2 (323) and of this run (177), characters per prompt token stay between 3.8 and
+4.9, no prompt stops at a round limit, and the largest is ~22k tokens of a 262,144 window.
+**No sign of truncation.**
+
+Decision (user): stop the run and resume when the Spark is quieter. Stopped at 17:26; the
+file holds 33 complete rows (the refused case 34 was never written). The resume will
+continue at case 34 **on the same code (`48f022e`)** — no pipeline change lands until this
+run is complete.
+
+### Limitations to disclose
+- The Spark is shared: time per case (C2) partly measures other users' load, and runs
+  can stall while others use the server. Token counts are unaffected.
+- A run interrupted and resumed spans two periods; the per-case results do not depend on
+  it (each case runs whole on one code version), the timing might.
