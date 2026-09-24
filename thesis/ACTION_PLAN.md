@@ -141,9 +141,16 @@ log source at random, whatever the framing.
 **Time-box:** the changes listed below. If S3 is still at chance after them, stop
 and report it as a finding rather than keep tuning.
 
-- [ ] **2.1** Diagnose from baseline v2 *(offline)*: where does the logsource go
+- [x] **2.1** Diagnose from baseline v2 *(offline)*: where does the logsource go
       wrong — the analysis stage's suggestion vs gold, the attack-vector
       telemetry vs gold, or the rule ignoring a correct suggestion (defect 11)?
+      **Done 2026-09-24** (`eval/diagnose_logsource.py`; log "Plan 2.1"): the
+      analysis's top category is right in 29/57, generation overrides 14 of those
+      (10 with the attack-vector label); 17/41 wrong rules use a non-Sigma category
+      (`webserver_access_log`); the suggestion verbatim would score 0/57 (its
+      service is `sysmon`). **Proposed order, awaiting the user:** (a) one
+      vocabulary — attack-vector telemetry in Sigma categories; (b) fix the
+      suggestion's service; (c) 2.2 precedence; (d) 2.3 web bias; 2.4 not indicated.
 - [ ] **2.2** Change: make the (suggested or confirmed) logsource an explicit
       constraint in generation, checked after generation (defect 11). Measure.
 - [ ] **2.3** Change: remove the attack-vector prompt's web bias (21/48 non-web

@@ -2164,3 +2164,108 @@ must be read paired; the summariser's own note says so.
 ### Status
 Plan 1.5 done; **Phase 1 complete**. `baseline60_v2.jsonl` replaces v1 as the reference.
 Next in the plan: 2.1, the logsource diagnosis (offline, from v2's recorded suggestions).
+
+---
+
+## 2026-09-24 — Plan 2.1: where the log source goes wrong (diagnosis, offline)
+
+### Question
+S3 (logsource exact match) is at chance: 0.123 on baseline v2 against a null baseline
+of 0.173. The plan asked where it goes wrong — the analysis stage's suggestion, the
+attack-vector stage's telemetry, or the rule ignoring a correct suggestion (defect 11).
+
+### Method
+`eval/diagnose_logsource.py` (21 offline tests, `tests/test_diagnose_logsource.py`,
+written first; full suite 224 passed), run on `eval/results/baseline60_v2.jsonl`. No
+LLM, no network. Every number below is printed by that script.
+- **First, which field fails.** S3 needs category, product and service to agree. In v2's
+  57 scored cases the rule's category matches gold in 16, the product in 26, and a wrong
+  `service` alone explains only 1 case (v1: 0). So the category is compared.
+- **Definitions fixed before any bucket count was computed** (script docstring and
+  tests): rule and gold category read from the row's S3 score, same normalisation as the
+  scorer; top suggestion = first of the analysis stage's `logsource_suggestions`;
+  offered = the first three (all the generation prompt shows). Each case falls in exactly
+  one bucket.
+
+### Result — pre-registered buckets (n = 57)
+
+| Bucket | Cases | Meaning |
+|---|---|---|
+| right_suggested | 15 | analysis top suggestion right, rule right |
+| right_rescued | 1 | suggestion wrong, rule right |
+| **overridden** | **14** | **suggestion right, rule wrong — defect 11** |
+| ranked_low | 7 | gold offered as suggestion 2 or 3, rule wrong |
+| followed_wrong | 11 | gold not offered, rule = the wrong top suggestion (4 have no gold category) |
+| wrong_elsewhere | 9 | gold not offered, rule differs from the suggestion |
+
+- **The analysis stage's top suggestion has the right category in 29 of 57 cases**
+  (51%); the gold category is among the three offered in 36.
+- **The generation stage keeps a correct top suggestion in 15 of 29 and overrides it in
+  14.** It rescues a wrong one once. Defect 11 is now measured: about half of the
+  correct suggestions are lost at generation.
+- The gold category appears in **some** rule of the response in 29 of 57 cases, in the
+  first rule (what S3 scores) in 16.
+- Web labels when the gold rule is not a web rule (46 cases): attack-vector telemetry web
+  in 16, analysis top suggestion web in 4. The pre-registered rule-side measure (category
+  `webserver` or `proxy`) gives 3 — **an undercount**: it does not recognise
+  `webserver_access_log`, which is not a Sigma category (see below). Counting it from the
+  script's confusion list, the rule names web telemetry in 16 of the 46, the same as the
+  attack-vector stage.
+
+### Result — post-hoc measures (added after the first run; not pre-registered)
+Found by reading the confusion list, then added to the same committed script with their
+own tests, labelled post-hoc in its output.
+- **The rule's category is the attack-vector stage's telemetry label, verbatim, in 24 of
+  the 41 wrong rules** — and in 10 of the 14 overridden cases.
+- **17 of the 41 wrong rules use a category that no rule in the local SigmaHQ corpus
+  uses** (37 categories there): `webserver_access_log` 15, `web_proxy` 1,
+  `email_gateway` 1. These are labels from the attack-vector stage's own 13-value
+  vocabulary, which is not Sigma's. Such a rule can never match.
+- **Had the rule used the analysis stage's top suggestion verbatim, S3 would be 0 of
+  57.** The suggestion's `service` is `sysmon` in 44 cases (and `webserver_access_log` in
+  8), while SigmaHQ's Sysmon-based rules carry only category and product. So "make the
+  rule follow the suggestion" (plan 2.2 as worded) would fail as it stands.
+
+### Mechanism (inspected in the prompts, not measured)
+- **The generation prompt ranks the attack vector above the analysis stage.** Its rule 2:
+  "At least one rule MUST target the PRIMARY ATTACK VECTOR … the logsource of that rule
+  must match the telemetry where that traffic is observed. Initial-access detection is
+  MANDATORY when an exploit is described." The attack-vector summary near the top of the
+  prompt includes "Primary telemetry: <label>"; the analysis suggestions are appended to
+  the Sysmon reference block (`stage_generate.py:273`).
+- **Two vocabularies.** The attack-vector stage chooses from 13 labels of its own
+  (`webserver_access_log`, `web_proxy`, `network_ids`, `email_gateway`, …), not Sigma
+  categories; the generation stage copies them into `logsource.category`.
+- **The analysis prompt's only example** suggests `category: process_access`,
+  `product: windows`, `service: sysmon` — the likely source of the 44 `sysmon` services
+  (the same pattern as defect 15: a worked example copied).
+- Plausible, not shown: "initial access is mandatory" also pushes the initial-access rule
+  first, while many gold rules detect post-exploitation on the host — consistent with the
+  gold category appearing in a later rule more often than in the first.
+
+### What this means for the order of 2.2–2.4 (a proposal; the user decides)
+1. **One vocabulary** — the attack-vector stage's telemetry must be expressed in Sigma
+   categories before it reaches generation (17 unmatchable categories). New task.
+2. **The suggestion's service** — the analysis example teaches `service: sysmon`; fix it
+   before the suggestion can be used as a constraint (0 of 57 otherwise).
+3. **2.2, precedence** — make the (corrected) suggestion the instruction for the rule's
+   logsource, and resolve the conflict with generation rule 2 (14 overridden, 10 of them
+   by the attack-vector label).
+4. **2.3, web bias** — still 16 of 46 non-web cases labelled web by the attack-vector stage.
+5. **2.4, boilerplate** — not indicated: the analysis stage gets the category right in
+   about half the cases with the whole page; nothing here points to boilerplate.
+Ceiling to keep in mind: had the rule always taken the top suggestion's *category*, the
+category would be right in 29 of 57, not 16 — a bound on what the generation-side fixes
+(1–3) can reach on category alone; exact match also needs product and service.
+
+### Limitations to disclose
+- Category only; product is a second failure (the top suggestion's category and product
+  both agree with gold in only 18 of 57) and is not diagnosed here.
+- The post-hoc measures were chosen after seeing the data; they describe this run and
+  motivate changes, they are not a test of a hypothesis.
+- One run, n = 57; the buckets are counts, with no inference attached.
+- "Used by no SigmaHQ rule" is judged against the local corpus copy (`data/sigma`), not
+  the full Sigma taxonomy specification.
+
+### Status
+Plan 2.1 done. The next change waits for the user's choice of order.

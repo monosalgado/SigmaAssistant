@@ -132,6 +132,15 @@ limitation in the log belongs here too.
     declared). Until a committed script reproduces them, they are working numbers, not
     citable ones — the same standard as the Foundation-Sec probe (item 22). (baseline v2
     entry)
+35. **The logsource diagnosis (plan 2.1) is category-level, one run, n = 57**, with counts
+    and no inference. Product, a second failure, is not diagnosed. Its three post-hoc
+    measures were chosen after reading the data. "No SigmaHQ rule uses this category" is
+    judged against the local corpus copy, not the Sigma taxonomy specification. (2.1 entry)
+36. **S3 scores the first rule only**, and the diagnosis shows it matters: the gold
+    category is in *some* rule of the response in 29 of 57 cases, in the first in 16.
+    First-rule scoring stays (it is what a user sees first), but the thesis should report
+    the any-rule figure next to it — as an upper bound, since more rules also mean more
+    chances to hit. (2.1 entry)
 
 ---
 

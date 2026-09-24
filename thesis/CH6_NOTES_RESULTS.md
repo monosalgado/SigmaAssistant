@@ -169,8 +169,12 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
 - `[UNMEASURED]` Hypothesis: two of the three worked examples are web exploits, and the
   field is defined as where "the initial exploit" is visible, while many gold rules
   detect post-exploitation behaviour on the host. Plan task 2.3.
+- `[MEASURED] 2026-09-24` In the full pipeline (baseline v2, plan 2.1): web telemetry for
+  **16 of 46** non-web gold cases — and the generated rule lands on web telemetry in the
+  same 16 of 46. (Different run and denominator from the 21/48 above; not directly
+  comparable.) The bias reaches the rule — see §6.4.4.
 
-### 6.4.4 A correct suggestion overridden — generation ignores the logsource suggestion (defect 11), open
+### 6.4.4 A correct suggestion overridden — generation ignores the logsource suggestion (defect 11), open, measured 2026-09-24
 - `[MEASURED]` Observed live (Bumblebee report, 2026-09-13): the analysis stage suggested
   `process_creation / windows / sysmon` at 0.95 confidence; the generated rule used
   `webserver_access_log` and described an attack the report does not contain. Seen again
@@ -178,9 +182,35 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
 - Mechanism (corrected 2026-09-23): the suggestion *does* reach the generation prompt,
   but appended to the end of the Sysmon reference block (`stage_generate.py:273`) —
   buried in reference material, not an instruction.
-- `[UNMEASURED]` How often. Baseline v2 records the suggestion per case (Change 15), so
-  plan task 2.1 can separate "analysis wrong" from "analysis right, generation ignored it"
-  — the likely explanation of S3 at chance, not yet shown.
+- `[MEASURED] 2026-09-24` **How often — and why S3 is at chance** (plan 2.1,
+  `eval/diagnose_logsource.py` on baseline v2, category level, n = 57, buckets fixed
+  before counting):
+  - the analysis stage's top suggestion has the right category in **29 of 57**;
+  - generation **keeps it in 15 and overrides it in 14** — about half of the correct
+    suggestions are lost at the last step;
+  - where the analysis is wrong (27), the gold was offered 2nd/3rd in 7; generation
+    rescues a wrong suggestion once.
+  - The failing field is the category (16/57 right), not the service (alone wrong in 1).
+- `[MEASURED]` post-hoc — **two vocabularies**: the rule's category is the attack-vector
+  stage's own telemetry label, verbatim, in **24 of 41** wrong rules (10 of the 14
+  overrides); **17 of 41** wrong rules use a category no SigmaHQ rule uses
+  (`webserver_access_log` 15). The attack-vector stage picks from 13 labels of its own,
+  not Sigma categories, and generation copies them. A rule with such a category can never
+  match anything.
+- `[MEASURED]` post-hoc — **the suggestion is not usable as-is**: had the rule copied the
+  top suggestion verbatim, S3 would be **0 of 57** — its `service` is `sysmon` in 44 cases
+  (the analysis prompt's only example uses `service: sysmon`; SigmaHQ's Sysmon-based rules
+  carry only category and product). Category and product both right in 18 of 57.
+- Mechanism `[DESIGN — inspected]`: generation rule 2 makes an initial-access rule
+  "MANDATORY" with a logsource matching "the telemetry where that traffic is observed",
+  and the attack-vector summary ("Primary telemetry: …") sits near the top of the prompt;
+  the analysis suggestion is buried in the Sysmon block. The prompt ranks the attack
+  vector above the analysis.
+- For the thesis: this is the §6.4 throughline again — a stage got it right and a later
+  stage overrode it, silently. Also a prompt-example copy (`service: sysmon`), the same
+  pattern as defect 15.
+- `[DISCLOSE]` The post-hoc measures were chosen after seeing the data: descriptive, they
+  motivate the Phase 2 changes; they do not test a hypothesis.
 
 ### 6.4.5 A field invented instead of generated — rule identifiers (defect 10) `[MEASURED]`
 - The model emitted UUID-shaped ids with non-hex characters
