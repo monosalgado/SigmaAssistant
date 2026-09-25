@@ -2551,3 +2551,69 @@ The Change 22 measurement restarts from scratch on Changes 22 + 24:
 `eval/results/p2a_vocabulary60_r2.jsonl`, arm `p2a_vocabulary_r2`. Measurement plan as fixed
 for Change 22 (primary: first rules whose category no SigmaHQ rule uses, v2 17/57;
 secondary: S3 paired, the 2.1 buckets), plus the count of answers cut at the limit.
+
+---
+
+## 2026-09-24 — Change 22 measured (plan 2.2a, run on Changes 22 + 24)
+
+`eval/results/p2a_vocabulary60_r2.jsonl`, arm `p2a_vocabulary_r2`, code `07cb664`, the same
+60 cases, started 19:51, 166.8 min, no relaunch, no manual step. **CITABLE** (all seven
+gates). Answers cut at the output limit: **2 calls in 2 cases**, both rescued by the retry —
+`9a2d8b3e` (the case that stopped the first run: first attempt cut at 16,384 tokens after
+349 s, retry finished at 5,188 tokens) and `a1507d71` (**baseline v2's case 52**, whose hang
+was unexplained — the same kind of loop). The loop is not deterministic after all: it hit
+case `9a2d8b3e` on five attempts earlier in the day, once here.
+
+### Pre-registered measures (plan fixed in the Change 22 entry), against baseline v2
+Committed scripts: `compare_runs.py baseline60_v2.jsonl p2a_vocabulary60_r2.jsonl` and
+`diagnose_logsource.py` on each file.
+
+| Measure | v2 | Change 22 | Note |
+|---|---|---|---|
+| **Primary: wrong rules whose category no SigmaHQ rule uses** | **17** of 57 scored | **1** of 53 (`security`) | the change's purpose |
+| S3 logsource exact, paired (n = 52) | 6 | **11** | 5 gained, 0 lost; exact McNemar **p = 0.062** |
+| S1 valid first rule, paired (n = 60) | 57 | 53 | 5 lost, 1 gained; p = 0.22 (below) |
+| S4 ATT&CK F1, paired (n = 35) | 0.171 | 0.190 | +0.019, 95% CI [−0.019, +0.067] |
+| S5 detection F1, paired (n = 51) | 0.213 | 0.243 | +0.030, 95% CI [−0.023, +0.090] |
+| Rules per case | 4.15 | 3.67 | −0.48, CI [−0.98, −0.05] |
+| Tokens / seconds per case | — | — | no difference (CIs span zero) |
+
+2.1 buckets (category level): **overridden 14 → 3** (defect 11: generation now keeps the
+analysis stage's category far more often); right_suggested 15 → 18; ranked_low 7 → 12;
+followed_wrong 11 → 14; wrong_elsewhere 9 → 6. Rule category right 16/57 → 18/53.
+
+### Where the web bias went (non-web gold cases: v2 46, now 46)
+Attack-vector telemetry web 16 → 18 (the stage was not changed); **analysis top suggestion
+web 4 → 11**; generated rule web (`webserver`/`proxy`) 3 → 18. In v2 most web-biased rules
+carried the non-Sigma label, so they did not count as web; now the label reads "Sigma
+logsource category `webserver`", and the analysis stage follows it. **The web bias now
+flows through legitimately named categories** — step (d) is where it has to be fixed.
+The analysis suggestion copies the new wording as its `service` (`webserver` 10 times;
+was `webserver_access_log` 8) — step (b).
+
+### The S1 drop (5 lost first rules), inspected
+None involves a cut answer. 3 are malformed YAML in the first rule (e.g. an unquoted value
+containing `Content-Disposition: form-data; …`); 2 are the generation stage's JSON failing
+to parse ("Invalid control character", "Invalid \escape") → no rules at all — the known
+risk of `json_mode` on generation (defect 5). Consistent with run-to-run variation at
+p = 0.22; recorded because S2–S5 are computed only on rules that parse.
+
+### Reading
+- Change 22 did what it was designed for: impossible categories 17 → 1, and generation
+  overrides a correct suggestion far less (14 → 3).
+- S3 moved in one direction only (6 → 11 on the same cases, no case lost), p = 0.062 — not
+  significant at 0.05 with n = 52. Unpaired, S3 is 0.208 (11/53) against a chance level of
+  0.173 (≈ 9 of 53 expected): above chance for the first time, not distinguishably so.
+- What still limits S3: the web bias (now visible), the suggestion's service, and product.
+  Steps (b) and (d) target exactly these.
+
+### Limitations to disclose
+- The run is on Changes 22 + 24. Change 24 changed nothing in 58 cases (no cut answer) and
+  rescued 2; it is not a confound for the categories.
+- The primary measure's counts are not tested paired here (`compare_runs.py` does not
+  compute it); 17 → 1 is reported as counts.
+- p = 0.062 must not be written as a significant improvement.
+
+### Status
+Plan 2.2a done. Reference for the next step: this file. Next: 2.2b, the analysis
+suggestion's `service`.

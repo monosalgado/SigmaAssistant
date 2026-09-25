@@ -174,6 +174,10 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
   **16 of 46** non-web gold cases — and the generated rule lands on web telemetry in the
   same 16 of 46. (Different run and denominator from the 21/48 above; not directly
   comparable.) The bias reaches the rule — see §6.4.4.
+- `[MEASURED] 2026-09-24` After Change 22 the bias flows through real category names:
+  attack-vector web 18 of 46 non-web cases (unchanged stage), **analysis top suggestion web
+  4 → 11**, rule web 18. Fixing the vocabulary made the bias visible; it now has to be fixed
+  at its source (plan 2.3, step d).
 
 ### 6.4.4 A correct suggestion overridden — generation ignores the logsource suggestion (defect 11), open, measured 2026-09-24
 - `[MEASURED]` Observed live (Bumblebee report, 2026-09-13): the analysis stage suggested
@@ -212,6 +216,20 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
   pattern as defect 15.
 - `[DISCLOSE]` The post-hoc measures were chosen after seeing the data: descriptive, they
   motivate the Phase 2 changes; they do not test a hypothesis.
+- `[MEASURED] 2026-09-24` **Change 22 (one vocabulary), measured** — the attack-vector
+  label now reaches later stages as a Sigma category (`p2a_vocabulary60_r2.jsonl`, CITABLE,
+  paired against v2, measures fixed before the run):
+  - wrong rules with a category no SigmaHQ rule uses **17 → 1** (primary measure);
+  - generation overrides a correct suggestion **14 → 3**;
+  - **S3 exact 6 → 11 of 52 on the same cases, 0 lost, p = 0.062** — one-directional, not
+    significant at 0.05. Unpaired 0.208 (11/53) vs chance 0.173: above chance for the
+    first time, not distinguishably so;
+  - S4 +0.019, S5 +0.030 (both CIs span zero); cost unchanged.
+  - For the thesis: a *wording* change between two stages — no new information — removed
+    most overrides. The stages were not disagreeing about the attack; they were using
+    different words for the same log source.
+  - `[DISCLOSE]` S1 fell 57 → 53 (p = 0.22): 3 malformed YAML, 2 generation-JSON parse
+    failures (defect 5); none involves the output limit.
 
 ### 6.4.5 A field invented instead of generated — rule identifiers (defect 10) `[MEASURED]`
 - The model emitted UUID-shaped ids with non-hex characters

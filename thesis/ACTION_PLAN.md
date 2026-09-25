@@ -156,17 +156,21 @@ and report it as a finding rather than keep tuning.
       service is `sysmon`). **Order agreed with the user:** (a) one vocabulary —
       attack-vector telemetry in Sigma categories; (b) fix the suggestion's
       service; (c) 2.2 precedence; (d) 2.3 web bias; 2.4 dropped. One run each.
-- [>] **2.2a** One vocabulary: the attack-vector stage's telemetry reaches the
+- [x] **2.2a** One vocabulary: the attack-vector stage's telemetry reaches the
       analysis and generation stages in Sigma's terms. Measure: categories no
       SigmaHQ rule uses (17/41 wrong rules in v2), S3 paired against v2.
       **Blocked 2026-09-24 at 33/60:** case `9a2d8b3e` loops in the analysis
       stage on every attempt (defect 19). Needs a decision on defect 19 first.
       Decision (user): Change 24, then restart from scratch.
+      **Done 2026-09-24** (`p2a_vocabulary60_r2.jsonl`, CITABLE): non-Sigma categories
+      17 → 1; overrides 14 → 3; S3 paired 6 → 11 of 52 (p = 0.062); web bias now reaches
+      the rule under a real name (18/46). Next: 2.2b.
 - [x] **Change 24** (defect 19, found during 2.2a): every LLM answer has a bounded
       length (16,384 tokens); a cut answer is retried, then recorded as the model's
       failure and measured with the case. 2.2a restarts from scratch on it
       (`p2a_vocabulary60_r2.jsonl`).
-- [ ] **2.2b** The analysis suggestion's `service` (44/57 `sysmon`). Measure.
+- [ ] **2.2b** The analysis suggestion's `service` (44/57 `sysmon` in v2; 35/53 `sysmon`
+      and 10 `webserver` after 2.2a). Measure against `p2a_vocabulary60_r2.jsonl`.
 - [ ] **2.2e** (user, 2026-09-24) ATT&CK ID check: drop technique IDs that do not exist
       in ATT&CK (the `mitre` collection), like the rule-id check (Change 9). Changes
       finished answers → its own run. Measure S4 and invented-ID counts.
