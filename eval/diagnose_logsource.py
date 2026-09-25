@@ -141,6 +141,17 @@ def top_category_and_product_right(row: dict) -> Optional[bool]:
                for f in ("category", "product"))
 
 
+def top_service_right(row: dict) -> Optional[bool]:
+    """Change 25's measure (fixed before its run): the top suggestion's service equals
+    the gold rule's, absent matching absent as in S3."""
+    suggestions = (row.get("pipeline") or {}).get("logsource_suggestions") or []
+    if not suggestions:
+        return None
+    gold = (row["scores"]["logsource"]["per_field"].get("service") or {}).get("gold")
+    service = _norm(suggestions[0].get("service"))
+    return (None if service in ("-", "none", "n/a", "null") else service) == _norm(gold)
+
+
 def top_suggestion_exact(row: dict) -> Optional[bool]:
     """S3 had the rule used the analysis stage's top suggestion verbatim (post-hoc)."""
     suggestions = (row.get("pipeline") or {}).get("logsource_suggestions") or []
@@ -258,6 +269,8 @@ def main(argv: list) -> int:
           f"  (top suggestion's service: {dict(Counter(_top_service(r) for r in rows if diagnose_case(r)))})")
     cp = sum(1 for r in rows if diagnose_case(r) and top_category_and_product_right(r))
     print(f"  top suggestion's category AND product right       : {cp} / {n}")
+    sv = sum(1 for r in rows if diagnose_case(r) and top_service_right(r))
+    print(f"\nChange 25 measure: top suggestion's service = gold's  : {sv} / {n}")
     return 0
 
 

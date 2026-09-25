@@ -199,3 +199,18 @@ def test_top_suggestion_category_and_product_agreement():
     assert top_category_and_product_right(
         _scored_row(gold, gold, top=("process_creation", "linux", None))) is False
     assert top_category_and_product_right(_scored_row(gold, gold)) is None
+
+
+# --------------------------------------------------------------------------
+# Change 25 (plan 2.2b), fixed before its run: does the analysis stage's top
+# suggestion carry the gold rule's service? (absent matches absent, as in S3)
+# --------------------------------------------------------------------------
+
+def test_top_suggestion_service_against_gold():
+    from eval.diagnose_logsource import top_service_right
+    gold = ("process_creation", "windows", None)
+    assert top_service_right(_scored_row(gold, gold, top=("process_creation", "windows", "sysmon"))) is False
+    assert top_service_right(_scored_row(gold, gold, top=("process_creation", "windows", None))) is True
+    sec = (None, "windows", "security")
+    assert top_service_right(_scored_row(sec, sec, top=(None, "Windows", "Security"))) is True
+    assert top_service_right(_scored_row(gold, gold)) is None

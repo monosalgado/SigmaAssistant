@@ -13,6 +13,7 @@ from backend.pipeline.base_stage import PipelineStage
 from backend.pipeline.stage_attack_vector import AttackVectorStage
 from backend.pipeline import prompts
 from backend.pipeline import domain_knowledge as dk
+from backend.pipeline.sigma_logsource import describe_suggestion
 
 
 # Top-level `id:` line. Anchored at column 0 so nested mapping keys are never
@@ -251,7 +252,7 @@ class GenerateStage(PipelineStage):
                 logsource_text += f"Primary recommendation: {primary}\n"
             for sug in logsource_info["suggestions"][:3]:
                 logsource_text += (
-                    f"- {sug.get('category', '?')}/{sug.get('product', '?')}/{sug.get('service', '?')} "
+                    f"- {describe_suggestion(sug)} "
                     f"(confidence: {sug.get('confidence', '?')}): {sug.get('reasoning', '')}\n"
                     f"  Fields: {', '.join(sug.get('relevant_fields', []))}\n"
                 )

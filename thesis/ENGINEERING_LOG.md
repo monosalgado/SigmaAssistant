@@ -2617,3 +2617,58 @@ p = 0.22; recorded because S2–S5 are computed only on rules that parse.
 ### Status
 Plan 2.2a done. Reference for the next step: this file. Next: 2.2b, the analysis
 suggestion's `service`.
+
+---
+
+## 2026-09-25 — Change 25 (plan 2.2b): a suggested log source with a category carries no service
+
+### Motivation
+The analysis stage's top suggestion carried a service in every case — `sysmon` 35 of 53 and
+`webserver` 10 after Change 22 — and it matched the human rule's service in **0 of 53**
+(`diagnose_logsource.py`, the measure added below). Source: the COMBINED_ANALYSIS prompt's
+reference table ("windows/sysmon", "linux-windows/apache-iis") and its only example
+(`"service": "sysmon"`). Consequence for plan step (c): a rule that followed the suggestion
+verbatim would score 0 of 53 on S3.
+
+### What SigmaHQ does (measured on the local corpus, 3,691 rules)
+| Rules | Count | Carry a service |
+|---|---|---|
+| with a category | 2,880 | **12** |
+| without a category | 811 | **792** (`windows`/`security` 168, `windows`/`system` 74, `aws`/`cloudtrail` 56, `linux`/`auditd` 53, …) |
+1,593 `process_creation` rules, none with a service; 82 `webserver` and 55 `proxy` rules,
+none with a product or service. `service: sysmon` appears in 4 rules, all without a
+category. In the 60-case sample, 52 gold rules have a category and no service; 5 have no
+category and a service (`security` 3, `http` 1, `sslvpnd` 1).
+
+### Design (the user's decision: "use service only when it doesn't have a category")
+| Decision | Why |
+|---|---|
+| A suggestion with a category → service removed, old value kept in `service_dropped` | Sigma's convention (12 exceptions in 2,880); the record lets the future assistant explain what it removed |
+| No category → the service stays | There it *is* the log source (792 of 811) |
+| No category and a (product, service) pair no SigmaHQ rule uses → `service_to_confirm` | User: when unsure, ask the analyst. Recorded only; shown to the analyst in Phase 3, **not** to the rule writer, so it cannot change the rules |
+| Known pairs from `data/sigma/rules` (73 pairs, committed as `backend/pipeline/sigma_known_services.json`, rebuilt by `scripts/build_sigma_known_services.py`) | The directory the retrieval index uses; `rules-emerging-threats` (the scored answers) is excluded — 8 pairs appear only there, e.g. `fortios`/`sslvpnd` |
+| In code, after the model answers — not a prompt edit | Changes exactly this field; a prompt edit could shift other answers (as Changes 9 and 22) |
+| The generation prompt shows each suggestion with only the fields present (`process_creation/windows`, not `…/None`) | Nothing to copy |
+Not changed: the prompt's table and example still say `sysmon` (the model may keep writing
+it; code removes it). Indirect effect, disclosed: the taxonomy retrieval query is built
+from the suggestion's fields, so it no longer contains "sysmon".
+
+### Verification
+Tests first, seen failing: **24 tests** (`tests/test_logsource_service.py`) — the rule
+itself, placeholders (`-`, `none`, `n/a`…) not counted as a category, case-insensitive
+matching, the input not modified, the analysis stage applying it, the generation prompt
+showing only present fields and no flags, the committed list holding 73 pairs and being
+reproducible from `data/sigma/rules` without the emerging-threats-only pairs. Plus 1 test
+for the new diagnosis measure. Full suite **288 passed**.
+
+### Measurement plan (fixed before the run)
+Same 60 cases; arm `p2b_service`, `eval/results/p2b_service60.jsonl`; compared paired with
+**`p2a_vocabulary60_r2.jsonl`** (the Phase 2 reference; runs are cumulative).
+- Primary: the top suggestion's service equals the gold rule's (`diagnose_logsource.py`,
+  "Change 25 measure") — **0 of 53** in the reference.
+- Secondary: S3 had the rule copied the top suggestion verbatim (0 of 53); S3 paired; the
+  2.1 buckets; how many suggestions are marked `service_to_confirm`.
+- Expected, stated before the run: little or no change in S3 — in the reference run every
+  rule with the right category and product already had the right service (11 of 11); the
+  rule writer mostly ignores the suggestion's service. The change matters for step (c) and
+  for what the analyst will see.

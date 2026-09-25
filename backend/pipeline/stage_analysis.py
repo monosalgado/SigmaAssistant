@@ -10,6 +10,10 @@ import json
 from backend.pipeline.base_stage import PipelineStage
 from backend.pipeline.stage_attack_vector import AttackVectorStage
 from backend.pipeline import prompts
+from backend.pipeline.sigma_logsource import load_known_services, normalise_suggestion
+
+# Loaded once: the (product, service) pairs SigmaHQ uses without a category (Change 25).
+_KNOWN_SERVICES = load_known_services()
 
 
 class AnalysisStage(PipelineStage):
@@ -86,7 +90,12 @@ class AnalysisStage(PipelineStage):
         ttp_mappings = result.get("ttp_mappings", [])
         context["ttp_mapping"] = {"mappings": ttp_mappings}
 
-        logsource_suggestions = result.get("logsource_suggestions", [])
+        # A suggestion with a category carries no service (Sigma's convention); an
+        # unknown service without a category is marked for the analyst to confirm.
+        logsource_suggestions = [
+            normalise_suggestion(s, _KNOWN_SERVICES) if isinstance(s, dict) else s
+            for s in result.get("logsource_suggestions", [])
+        ]
         logsource_primary = result.get("logsource_primary", "")
         context["logsource_suggestion"] = {
             "suggestions": logsource_suggestions,

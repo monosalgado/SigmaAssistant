@@ -169,8 +169,10 @@ and report it as a finding rather than keep tuning.
       length (16,384 tokens); a cut answer is retried, then recorded as the model's
       failure and measured with the case. 2.2a restarts from scratch on it
       (`p2a_vocabulary60_r2.jsonl`).
-- [ ] **2.2b** The analysis suggestion's `service` (44/57 `sysmon` in v2; 35/53 `sysmon`
+- [>] **2.2b** The analysis suggestion's `service` (44/57 `sysmon` in v2; 35/53 `sysmon`
       and 10 `webserver` after 2.2a). Measure against `p2a_vocabulary60_r2.jsonl`.
+      Change 25 (user's rule): service only when there is no category; an unknown one is
+      marked `service_to_confirm` for the analyst. Run `p2b_service60.jsonl`.
 - [ ] **2.2e** (user, 2026-09-24) ATT&CK ID check: drop technique IDs that do not exist
       in ATT&CK (the `mitre` collection), like the rule-id check (Change 9). Changes
       finished answers → its own run. Measure S4 and invented-ID counts.
@@ -199,6 +201,8 @@ Design: `thesis/ASSISTANT_DESIGN.md` (draft, still to be reviewed by the user).
 
 - [x] 3.0 Defect 13 fixed (`663f005`) — design step 1
 - [ ] **3.1** Report builder: a pure function from pipeline context to the report *(offline)*
+      Include (user, 2026-09-25): suggestions marked `service_to_confirm` (Change 25) are
+      shown for the analyst to confirm, with `service_dropped` explained.
 - [ ] **3.2** Split the orchestrator into analyse → checkpoint → generate, with the
       automated path unchanged *(offline)*
 - [ ] **3.3** Evidence quotes, with code checking that each quote is on the page. Measure.
@@ -394,4 +398,5 @@ so removing one is reversible; untracked and ignored files have no such safety n
 | 2026-09-24 | Keep Change 12 (whole source): token and time cost is not a concern — everything is local and unbilled; rule quality is the priority, and full context matters for it | user |
 | 2026-09-24 | Phase 2 order from 2.1: (a) one vocabulary, (b) the suggestion's service, (c) 2.2 precedence, (d) 2.3 web bias; 2.4 dropped | user |
 | 2026-09-24 | One 60-case run per Phase 2 change, so each change's effect can be attributed | user |
+| 2026-09-25 | Step (b): a log source with a category carries no service; without a category the service stays, unknown ones go to the analyst to confirm | user |
 | 2026-09-24 | Defect 19: bound every answer (Change 24), treat a cut answer as a model failure; restart the 2.2a run from scratch; add ATT&CK ID check (2.2e) and ≤ 10 techniques (2.2f) as their own steps | user |
