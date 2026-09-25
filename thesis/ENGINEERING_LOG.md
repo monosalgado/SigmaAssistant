@@ -2672,3 +2672,48 @@ Same 60 cases; arm `p2b_service`, `eval/results/p2b_service60.jsonl`; compared p
   rule with the right category and product already had the right service (11 of 11); the
   rule writer mostly ignores the suggestion's service. The change matters for step (c) and
   for what the analyst will see.
+
+---
+
+## 2026-09-25 — Change 25 measured (plan 2.2b)
+
+`eval/results/p2b_service60.jsonl`, arm `p2b_service`, code `3be14d0` (Changes 22 + 24 + 25),
+same 60 cases, 198.0 min, no relaunch, no manual step. **CITABLE**. Answers cut at the output
+limit: **6 calls in 4 cases, all in the analysis stage** (`9a2d8b3e` cut on all 3 attempts →
+the stage fell back to an empty analysis, the case was written and scored with 4 valid rules,
+as Change 24 designed; `ad7085ac`, `32b5db62`, `7b544661` rescued by the retry).
+
+### Pre-registered measures, against `p2a_vocabulary60_r2.jsonl` (paired)
+| Measure | Before | After | Note |
+|---|---|---|---|
+| **Primary: top suggestion's service = gold's** | **0 / 53** | **51 / 58** | the change's purpose |
+| S3 had the rule copied the top suggestion verbatim | 0 / 53 | **15 / 58** | the ceiling step (c) can aim at |
+| S3 exact, paired (n = 53) | 11 | 8 | 3 lost, 0 gained; p = 0.25 |
+| S1 valid first rule, paired (n = 60) | 53 | 58 | 5 gained, 0 lost; p = 0.062 |
+| S4 / S5, paired | 0.190 / 0.239 | 0.151 / 0.212 | −0.039 / −0.026, CIs span zero |
+| Seconds per case | 166.8 | 198.0 | +31, CI [−3, +69]; the loops (~350 s per cut attempt) |
+| Rules per case | 3.67 | 4.20 | +0.53, CI [+0.12, +1.03] |
+Buckets: overridden 3 → 6; right_suggested 18 → 18; followed_wrong 14 → 16. S3 per field:
+category 18/53 → 18/58, product 22/53 → 30/58, service 33/53 → 36/58.
+
+### The three S3 losses, inspected
+- `f8e9aa1c`, `7b544661`: the top suggestion was right both days (`process_creation/windows`);
+  today the rule writer wrote **`category: email`** — the attack-vector stage's telemetry was
+  "email gateway logs" — a category no SigmaHQ rule uses (non-Sigma categories 1 → 3:
+  `email` 2, `security` 1). The override pattern step (c) targets.
+- `9aa27839` (gold `process_creation/linux`): the suggestion said `windows` both days; yesterday
+  the rule writer corrected it to `linux`, today it followed `windows` and added `service: sshd`.
+- Nothing shows the service change caused these; with one run and p = 0.25 they are not
+  distinguishable from run-to-run variation. The expectation stated before the run ("little
+  or no change in S3") held within noise, in the unfavourable direction.
+
+### Finding: the analysis stage never proposes a log source without a category
+0 suggestions were marked `service_to_confirm`: the analysis stage suggested a category-based
+source every time. The 6 gold rules that are defined by a service (`windows`/`security` 3,
+`http`, `globalprotect`, `sslvpnd`) all got category suggestions (e.g. `process_creation/windows`
+for a Windows Security rule), so their service was removed — the 7 remaining service misses.
+Likely cause, not shown: the analysis prompt's reference table lists only category-based
+sources. Recorded in the plan's Inbox; not in the agreed order.
+
+### Status
+Plan 2.2b done. `p2b_service60.jsonl` is the reference for step (c).
