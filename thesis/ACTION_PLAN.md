@@ -181,7 +181,8 @@ and report it as a finding rather than keep tuning.
 - [ ] **2.2f** (user, 2026-09-24) At most 10 techniques in the analysis answer — enough
       for a rule; loosely related techniques add noise (user). Prompt change → its own
       run. Measure S4, loop rate (answers cut at the limit).
-- [ ] **2.2** (step c) Change: make the (suggested or confirmed) logsource an explicit
+- [>] **2.2** (step c) Change 26 (prompt precedence, nothing enforced — user: "I want them to
+      think"). Run `p2c_first_rule60.jsonl` vs `p2b_service60.jsonl`. Originally: make the (suggested or confirmed) logsource an explicit
       constraint in generation, checked after generation (defect 11); resolve the
       conflict with generation rule 2 ("initial access MANDATORY"). Measure.
 - [ ] **2.3** (step d) Change: remove the attack-vector prompt's web bias (21/48 non-web
@@ -405,5 +406,6 @@ so removing one is reversible; untracked and ignored files have no such safety n
 | 2026-09-24 | Keep Change 12 (whole source): token and time cost is not a concern — everything is local and unbilled; rule quality is the priority, and full context matters for it | user |
 | 2026-09-24 | Phase 2 order from 2.1: (a) one vocabulary, (b) the suggestion's service, (c) 2.2 precedence, (d) 2.3 web bias; 2.4 dropped | user |
 | 2026-09-24 | One 60-case run per Phase 2 change, so each change's effect can be attributed | user |
+| 2026-09-25 | No hardcoding to get results: the LLM stages decide; code validates against a spec and records. Step (c) is a prompt change with no enforcement | user |
 | 2026-09-25 | Step (b): a log source with a category carries no service; without a category the service stays, unknown ones go to the analyst to confirm | user |
 | 2026-09-24 | Defect 19: bound every answer (Change 24), treat a cut answer as a model failure; restart the 2.2a run from scratch; add ATT&CK ID check (2.2e) and ≤ 10 techniques (2.2f) as their own steps | user |

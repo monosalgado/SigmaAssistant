@@ -13,7 +13,7 @@ from backend.pipeline.base_stage import PipelineStage
 from backend.pipeline.stage_attack_vector import AttackVectorStage
 from backend.pipeline import prompts
 from backend.pipeline import domain_knowledge as dk
-from backend.pipeline.sigma_logsource import describe_suggestion
+from backend.pipeline.sigma_logsource import describe_suggestion, first_rule_logsource_block
 
 
 # Top-level `id:` line. Anchored at column 0 so nested mapping keys are never
@@ -265,6 +265,7 @@ class GenerateStage(PipelineStage):
         prompt = prompts.RULE_GENERATION.format(
             current_date=current_date,
             attack_vector_summary=attack_vector_summary,
+            first_rule_logsource=first_rule_logsource_block(logsource_info),
             payload_signatures=payload_signatures_text,
             incidental_blacklist=incidental_blacklist,
             attack_summary=attack_summary,

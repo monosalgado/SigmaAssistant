@@ -214,3 +214,18 @@ def test_top_suggestion_service_against_gold():
     sec = (None, "windows", "security")
     assert top_service_right(_scored_row(sec, sec, top=(None, "Windows", "Security"))) is True
     assert top_service_right(_scored_row(gold, gold)) is None
+
+
+# --------------------------------------------------------------------------
+# Change 26 (plan 2.2, step c), fixed before its run: does the FIRST rule use
+# the analysis stage's top suggestion? (category, product and service)
+# --------------------------------------------------------------------------
+
+def test_first_rule_follows_the_top_suggestion():
+    from eval.diagnose_logsource import first_rule_follows_top
+    pc = ("process_creation", "windows", None)
+    gold = ("webserver", None, None)
+    assert first_rule_follows_top(_scored_row(pc, gold, top=pc)) is True
+    assert first_rule_follows_top(_scored_row(pc, gold, top=("process_creation", "linux", None))) is False
+    assert first_rule_follows_top(_scored_row(("Process_Creation", "Windows", None), gold, top=pc)) is True
+    assert first_rule_follows_top(_scored_row(pc, gold)) is None

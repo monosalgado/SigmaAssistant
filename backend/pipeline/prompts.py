@@ -190,6 +190,9 @@ RULE_GENERATION = """You are an expert Sigma rule author. Generate detection rul
 ### Primary Attack Vector (anchor at least ONE rule on this)
 {attack_vector_summary}
 
+### Log Source for the First Rule (recommended by the analysis stage)
+{first_rule_logsource}
+
 ### Payload Signatures (strings/patterns a real attacker MUST produce — prefer these in detection)
 {payload_signatures}
 
@@ -231,8 +234,8 @@ RULE_GENERATION = """You are an expert Sigma rule author. Generate detection rul
 {user_query}
 
 ### Instructions
-1. Generate one or more Sigma rules that detect the described attack behavior.
-2. **At least one rule MUST target the PRIMARY ATTACK VECTOR** — i.e. match on the attacker-controlled input, entry point, or payload signatures. If the primary vector is a network request (HTTP/WebSocket/SMB/DNS), the logsource of that rule must match the telemetry where that traffic is observed. Initial-access detection is MANDATORY when an exploit is described.
+1. Generate one or more Sigma rules that detect the described attack behavior. **The FIRST rule should use the log source given in "Log Source for the First Rule" above**, unless the evidence above shows that this log source cannot observe the described behaviour; in that case choose the log source that can, and state the reason in that rule's `description`.
+2. **At least one rule MUST target the PRIMARY ATTACK VECTOR** — i.e. match on the attacker-controlled input, entry point, or payload signatures. If the primary vector is a network request (HTTP/WebSocket/SMB/DNS), the logsource of that rule must match the telemetry where that traffic is observed. Initial-access detection is MANDATORY when an exploit is described. This rule does not have to be the first rule.
 3. Prefer the supplied "Payload Signatures" as detection criteria over arbitrary strings from the text. These are the patterns a real attacker cannot avoid.
 4. **NEVER** use any string from "Strings that must NOT drive detection" as a detection criterion. Those are patch-analysis / researcher-workflow artifacts and would never fire in a real attack.
 5. **FIELD VALIDITY — DERIVE EVERY FIELD NAME FROM THE SIGMA LOGSOURCE TAXONOMY ABOVE.** Every field you put in `detection:` MUST be a field that the taxonomy block describes as existing for the chosen (category, product, service) triple. General rules that always apply:

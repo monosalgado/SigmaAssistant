@@ -72,6 +72,29 @@ def normalise_suggestion(suggestion: dict, known_services: set) -> dict:
     return out
 
 
+def first_rule_logsource_block(logsource_info: dict) -> str:
+    """The log source the generation prompt recommends for the first rule (Change 26).
+
+    The analyst's confirmation wins; otherwise the analysis stage's top suggestion, as
+    ready-to-use YAML with its confidence and reasoning, so the model can weigh it. It
+    is a recommendation: the prompt lets the model choose otherwise and explain why.
+    """
+    if logsource_info.get("user_confirmed") and logsource_info.get("primary_source"):
+        return (f"Log source confirmed by the analyst: {logsource_info['primary_source']}. "
+                "Use it for the first rule.")
+    suggestions = [s for s in logsource_info.get("suggestions") or [] if isinstance(s, dict)]
+    if not suggestions:
+        return ("No log source was recommended by the analysis; choose the one that best "
+                "observes the behaviour described.")
+    top = suggestions[0]
+    lines = ["logsource:"] + [f"    {f}: {str(top[f]).strip()}" for f in ("category", "product", "service")
+                              if _clean(top.get(f)) is not None]
+    why = f"Confidence: {top.get('confidence', '?')}."
+    if top.get("reasoning"):
+        why += f" Why: {top['reasoning']}"
+    return "\n".join(lines) + "\n" + why
+
+
 def describe_suggestion(suggestion: dict) -> str:
     """category/product/service for the generation prompt, only the fields present."""
     parts = [str(suggestion[f]).strip() for f in ("category", "product", "service")

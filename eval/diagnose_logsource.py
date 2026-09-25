@@ -152,6 +152,19 @@ def top_service_right(row: dict) -> Optional[bool]:
     return (None if service in ("-", "none", "n/a", "null") else service) == _norm(gold)
 
 
+def first_rule_follows_top(row: dict) -> Optional[bool]:
+    """Change 26's measure (fixed before its run): the first rule's log source equals
+    the analysis stage's top suggestion - category, product and service, absent
+    matching absent, placeholders ('-', 'none'…) counted as absent."""
+    suggestions = (row.get("pipeline") or {}).get("logsource_suggestions") or []
+    if not suggestions:
+        return None
+    clean = lambda v: None if _norm(v) in (None, "-", "none", "n/a", "null") else _norm(v)
+    per_field = row["scores"]["logsource"]["per_field"]
+    return all(clean((per_field.get(f) or {}).get("predicted")) == clean(suggestions[0].get(f))
+               for f in ("category", "product", "service"))
+
+
 def top_suggestion_exact(row: dict) -> Optional[bool]:
     """S3 had the rule used the analysis stage's top suggestion verbatim (post-hoc)."""
     suggestions = (row.get("pipeline") or {}).get("logsource_suggestions") or []
@@ -271,6 +284,8 @@ def main(argv: list) -> int:
     print(f"  top suggestion's category AND product right       : {cp} / {n}")
     sv = sum(1 for r in rows if diagnose_case(r) and top_service_right(r))
     print(f"\nChange 25 measure: top suggestion's service = gold's  : {sv} / {n}")
+    fr = sum(1 for r in rows if diagnose_case(r) and first_rule_follows_top(r))
+    print(f"Change 26 measure: first rule = top suggestion       : {fr} / {n}")
     return 0
 
 

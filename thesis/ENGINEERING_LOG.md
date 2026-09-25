@@ -2717,3 +2717,48 @@ sources. Recorded in the plan's Inbox; not in the agreed order.
 
 ### Status
 Plan 2.2b done. `p2b_service60.jsonl` is the reference for step (c).
+
+---
+
+## 2026-09-25 — Change 26 (plan 2.2, step c): the generation prompt recommends the analysis stage's log source for the first rule
+
+### Motivation
+Defect 11. After Change 25 the rule writer still overrode a correct top suggestion in 6 of 58
+cases (2 of them by inventing `category: email` from the attack vector's "email gateway logs"),
+and the first rule used the top suggestion's log source in only **24 of 58**. Mechanism
+(2.1): the prompt's attack-vector section says "anchor at least ONE rule on this"; rule 2 made
+an initial-access rule MANDATORY with "the telemetry where that traffic is observed"; the
+analysis suggestion sat inside the Sysmon reference block.
+
+### Principle (user, 2026-09-25)
+"I don't want things hardcoded … I want them to think." Code does **not** set, rewrite or
+reorder a rule's log source — a rule's detection fields belong to its log source, so forcing
+the field would raise S3 without a better rule. The model decides; code only records.
+
+### Design
+| Decision | Why |
+|---|---|
+| New prompt section right after the attack vector: "Log Source for the First Rule (recommended by the analysis stage)" — the top suggestion as YAML, with its confidence and reasoning | Precedence by position and form; the reasoning lets the model weigh it |
+| Instruction 1: the first rule *should* use it, **unless the evidence shows that log source cannot observe the behaviour** — then choose the one that can and **say why in the rule's `description`** | The model thinks; a departure is explained (also what the analyst will read) |
+| Rule 2 keeps the attack-vector rule, adds "This rule does not have to be the first rule" | The initial-access rule and the coverage check stay; the conflict with instruction 1 goes |
+| The analyst's confirmation (`user_confirmed`) replaces the suggestion in that section | The assistant flow |
+| Unchanged: the suggestion list in the reference block; the coverage check; no enforcement | One change |
+
+### Verification
+Tests first, seen failing: **10 tests** (`tests/test_first_rule_logsource.py`) — the block's
+YAML, confidence and reasoning; a category-less source keeps its service; internal flags not
+shown; the analyst's confirmation wins; no suggestion said plainly; the section sits between
+the attack vector and the payload signatures; instruction 1's escape clause and explanation;
+rule 2 not necessarily first; the generation stage's real prompt carries it. Plus 1 test for
+the new diagnosis measure. Full suite **298 passed**.
+
+### Measurement plan (fixed before the run)
+Same 60 cases; arm `p2c_first_rule`, `eval/results/p2c_first_rule60.jsonl`; paired against
+**`p2b_service60.jsonl`**.
+- Primary: the first rule's log source equals the top suggestion (`diagnose_logsource.py`,
+  "Change 26 measure") — **24 of 58** in the reference.
+- Secondary: S3 paired (reference 8 of 58; the ceiling if the first rule always followed the
+  suggestion is 15 of 58); the overridden bucket (6); S1, S4, S5; rules per case; how many
+  rules state a reason for departing (read by hand, not scored).
+- Expectation, stated before the run: compliance up; S3 up at most to ~15; the web bias
+  remains (the analysis suggests web in 10 cases) — step (d).
