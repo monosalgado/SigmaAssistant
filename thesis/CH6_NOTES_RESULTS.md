@@ -230,6 +230,15 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
     different words for the same log source.
   - `[DISCLOSE]` S1 fell 57 → 53 (p = 0.22): 3 malformed YAML, 2 generation-JSON parse
     failures (defect 5); none involves the output limit.
+- `[MEASURED] 2026-09-25` **Change 25 (no service next to a category), measured** against the
+  Change 22 run (`p2b_service60.jsonl`, CITABLE, measures fixed before the run):
+  - the suggestion's service matches the human rule **0/53 → 51/58**; S3 had the rule copied the
+    suggestion **0/53 → 15/58** — the prerequisite for step (c);
+  - S3 paired 11 → 8 of 53 (3 lost, p = 0.25), stated expectation "little change" held within
+    noise; 2 of the 3 losses are the rule writer inventing `category: email` over a correct
+    suggestion — the override step (c) targets.
+  - Finding: the analysis stage never suggests a log source *without* a category; the 6 gold
+    rules defined by a service (e.g. Windows Security) are always missed there.
 
 ### 6.4.5 A field invented instead of generated — rule identifiers (defect 10) `[MEASURED]`
 - The model emitted UUID-shaped ids with non-hex characters

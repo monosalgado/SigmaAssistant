@@ -169,10 +169,12 @@ and report it as a finding rather than keep tuning.
       length (16,384 tokens); a cut answer is retried, then recorded as the model's
       failure and measured with the case. 2.2a restarts from scratch on it
       (`p2a_vocabulary60_r2.jsonl`).
-- [>] **2.2b** The analysis suggestion's `service` (44/57 `sysmon` in v2; 35/53 `sysmon`
+- [x] **2.2b** The analysis suggestion's `service` (44/57 `sysmon` in v2; 35/53 `sysmon`
       and 10 `webserver` after 2.2a). Measure against `p2a_vocabulary60_r2.jsonl`.
       Change 25 (user's rule): service only when there is no category; an unknown one is
       marked `service_to_confirm` for the analyst. Run `p2b_service60.jsonl`.
+      **Done 2026-09-25** (CITABLE): suggestion's service right 0/53 → 51/58; S3-if-copied
+      0 → 15/58; S3 paired 11 → 8 of 53 (3 lost, p = 0.25; 2 are rules written as `email`).
 - [ ] **2.2e** (user, 2026-09-24) ATT&CK ID check: drop technique IDs that do not exist
       in ATT&CK (the `mitre` collection), like the rule-id check (Change 9). Changes
       finished answers → its own run. Measure S4 and invented-ID counts.
@@ -298,6 +300,11 @@ is a decision, not a default.
   stops runs until the timeout — one hypothesis for baseline v2's hung analysis
   call. An output cap is a pipeline change (it could cut long legitimate answers),
   so it needs its own measurement.
+- The analysis stage never suggests a log source without a category (0 `service_to_confirm`
+  in 60 cases); the 6 gold rules defined by a service (Windows Security ×3, …) always get a
+  category suggestion. Its reference table lists only category-based sources. (Change 25 run)
+- Answers that loop are all in the analysis stage so far (6 of 6 cut calls, 2026-09-25).
+  Supports 2.2f (at most 10 techniques).
 - **The Spark's Ollama is shared** with another user's application (seen 2026-09-24:
   4 clients on one server). Requests compete; two runs stalled 40+ min. Options: the
   preflight reports other clients connected to Ollama before a run starts (a small
