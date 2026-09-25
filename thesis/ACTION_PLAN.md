@@ -4,7 +4,7 @@ Created 2026-09-23. **This file decides what gets worked on.** Anything not in t
 current phase goes to the Inbox or the Parking lot, not into the code.
 
 **Current phase: 2 — Fix the logsource failure.** Phase 1 complete 2026-09-24
-(its Inbox triage is due, with the user). Phase 0 runs in parallel (it needs the
+(its Inbox triaged with the user 2026-09-25). Phase 0 runs in parallel (it needs the
 professor, not the code).
 
 ---
@@ -175,23 +175,36 @@ and report it as a finding rather than keep tuning.
       marked `service_to_confirm` for the analyst. Run `p2b_service60.jsonl`.
       **Done 2026-09-25** (CITABLE): suggestion's service right 0/53 → 51/58; S3-if-copied
       0 → 15/58; S3 paired 11 → 8 of 53 (3 lost, p = 0.25; 2 are rules written as `email`).
-- [ ] **2.2e** (user, 2026-09-24) ATT&CK ID check: drop technique IDs that do not exist
-      in ATT&CK (the `mitre` collection), like the rule-id check (Change 9). Changes
-      finished answers → its own run. Measure S4 and invented-ID counts.
-- [ ] **2.2f** (user, 2026-09-24) At most 10 techniques in the analysis answer — enough
-      for a rule; loosely related techniques add noise (user). Prompt change → its own
-      run. Measure S4, loop rate (answers cut at the limit).
 - [>] **2.2** (step c) Change 26 (prompt precedence, nothing enforced — user: "I want them to
       think"). Run `p2c_first_rule60.jsonl` vs `p2b_service60.jsonl`. Originally: make the (suggested or confirmed) logsource an explicit
       constraint in generation, checked after generation (defect 11); resolve the
       conflict with generation rule 2 ("initial access MANDATORY"). Measure.
 - [ ] **2.3** (step d) Change: remove the attack-vector prompt's web bias (21/48 non-web
-      cases labelled web-server telemetry; 16/46 in v2). Measure with the probe, then
-      the harness.
+      cases labelled web-server telemetry; 16/46 in v2; 18/46 after Change 22). Measure with
+      the probe, then the harness. Includes (Inbox 2026-09-25): its worked examples were
+      written from specific past cases (Example A is a real saved Citrix rule), and the stage
+      still copies example text into answers (`/saml/login` on a rootkit report) — count that
+      before and after, with a committed script.
+- [ ] **2.5** (user: important) The rule writer invents categories Sigma does not have
+      (`email`, `security`: 3 in the Change 25 run). The review stage flags a category not in
+      Sigma's taxonomy and the regeneration feedback asks the model to fix it — validation
+      against the spec; the model does the fixing. Its own run.
+- [ ] **2.6** The analysis stage never suggests a log source without a category, so the 6 gold
+      rules defined by a service (Windows Security ×3, …) are always missed. Give its prompt a
+      complete reference table (service-based sources too; no "windows/sysmon"). Prompt
+      change: the model chooses. Its own run.
+- [ ] **2.7** (user, was 2.2e) ATT&CK ID check: drop technique IDs that do not exist in
+      ATT&CK (the `mitre` collection), like the rule-id check (Change 9). Changes finished
+      answers → its own run. Measure S4 and invented-ID counts.
+- [ ] **2.8** (user, was 2.2f) The analysis lists **the 10 most relevant techniques** at most.
+      Data (Change 25 run): gold rules use 1 technique (28 of 40), at most 5; the analysis lists
+      a median of 6, more than 10 in 14 of 58 cases, 108 in one; of the gold techniques it
+      finds (24), 21 are in its first 10 but only 15 in its first 5. All 6 looping answers
+      were in the analysis stage. Prompt change → its own run. Measure S4 and answers cut.
 - [-] **2.4** Strip page boilerplate (defect 9) — dropped 2026-09-24: 2.1 showed
       nothing pointing to it.
 
-2.1 decides the order of 2.2–2.4.
+Order agreed with the user (2026-09-24/25): (c) 2.2 → (d) 2.3 → 2.5 → 2.6 → 2.7 → 2.8.
 
 **Exit criteria:** S3 significantly above the null baseline, or the time-box is
 spent and the result is written up as a finding.
@@ -209,6 +222,9 @@ Design: `thesis/ASSISTANT_DESIGN.md` (draft, still to be reviewed by the user).
 - [ ] **3.2** Split the orchestrator into analyse → checkpoint → generate, with the
       automated path unchanged *(offline)*
 - [ ] **3.3** Evidence quotes, with code checking that each quote is on the page. Measure.
+      User (2026-09-25): paraphrase is fine if it is faithful to the page. So evidence is
+      shown either way; code marks the pieces found word for word on the page as
+      "verified". Only ~26% of quotes are verbatim today.
 - [ ] **3.4** API endpoints and saved state for the checkpoint
 - [ ] **3.5** Validate edited rules (new endpoint; `PUT /rules/{id}` validates too)
 - [ ] **3.6** Regression: automated path against baseline v2, within run-to-run noise
@@ -245,6 +261,8 @@ Which of these run depends on the contributions agreed in Phase 0.
       on the Spark (GlobalProtect only), detonate and export EVTX in the lab
       (OpenVPN only), score with Zircolite locally (no VPN). Both VPNs at once
       only if rules were generated live during an attack
+      Note (Inbox 2026-09-25): SigmaHQ's `regression_data` has 138 EVTX files, but for only
+      2 of our 437 emerging-threat rules and 0 of the 60-case sample — detonation needs the lab.
 
 Run budget has to be planned before this phase. Measured: one 60-case run took
 1 h 42 min before Change 12, and **~2 h 50 min of compute after it** (baseline v2,
@@ -268,51 +286,12 @@ is a decision, not a default.
 
 *(one line each; triaged at the end of the current phase)*
 
-- Only ~26% of `derived_from` quotes are verbatim — the model paraphrases what it
-  cites. Relevant to 3.3.
-- 2 cases of the first baseline produced no rule (86-char non-YAML reply); cause
-  unknown until 1.1 keeps the response text.
-- `sigma.nasbench.dev` ("Phoenix") mirrors all SigmaHQ rules, including the 457
-  emerging-threat rules that are our gold answers. **Must be on any web-search
-  or link-following blocklist** (gold leakage).
-- Phoenix lists Atomic Red Team mappings and EVTX downloads. SigmaHQ's own
-  `regression_data` has 138 EVTX files, but only **2 of our 437** emerging-threat
-  rules and **0 of the 60-case sample** have one. So ready-made EVTX would support
-  detonation (5.6) only on a different rule set, or next to lab runs.
-- The attack-vector prompt's worked examples were written from specific past
-  cases: `data/saved_rules.json` holds a real "CVE-2026-3055 Citrix NetScaler SAML
-  … NSC_TASS" rule, which is Example A. Examples this specific are what the model
-  copied (defect 15). Relevant to 2.3.
-- The PoC stage's GitHub link pattern has no dot in the branch/tag part, so links
-  to tags like `v1.2` are never fetched (pinned by a test, not changed).
-- The Foundation-Sec probe (CH6 §6.5) ran from uncommitted scratch scripts; rerun it from a
-  committed script before citing it.
-- `.env.example` lacks `ALLOWED_ORIGINS`, which `backend/main.py` reads. Trivial;
-  fold into H5.
-- ~~The v1 → v2 paired tests ran from a scratch script.~~ Done 2026-09-24:
-  `eval/compare_runs.py` (Change 23, user-approved) reproduces them.
-- Example copying persists in the full pipeline: in baseline v2 a Windows
-  kernel-rootkit case got Example A's `/saml/login`. Count it over v2's recorded
-  attack vectors with the probe's markers. Relevant to 2.1/2.3.
-- A silent connection costs up to ~30 min before the stop rule sees it (OpenAI
-  client defaults: 600 s per request × 3 attempts). A shorter timeout for local
-  runs would lose less time; the stop rule already keeps the data clean.
-- The Ollama client sets no output limit (`max_tokens`): a generation that never
-  stops runs until the timeout — one hypothesis for baseline v2's hung analysis
-  call. An output cap is a pipeline change (it could cut long legitimate answers),
-  so it needs its own measurement.
-- The analysis stage never suggests a log source without a category (0 `service_to_confirm`
-  in 60 cases); the 6 gold rules defined by a service (Windows Security ×3, …) always get a
-  category suggestion. Its reference table lists only category-based sources. (Change 25 run)
-- Answers that loop are all in the analysis stage so far (6 of 6 cut calls, 2026-09-25).
-  Supports 2.2f (at most 10 techniques).
-- **The Spark's Ollama is shared** with another user's application (seen 2026-09-24:
-  4 clients on one server). Requests compete; two runs stalled 40+ min. Options: the
-  preflight reports other clients connected to Ollama before a run starts (a small
-  tool change), and/or the user agrees run times with the other user.
-- GlobalProtect's auto-restore ends at "select a gateway … manually", so a VPN drop
-  needs the user; the relaunch wrapper gives up after ~12 min. Options: wait longer,
-  or the user sets a default gateway in the app (their setting, not ours).
+*(Empty. Triaged with the user 2026-09-25 — see the Decisions log. Closed: the paired-test
+script and the output limit (done); the no-rule cases (→ defect 5); the connection timeout
+(appropriate since Change 24); the shared Spark and the VPN reconnect (one-off, ignored);
+Foundation-Sec (out of the thesis entirely); the PoC dotted-tag quirk (known limitation,
+CH7 item 27); `.env.example` (already done in H5a); sigma.nasbench.dev (already in the
+web-search entry). Scheduled: 2.3, 2.5, 2.6, 2.8, 3.3, 5.6 notes, H7.)*
 
 ## Security — do first (the user's action)
 
@@ -354,6 +333,9 @@ so removing one is reversible; untracked and ignored files have no such safety n
       `run_mac.sh` into the README (the script also binds the server to
       `0.0.0.0` — fixed in H5a). Also: `.env.example` still says `gemini` is the only
       supported `LLM_PROVIDER`.
+- [ ] **H7** (user approved 2026-09-25) Delete the unused `LOG_SOURCE_SUGGESTION` prompt in
+      `backend/pipeline/prompts.py` (nothing calls it; it carries its own "sysmon" table).
+      **After** the step (c) run finishes — no code changes during a run.
 - [x] **H6** Decide in Phase 3: `backend/pipeline/schemas.py` is imported by
       nothing, but the report's data contract may reuse it. **Done: removed** — it had
       drifted (8 declared fields vs 15 real, no attack-vector model).
@@ -368,7 +350,9 @@ so removing one is reversible; untracked and ignored files have no such safety n
   evaluation, and prompt-injection handling. Best done after Phase 3, as its own
   evaluation arm.
 - Defects 4 (substring coverage check), 5 (`json_mode` on generation), 6 (dead
-  `fast` tier) — unless Phase 2 data shows they matter.
+  `fast` tier) — unless Phase 2 data shows they matter. Evidence for 5 so far: every
+  no-rule case since Change 15 is the generation JSON failing to parse ("Invalid control
+  character", "Invalid \\escape"): 2 cases in the Change 22 run. Reconsider after Phase 2.
 - S6 backend compilability.
 - **Platform and SIEM/EDR queries** (user, 2026-09-24; Phase 0 option D). What
   exists: the review stage already converts every rule with one pySigma backend,
@@ -406,6 +390,7 @@ so removing one is reversible; untracked and ignored files have no such safety n
 | 2026-09-24 | Keep Change 12 (whole source): token and time cost is not a concern — everything is local and unbilled; rule quality is the priority, and full context matters for it | user |
 | 2026-09-24 | Phase 2 order from 2.1: (a) one vocabulary, (b) the suggestion's service, (c) 2.2 precedence, (d) 2.3 web bias; 2.4 dropped | user |
 | 2026-09-24 | One 60-case run per Phase 2 change, so each change's effect can be attributed | user |
+| 2026-09-25 | Inbox triage: 2.5 (invented categories) and 2.6 (complete reference table) added after (d); order (d) → 2.5 → 2.6 → ATT&CK ID check → 10 most relevant techniques; Foundation-Sec out of the thesis; paraphrased evidence is fine; delete the unused suggestion prompt | user |
 | 2026-09-25 | No hardcoding to get results: the LLM stages decide; code validates against a spec and records. Step (c) is a prompt change with no enforcement | user |
 | 2026-09-25 | Step (b): a log source with a category carries no service; without a category the service stays, unknown ones go to the analyst to confirm | user |
 | 2026-09-24 | Defect 19: bound every answer (Change 24), treat a cut answer as a model failure; restart the 2.2a run from scratch; add ATT&CK ID check (2.2e) and ≤ 10 techniques (2.2f) as their own steps | user |

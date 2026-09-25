@@ -84,7 +84,7 @@ limitation in the log belongs here too.
 21. **The server's context size is not set by the code.** It is 262,144 on the Spark
     today and the preflight checks it is ≥ 32k before every run; a different server could
     truncate prompts silently. (Changes 12, 20)
-22. **The Foundation-Sec result is narrow**: base model only, prompts designed for an
+22. ~~Out of the thesis (user, 2026-09-25) — kept so item numbers stay stable.~~ **The Foundation-Sec result is narrow**: base model only, prompts designed for an
     instruction model, 3 cases, scripts not committed. Not evidence about the Instruct
     model. (CH6 §6.5)
 

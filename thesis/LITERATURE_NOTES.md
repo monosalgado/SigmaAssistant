@@ -67,7 +67,7 @@ Moved into the repository from the assistant's private notes on 2026-09-23.
 
 ## Small models and fine-tuning — for Chapter 7's "why no fine-tuning"
 
-- **Foundation-Sec-8B** (Cisco Foundation AI): base arXiv 2504.21039, Instruct
+- *(Not used in the thesis — user, 2026-09-25.)* **Foundation-Sec-8B** (Cisco Foundation AI): base arXiv 2504.21039, Instruct
   2508.01059, Reasoning 2601.21051. Llama-3.1-8B + ~5.1B tokens of security text.
   *Update 2026-09-23:* both base and Instruct document a **4,096-token** sequence length;
   61% of this pipeline's prompts exceed it; the installed base model could not do the

@@ -311,6 +311,8 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
 
 ## 6.5 A negative result — the security-pretrained model (contribution 3, dropped) `[MEASURED] 2026-09-23`
 
+> **Not used in the thesis** (user, 2026-09-25: "We are not going to use Foundation-Sec at all"). Kept as history only; do not write it up.
+
 - The installed `foundation-sec:8b` is the **base** model (completion only, no chat
   template), not Instruct. On the attack-vector stage (3 real cases, the pipeline's own
   prompt): via the chat endpoint it returned only `<|im_end|>`; via raw completion,
