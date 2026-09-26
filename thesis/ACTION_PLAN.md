@@ -191,16 +191,15 @@ and report it as a finding rather than keep tuning.
       written from specific past cases (Example A is a real saved Citrix rule), and the stage
       still copies example text into answers (`/saml/login` on a rootkit report) — count that
       before and after, with a committed script.
-- [ ] **2.5** (user: important) The rule writer invents categories Sigma does not have
-      (`email`, `security`: 3 in the Change 25 run). The review stage flags a category not in
-      Sigma's taxonomy and the regeneration feedback asks the model to fix it — validation
-      against the spec; the model does the fixing. Its own run.
-- [ ] **2.6** The analysis stage never suggests a log source without a category, so the 6 gold
+- [ ] **2.6** (next after d) The analysis stage never suggests a log source without a category, so the 6 gold
       rules defined by a service (Windows Security ×3, …) are always missed. Give its prompt a
       complete reference table (service-based sources too; no "windows/sysmon"). Prompt
       change: the model chooses. Its own run.
       Also (Change 26 run): the table's "linux-windows/apache-iis" cell is copied into the
       web suggestions' `product` (5 of 12 departures); no gold web rule has a product.
+      Why next (2026-09-26, step c run): of the 43 first rules that miss S3, 6 fail only on the
+      product — 3 carry "linux-windows/apache-iis", 1 "iis" (gold web rules have none) — and
+      the 5 gold rules defined by a service are always missed. The most likely step to move S3.
 - [ ] **2.7** (user, was 2.2e) ATT&CK ID check: drop technique IDs that do not exist in
       ATT&CK (the `mitre` collection), like the rule-id check (Change 9). Changes finished
       answers → its own run. Measure S4 and invented-ID counts.
@@ -209,10 +208,13 @@ and report it as a finding rather than keep tuning.
       a median of 6, more than 10 in 14 of 58 cases, 108 in one; of the gold techniques it
       finds (24), 21 are in its first 10 but only 15 in its first 5. All 6 looping answers
       were in the analysis stage. Prompt change → its own run. Measure S4 and answers cut.
+- [-] **2.5** Moved to Phase 3 (3.5) on 2026-09-26 — see there. Invented categories are ~2% of
+      rules but 0 first rules after Change 26, so they no longer affect S3.
 - [-] **2.4** Strip page boilerplate (defect 9) — dropped 2026-09-24: 2.1 showed
       nothing pointing to it.
 
-Order agreed with the user (2026-09-24/25): (c) 2.2 → (d) 2.3 → 2.5 → 2.6 → 2.7 → 2.8.
+Order agreed with the user (2026-09-24/25, revised 2026-09-26): (c) 2.2 → (d) 2.3 → 2.6 → 2.7 → 2.8;
+2.5 moved to Phase 3.
 
 **Exit test (built 2026-09-26, `eval/summarise.py`):** exact binomial, one-sided, alpha 0.05,
 against 0.173 — applied **once, to the final Phase 2 run** (pre-registered). Descriptive so far:
@@ -238,6 +240,9 @@ Design: `thesis/ASSISTANT_DESIGN.md` (draft, still to be reviewed by the user).
       "verified". Only ~26% of quotes are verbatim today.
 - [ ] **3.4** API endpoints and saved state for the checkpoint
 - [ ] **3.5** Validate edited rules (new endpoint; `PUT /rules/{id}` validates too)
+      Includes former 2.5 (user: important): flag a logsource category that does not exist in
+      Sigma (`email`, `security`, `network`: 4 of 237 rules in the step (c) run, none first) and
+      ask the model to fix it — the same check for generated and analyst-edited rules.
 - [ ] **3.6** Regression: automated path against baseline v2, within run-to-run noise
 
 Decisions needed before 3.4: where the checkpoint state is stored; whether "ask the
@@ -401,6 +406,7 @@ so removing one is reversible; untracked and ignored files have no such safety n
 | 2026-09-24 | Keep Change 12 (whole source): token and time cost is not a concern — everything is local and unbilled; rule quality is the priority, and full context matters for it | user |
 | 2026-09-24 | Phase 2 order from 2.1: (a) one vocabulary, (b) the suggestion's service, (c) 2.2 precedence, (d) 2.3 web bias; 2.4 dropped | user |
 | 2026-09-24 | One 60-case run per Phase 2 change, so each change's effect can be attributed | user |
+| 2026-09-26 | Phase 2 reordered: after (d), 2.6 (reference table) next — most likely to move S3; 2.5 (invented categories) moved to Phase 3.5 as a quality guard for generated and edited rules | user |
 | 2026-09-25 | Inbox triage: 2.5 (invented categories) and 2.6 (complete reference table) added after (d); order (d) → 2.5 → 2.6 → ATT&CK ID check → 10 most relevant techniques; Foundation-Sec out of the thesis; paraphrased evidence is fine; delete the unused suggestion prompt | user |
 | 2026-09-25 | No hardcoding to get results: the LLM stages decide; code validates against a spec and records. Step (c) is a prompt change with no enforcement | user |
 | 2026-09-25 | Step (b): a log source with a category carries no service; without a category the service stays, unknown ones go to the analyst to confirm | user |
