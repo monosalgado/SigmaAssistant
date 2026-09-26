@@ -161,9 +161,21 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
 - Why the examples were copyable: the worked examples were written from specific past
   cases — `data/saved_rules.json` holds the real "CVE-2026-3055 Citrix NetScaler SAML …
   NSC_TASS" rule the SAML example came from.
-- Log: defect-15 measurement entry and Change 12 (`ac725e1`, `f9b64f1`).
+- `[MEASURED] 2026-09-26` **Replacing the example moved the copying** (Change 27;
+  `eval/count_example_copies.py`, committed and run on the reference before the run): the old
+  SAML example's text in the vector itself **4 → 0**; the new email/ISO/LNK example's text
+  **0 → 2** — the Qakbot and Emotet-LNK reports received its initial-access sentence word for
+  word and its invented `qx7loader.dll` / `QxUpdate`. Total in the vector itself 4 → 2.
+- `[MEASURED — one-off search, not a committed measure]` The copied names **reach the
+  generated rules**: the new example's names in the rules of those 2 cases; the old
+  example's strings in the rules of 4 cases in the reference run. Detection strings for
+  files that do not exist; S3 cannot see them (both new cases had the right log source).
+- For the thesis: with this model, a concrete worked example is copied into reports that
+  resemble it. Which example is copied depends on which reports look like it; changing the
+  example does not remove the behaviour. Defect 15 stays open (options in the plan).
+- Log: defect-15 measurement entry and Change 12 (`ac725e1`, `f9b64f1`); "Change 27 measured".
 
-### 6.4.3 A bias the window did not fix — web telemetry for host rules `[MEASURED] 2026-09-23`, open
+### 6.4.3 A bias the window did not fix — web telemetry for host rules `[MEASURED] 2026-09-23`, reduced 2026-09-26 (Change 27)
 - After Change 12, the attack-vector stage still names `webserver_access_log` as primary
   telemetry for **21 of 48** cases whose gold rule is not a web or proxy rule (23 before;
   p = 0.69, unchanged).
@@ -175,9 +187,26 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
   same 16 of 46. (Different run and denominator from the 21/48 above; not directly
   comparable.) The bias reaches the rule — see §6.4.4.
 - `[MEASURED] 2026-09-24` After Change 22 the bias flows through real category names:
-  attack-vector web 18 of 46 non-web cases (unchanged stage), **analysis top suggestion web
+  attack-vector web 18 of 44 non-web cases (unchanged stage; first written "of 46" — corrected
+  2026-09-26, log "Correction: two … denominators"), **analysis top suggestion web
   4 → 11**, rule web 18. Fixing the vocabulary made the bias visible; it now has to be fixed
   at its source (plan 2.3, step d).
+- `[MEASURED] 2026-09-26` **Change 27 (examples rebalanced, `primary_telemetry` redefined as
+  where the described activity is seen), measured** against the Change 26 run
+  (`p2d_web_bias60.jsonl`, CITABLE, measures fixed before the run):
+  - attack-vector web on non-web gold **18/48 → 14/45** (primary); first rule web
+    **16/48 → 8/45**; analysis top suggestion web 10/48 → 7/45;
+  - **S3 13 → 13 of 54** (2 gained, 2 lost, p = 1.0); S1, S4, S5 no detectable change; no
+    web gold case lost its web label (the risk stated before the run).
+  - `[DISCLOSE]` These counts are over cases whose first rule parses, so the denominators
+    differ between runs. Read case by case, only 4 cases changed web ↔ non-web (3 off web,
+    1 on); the rest of the drop is two web-labelled cases whose first rule stopped parsing.
+    Not tested paired.
+  - The 2 S3 gains are relabelled cases (web → `process_creation`); the 2 losses are the new
+    definition read reasonably ("a dropper drops a DLL" → `file_event`) where the gold rule
+    is `process_creation` (read by hand).
+  - For the thesis: **the web bias was real and is reduced, but it no longer limited S3.**
+    Status: reduced; the remaining S3 limit is the analysis suggestion (plan 2.6).
 
 ### 6.4.4 A correct suggestion overridden — generation ignores the logsource suggestion (defect 11), open, measured 2026-09-24
 - `[MEASURED]` Observed live (Bumblebee report, 2026-09-13): the analysis stage suggested

@@ -158,6 +158,18 @@ limitation in the log belongs here too.
 39. **Model failures are scored, infrastructure failures are not** (Change 24's rule). A case
     whose answer is cut on every attempt is written with the stage's empty fallback and
     scored — the pipeline's real behaviour. The count is reported with every result. (Change 24)
+40. **Worked examples are copied, whichever examples they are** (Change 27). Replacing the
+    web example with an email-malware one removed the old example's text from the vectors
+    (4 → 0) but the new one was copied into 2 look-alike reports, and its invented file names
+    reached the generated rules. S3 does not detect this (both cases had the right log
+    source); the example-copy count is a lower bound (item 30), and copies in the rules were
+    found by a one-off search, not a committed measure. Defect 15 is reduced, not fixed.
+    ("Change 27 measured")
+41. **Some diagnosis counts compare different case sets.** The web-label counts are taken
+    over cases whose first rule parses, so each run has its own denominator; they are
+    reported as counts, not tested. Two denominators were once copied from an earlier run
+    instead of the tool's output (numerators right, no conclusion changed; corrected in the
+    log). (Chapter 5, "Comparing two runs"; log correction 2026-09-26)
 
 ---
 

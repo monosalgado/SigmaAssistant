@@ -503,6 +503,7 @@ Wilson interval, printed by `eval/summarise.py` under S3 (with the smallest k th
 p < 0.05). Standard library; 10 tests anchored to scipy values. `[DISCLOSE]` Pre-registered to be
 applied **once**, to the final Phase 2 run; earlier values are descriptive. The null is treated
 as fixed. Descriptive after Change 26: 14/57, CI 0.152–0.371, p = 0.104 — not yet above chance.
+After Change 27: 13/56, CI 0.141–0.358, p = 0.160.
 
 ### Comparing two runs — paired, not unpaired `[DESIGN]` (added 2026-09-24)
 Two runs on the same cases must be compared **case by case**: each metric only on cases
@@ -513,6 +514,13 @@ mean rose 0.123 → 0.175, but on the same 35 cases the difference was +0.014, C
 *which* rules parse changes *which* cases are averaged.
 Tool: `eval/compare_runs.py <A> <B>` (Change 23) — standard library only; 11 tests,
 including one that reproduces the v1 → v2 comparison from the committed result files.
+`[DISCLOSE]` (added 2026-09-26) **The same trap applies to counts.** The diagnosis tool's
+counts ("web labels when the gold rule is not a web rule") are over cases whose first rule
+parses, so their denominators differ between runs. In the Change 27 run the primary count
+fell 18/48 → 14/45, but only 4 cases changed label; 2 of the 4-case drop were cases leaving
+the count. Such counts are reported as counts, not tested; a paired, all-rows version would
+need its own committed tool. Every denominator is quoted from the tool's output (two were
+once copied from an earlier run — log, "Correction: two … denominators").
 
 ## 5.7 Status — what exists vs. what is claimed (2026-09-24)
 

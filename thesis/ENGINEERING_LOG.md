@@ -2930,3 +2930,108 @@ the summary fields. Full suite **322 passed**.
 | Change 26 (`p2c…`) | 14/57 | 0.152–0.371 | 0.104 | ≥ 16/57 |
 S3 is **not yet shown to be above chance**; after Change 26 it is two first rules short of the
 threshold at n = 57.
+
+---
+
+## 2026-09-26 — Correction: two "non-web gold" denominators were copied, not read from the tool
+
+Found while measuring Change 27. `diagnose_logsource.py` counts "web labels when the gold rule
+is not a web rule" over the cases whose **first rule parses** (S3 is scored), so the
+denominator changes from run to run. Two entries reused baseline v2's figure (46) instead of
+the tool's output:
+| Entry | Written | Tool output |
+|---|---|---|
+| "Change 22 measured" — "non-web gold cases: v2 46, now 46" | now 46 | **now 44** (`p2a_vocabulary60_r2.jsonl`) |
+| "Change 27 … (code done)" — reference "18 of 46" | 18 of 46 | **18 of 48** (`p2c_first_rule60.jsonl`) |
+The numerators (16, 18, 11, 18) are right, and no conclusion changes. The same two figures are
+corrected in the plan (2.2a, 2.3) and the Chapter 6 notes (§6.4.3). From now on, every
+denominator is quoted from the tool's output.
+
+---
+
+## 2026-09-26 — Change 27 measured (plan 2.3, step d)
+
+`eval/results/p2d_web_bias60.jsonl`, arm `p2d_web_bias`, code `17c448c` (Changes 22 + 24 + 25 +
+26 + 27), same 60 cases, 184.8 min, no relaunch, no manual step. No pipeline or harness file
+changed during the run (`git diff 17c448c HEAD -- backend/ eval/run_eval.py
+eval/run_resilient.py` is empty). **CITABLE.** Answers cut at the output limit: 6 calls in 2
+cases, **both in the analysis stage** (`9a2d8b3e` again, 3 of 3; `a35c97c8`, 3 of 3 — its first
+rule still scored S3 without a suggestion).
+
+### Pre-registered measures, against `p2c_first_rule60.jsonl`
+| Measure | Before | After | Tool |
+|---|---|---|---|
+| **Primary: attack-vector telemetry web, non-web gold** | **18 / 48** | **14 / 45** | `diagnose_logsource.py` |
+| Example text copied into the vector itself | 4 / 60 (all old Example A, `saml`) | **2 / 60 (both the new Example A, `email_iso_lnk`)** | `count_example_copies.py` |
+| Example text copied anywhere in the vector record | 10 / 60 (`saml` 6, `websocket_nginx` 6) | 7 / 60 (`websocket_nginx` 5, `email_iso_lnk` 2, `saml` 0) | same |
+| Analysis top suggestion web, non-web gold | 10 / 48 | 7 / 45 | `diagnose_logsource.py` |
+| Generated first rule web, non-web gold | 16 / 48 | **8 / 45** | same |
+| S3 exact, paired (n = 54) | 13 | 13 | 2 gained, 2 lost; exact McNemar p = 1.0 |
+| S1 valid first rule, paired (n = 60) | 57 | 56 | p = 1.0 |
+| S4 ATT&CK F1, paired (n = 35) | 0.119 | 0.167 | +0.048, 95% CI [−0.029, +0.133] |
+| S5 detection F1, paired (n = 52) | 0.291 | 0.287 | −0.004, 95% CI [−0.076, +0.067] |
+| Tokens / seconds per case | — | — | no difference (CIs span zero) |
+Buckets: right_suggested 22 → 22; right_rescued 0 → 1; overridden 2 → 0; ranked_low 11 → 10;
+followed_wrong 21 → 20; wrong_elsewhere 1 → 3. Change 26's measure (first rule = top
+suggestion) 44/57 → 47/56. Post-hoc (not pre-registered): the suggestion's ceiling (S3 had
+the rule copied it) 16/57 → 11/56; one first rule uses a category no SigmaHQ rule uses
+(`security`).
+**Stated risk (web gold cases watched for losses): did not occur** (read case by case, not
+from a committed tool): the 9 `webserver` gold cases kept web telemetry in both runs; the 2
+`proxy` gold cases moved from `network_ids` to host labels (their rules were already
+`process_creation`); none of the 11 web gold cases scored S3 in either run.
+
+### Read case by case (post-hoc; not from a committed tool — the counts below are readings)
+- **Half of the primary drop is the denominator.** Across all 60 rows the telemetry changed
+  between web and non-web in 4 cases: 3 left web (`24c4d154`, `29fd07fc`, `47e0852a`), 1 became
+  web (`c5a178bf`, a gold rule without a category). The other −2 are two web-labelled cases
+  whose first rule no longer parses (`846b866e`, `a62298a3`), so they left the count. The
+  tool's 18/48 → 14/45 compares different case sets — the same trap as unpaired means.
+- **The 2 S3 gains are 2 of the 3 relabelled cases** (`24c4d154`, `29fd07fc`: web →
+  `process_creation`, now right). `29fd07fc` was one of the 4 cases carrying the old SAML
+  example text.
+- **The 2 S3 losses are the new definition at work, not copying**: Kapeka (`64a871dd`) and
+  TidePool (`7b544661`) — "a dropper drops a DLL" → telemetry `file_event`; the analysis and the
+  rule followed; the gold rule is `process_creation`. A defensible reading of "where the
+  activity is most directly visible" that the gold does not share.
+- **The new example is copied into look-alike reports.** Qakbot (`0033cf83`) and Emotet LNK
+  (`1f32d820`): the vector's initial access is the example's sentence word for word ("User
+  opens a LNK file from an ISO email attachment, which executes rundll32.exe to load a
+  malicious DLL"), and the invented `qx7loader.dll` / `QxUpdate` appear **in the generated
+  rules of both cases** — detection strings for files that do not exist. In the reference run
+  the old example's strings (`/saml/login`, `SAMLRequest`, `NSC_TASS`) were in the generated
+  rules of 4 cases (`f6a711f3`, `47e0852a`, `29fd07fc`, `a1507d71`). Both cases' S3 was right,
+  so S3 does not see it.
+- The parse changes (2 first rules now parse, 3 no longer do) are YAML-level and in different
+  cases; S1 p = 1.0 — run-to-run variation, recorded because S2–S5 are computed only on rules
+  that parse.
+
+### Cumulative, against baseline v2 (not pre-registered as a test)
+S3 paired 6 → 13 of 55 (8 gained, 1 lost), exact McNemar p = 0.039; S5 +0.066, CI [−0.027,
++0.164]; S4 0.000. This is Phase 2's fifth paired comparison (Bonferroni-style threshold
+0.01): not conclusive. After Change 26 the same comparison gave 7 → 14, p = 0.016, and S5's
+interval excluded zero; it no longer does.
+S3 against chance (descriptive; the test is pre-registered for the final Phase 2 run only):
+13/56, 95% Wilson [0.141, 0.358], one-sided p = 0.160; p < 0.05 needs ≥ 16/56.
+
+### Reading
+- Change 27 did what an edit to the examples can do for the vector: the old real-case text is
+  gone from every vector (in-vector `saml` 4 → 0), and first rules on web telemetry for non-web
+  gold halved (16 → 8), with no web gold case lost.
+- **S3 did not move** (13 = 13). The attack-vector web bias is no longer what limits S3; the
+  analysis suggestion is (category, and the `product` of web suggestions —
+  "linux-windows/apache-iis" in `20c6ed1c` and `0d0d9a8a`) — plan 2.6.
+- **Defect 15 moved, it did not go away.** With this model, a concrete worked example is copied
+  into answers for reports that resemble it; replacing the example changed *which* reports
+  (web exploits → email malware) and how many (4 → 2), and the copied names still reach rules.
+  Stays open.
+
+### Limitations to disclose
+- The primary measure and its web-label siblings are counted over cases whose first rule
+  parses, so their denominators differ between runs; they are reported as counts, not tested
+  paired (as for Change 22). A paired, all-rows version would need a committed tool.
+- Copies into generated rules were found with a one-off search; not a committed measure.
+
+### Status
+Plan 2.3 done. Next: 2.6 (plan order). Open for the user: whether and when to treat defect 15
+at its cause (options in the plan).

@@ -164,7 +164,7 @@ and report it as a finding rather than keep tuning.
       Decision (user): Change 24, then restart from scratch.
       **Done 2026-09-24** (`p2a_vocabulary60_r2.jsonl`, CITABLE): non-Sigma categories
       17 → 1; overrides 14 → 3; S3 paired 6 → 11 of 52 (p = 0.062); web bias now reaches
-      the rule under a real name (18/46). Next: 2.2b.
+      the rule under a real name (18/44; was written 18/46 — corrected 2026-09-26). Next: 2.2b.
 - [x] **Change 24** (defect 19, found during 2.2a): every LLM answer has a bounded
       length (16,384 tokens); a cut answer is retried, then recorded as the model's
       failure and measured with the case. 2.2a restarts from scratch on it
@@ -182,16 +182,31 @@ and report it as a finding rather than keep tuning.
       **Done 2026-09-25** (CITABLE): first rule follows the suggestion 24/58 → 44/57; S3 9 → 14
       of 56 (0 lost, p = 0.062); S5 +0.075 CI [+0.008, +0.146]. Cumulative vs v2: S3 7 → 14 of
       55, p = 0.016 (4 comparisons: not conclusive alone). 0 of 12 departures explained.
-- [>] **2.3** (step d) Change 27 **code done 2026-09-25, not yet run** (prompt only: Example A →
+- [x] **2.3** (step d) Change 27 (prompt only: Example A →
       email/host malware; `primary_telemetry` = where the described activity is seen; "never invent
       a network request"). **Before the run:** a committed counter of example text in the rows'
-      attack vectors, run on `p2c_first_rule60.jsonl` too. Run `p2d_web_bias60.jsonl`. Originally: remove the attack-vector prompt's web bias (21/48 non-web
-      cases labelled web-server telemetry; 16/46 in v2; 18/46 after Change 22). Measure with
+      attack vectors, run on `p2c_first_rule60.jsonl` too. Run `p2d_web_bias60.jsonl`.
+      **Done 2026-09-26** (CITABLE): attack-vector web on non-web gold 18/48 → 14/45 (half of it
+      is cases leaving the count — read case by case: 3 relabelled off web, 1 on); first rule web
+      16/48 → 8/45; old example text in vectors 4 → 0, **new example copied in 2** (its invented
+      names reach both cases' rules); S3 13 → 13 of 54 (2 gained, 2 lost, p = 1.0); no web gold
+      case lost. The web bias no longer limits S3; the suggestion does (2.6).
+      Originally: remove the attack-vector prompt's web bias (21/48 non-web
+      cases labelled web-server telemetry; 16/46 in v2; 18/44 after Change 22). Measure with
       the probe, then the harness. Includes (Inbox 2026-09-25): its worked examples were
       written from specific past cases (Example A is a real saved Citrix rule), and the stage
       still copies example text into answers (`/saml/login` on a rootkit report) — count that
       before and after, with a committed script.
-- [ ] **2.6** (next after d) The analysis stage never suggests a log source without a category, so the 6 gold
+- [ ] **Defect 15 at its cause — decision open (user), found in the step (d) run.** The model
+      copies a concrete worked example into reports that resemble it; replacing the example
+      moved the copying (web exploits → email malware), and the invented names reach rules.
+      Options: (a) prompt — say the examples come from other, invented reports and none of
+      their names may be reused; (b) examples with placeholders (`<name>.dll`) instead of
+      realistic invented names; (c) code that validates and records — flag an example-only
+      string in an answer that is absent from the input, shown in the assistant's report
+      (Phase 3). (a)/(b) change prompts → one run each. S3 does not see these copies (both
+      cases were right), so they do not block the Phase 2 exit.
+- [ ] **2.6** (next) The analysis stage never suggests a log source without a category, so the 6 gold
       rules defined by a service (Windows Security ×3, …) are always missed. Give its prompt a
       complete reference table (service-based sources too; no "windows/sysmon"). Prompt
       change: the model chooses. Its own run.
@@ -218,7 +233,8 @@ Order agreed with the user (2026-09-24/25, revised 2026-09-26): (c) 2.2 → (d) 
 
 **Exit test (built 2026-09-26, `eval/summarise.py`):** exact binomial, one-sided, alpha 0.05,
 against 0.173 — applied **once, to the final Phase 2 run** (pre-registered). Descriptive so far:
-after step (c) S3 = 14/57, p = 0.104; p < 0.05 needs ≥ 16/57.
+after step (c) S3 = 14/57, p = 0.104; p < 0.05 needs ≥ 16/57. After step (d) 13/56, p = 0.160;
+needs ≥ 16/56.
 **Exit criteria:** S3 significantly above the null baseline, or the time-box is
 spent and the result is written up as a finding.
 
