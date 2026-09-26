@@ -174,8 +174,8 @@ limitation in the log belongs here too.
     reported as counts, not tested. Two denominators were once copied from an earlier run
     instead of the tool's output (numerators right, no conclusion changed; corrected in the
     log). (Chapter 5, "Comparing two runs"; log correction 2026-09-26)
-42. **Planned: the last Phase 2 run carries three changes** (defect 15's fix, 2.7, 2.8 — user,
-    2026-09-26). Their effects on S3–S5 cannot be separated; only each change's own mechanism
+42. **Planned: the last Phase 2 run on the tuning cases carries four changes** (defect 15's fix,
+    2.7, 2.8, the rule writer's example — user, 2026-09-26). Their effects on S3–S5 cannot be separated; only each change's own mechanism
     measure can. (Chapter 5, "Attribution")
 43. **The 2.6 table is built from SigmaHQ's main rule set, the same one retrieval uses.** The
     gold rules are held out (0 of 437 in it), but the table reflects SigmaHQ's conventions,

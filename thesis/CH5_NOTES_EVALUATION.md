@@ -539,8 +539,8 @@ give a paired before/after on unseen cases, and the chance test (above) is appli
 
 ### Attribution: one run per change, with one planned exception `[DESIGN]` (added 2026-09-26)
 Phase 2 ran one 60-case run per change so each effect could be attributed (user, 2026-09-24).
-From 2.6 on (user, 2026-09-26): 2.6 still runs alone; defect 15's fix, 2.7 and 2.8 then share
-one run. Each keeps a mechanism measure counted by code (example copies, invented technique
+From 2.6 on (user, 2026-09-26): 2.6 and 2.6b still run alone; defect 15's fix, 2.7, 2.8 and
+the rule writer's example fix (Change 33) then share one run. Each keeps a mechanism measure counted by code (example copies, invented technique
 IDs, list length and cut answers); their effect on S3–S5 is reported as joint.
 
 ## 5.7 Status — what exists vs. what is claimed (2026-09-24)
