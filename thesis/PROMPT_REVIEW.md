@@ -37,10 +37,11 @@ LLM-based Sigma→LEQL translator in `backend/translation/` used by the web app.
 The clearest measurement: **tactic tags.** The rule writer's one worked example tags
 `attack.credential_access` (underscore). Every generation prompt also carries 3 real SigmaHQ
 rules from retrieval, and **all 3,021** multi-word tactic tags in SigmaHQ's main set use
-hyphens (`attack.credential-access`), as do all 389 in the gold rules. Result: **143 of 150**
-multi-word tactic tags in the last run's rules use the underscore (baseline v2: 160 of 175).
-pySigma flags each one — "Invalid MITRE ATT&CK tagging" is **the most frequent issue in the
-run (at least 134 warnings)**, fed to the review model as noise. S4 is unaffected (it compares
+hyphens (`attack.credential-access`), as do all 389 in the gold rules. Result: **137 of 143**
+multi-word tactic tags in the last run's rules use the underscore (baseline v2: 152 of 166) —
+committed measure `eval/count_rule_conventions.py` (a first one-off count, which also matched
+text outside `tags`, gave 143 of 150). pySigma flags each one — "Invalid MITRE ATT&CK tagging"
+is **the most frequent issue in the run (136)**, fed to the review model as noise. S4 is unaffected (it compares
 techniques only), but every rule breaks SigmaHQ's current convention.
 The same pattern, earlier: `service: sysmon` from the analysis example (44 of 57 suggestions in
 v2); the table cell "linux-windows/apache-iis" (16 suggestions in step d); the attack-vector
@@ -132,7 +133,8 @@ way (logged separately).
 
 **Prompt changes (each its own run if it can move S3):**
 1. **Generation example fixed** (P1): hyphen tactic tags, no fixed id (Change 9 assigns one),
-   nothing case-specific. Measures: pySigma tag warnings (≥134 → ?), duplicate ids. Low risk;
+   nothing case-specific. Measures: pySigma tag warnings (136 → ?), duplicate ids.
+   **Scheduled 2026-09-26 (user): Change 33, in the shared run.** Low risk;
    does not touch the log source — could join the shared run.
 2. **Honest labels** (P2): payload signatures as "candidates proposed by an earlier step; use
    those the source supports"; the coverage retry asks to reconsider missed signatures instead

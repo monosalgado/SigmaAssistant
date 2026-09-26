@@ -3358,3 +3358,20 @@ review rewriting the scored rules without the log-source decision (unmeasured �
 the reviewed rules); YAML inside JSON. Five prompts are unused. Its candidate changes are
 proposals for the user; the counts in it come from one-off scripts over committed result files
 and need committed measures before being cited.
+
+---
+
+## 2026-09-26 — Change 33's measure (prompt review item 1, added to the shared run by the user)
+
+User, 2026-09-26: the rule writer's example fix joins the shared run (Changes 30–33). Its
+measure, written first and seen failing: **`eval/count_rule_conventions.py`** (5 tests) —
+multi-word tactic tags by style, pySigma "Invalid MITRE ATT&CK tagging" issues, rules with the
+old example id, cases with a duplicate id, rules still carrying the new placeholder id.
+| Run | Tactic tags underscore / hyphen | pySigma tag issues | Old example id | Cases with a duplicate id |
+|---|---|---|---|---|
+| `baseline60_v2.jsonl` | 152 / 14 | 158 | 2 | 0 |
+| `p2d_web_bias60.jsonl` | 140 / 18 | 140 | 0 | 0 |
+| `p2e_table60.jsonl` | 137 / 6 | 136 | 2 | 1 |
+**Correction to the previous entry:** its "143 of 150" came from a one-off count that also
+matched text outside the `tags` field; the committed measure gives **137 of 143** on the same
+run. The review document is corrected; the conclusion is unchanged.
