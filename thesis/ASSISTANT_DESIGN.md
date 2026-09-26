@@ -178,7 +178,7 @@ confirmed, coverage warnings, validation issues.
 | `POST /assist/generate` (SSE) | B | `{analysis_id, decisions}` → rules + traceability |
 | `POST /assist/validate` | C | `{yaml}` → pySigma issues. No LLM, instant |
 | `POST /assist/revise` | C | `{analysis_id, yaml, instruction}` → the model rewrites the rule from a plain-words instruction, then pySigma validates it. **In scope, built after manual editing** (decision 3) |
-| `POST /assist/convert` | C, pending | `{yaml, backend}` → a SIEM/EDR query (e.g. Splunk, Sentinel, Elastic). **Pending Phase 0 (option D) and the user's approval of new pySigma backend packages** (decision 4) |
+| `POST /assist/convert` | C, pending | `{yaml, backend}` → a SIEM/EDR query (e.g. Splunk, Sentinel, Elastic). **Nothing to invent:** pySigma — the library the pipeline already uses for InsightIDR — has backends for these; the work is choosing the backend and its field-mapping pipeline. **Pending Phase 0 (option D) and the user's approval of the new backend packages** (decision 4) |
 
 The existing `/analyze_stream` stays working until the new UI replaces it.
 `PUT /rules/{id}` should also validate (it currently does not).
