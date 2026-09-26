@@ -578,6 +578,7 @@ class PipelineOrchestrator:
             "indicators": extraction.get("indicators", []),
             "attack_summary": extraction.get("attack_summary", ""),
             "ttp_mappings": ttp_mapping.get("mappings", []),
+            "ttp_dropped_ids": ttp_mapping.get("dropped_ids", []),
             "validation_issues": validation.get("issues", []),
             "optimization_changes": optimization.get("all_changes", []),
             "suggested_log_sources": extraction.get("suggested_log_sources", []),

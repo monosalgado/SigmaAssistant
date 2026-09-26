@@ -268,6 +268,8 @@ Order agreed with the user (2026-09-24/25, revised 2026-09-26): (c) 2.2 → (d) 
 run — the last run on the 60 tuning cases; then 2.9, the held-out confirmation (two runs).
 **Shared run contents (2026-09-26):** Change 30 (defect 15, a+b), 31 (2.7 ID check), 32 (2.8, ≤ 10
 techniques), 33 (prompt review item 1: the rule writer's example — hyphen tactic tags, no fixed id).
+**Code done 2026-09-26; run `p2g_shared60.jsonl` (arm `p2g_shared`) vs `p2f_product60.jsonl`** —
+measurement plan in the log ("The shared run: Changes 30–33").
 
 **Exit test (built 2026-09-26, `eval/summarise.py`):** exact binomial, one-sided, alpha 0.05,
 against 0.173 — applied **once, to the final pipeline's held-out run (2.9, step 3)**

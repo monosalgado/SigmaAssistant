@@ -10,6 +10,7 @@ import json
 from backend.pipeline.base_stage import PipelineStage
 from backend.pipeline.stage_attack_vector import AttackVectorStage
 from backend.pipeline import prompts
+from backend.pipeline.attack_ids import load_attack_ids, split_known
 from backend.pipeline.sigma_logsource import (
     format_category_table,
     format_service_table,
@@ -24,6 +25,8 @@ _KNOWN_SERVICES = load_known_services()
 _LOGSOURCE_TABLE = load_logsource_table()
 _LOGSOURCE_CATEGORIES = format_category_table(_LOGSOURCE_TABLE)
 _LOGSOURCE_SERVICES = format_service_table(_LOGSOURCE_TABLE)
+# Loaded once: every technique ID in the local ATT&CK data (Change 31).
+_ATTACK_IDS = load_attack_ids()
 
 
 class AnalysisStage(PipelineStage):
@@ -99,8 +102,13 @@ class AnalysisStage(PipelineStage):
             "suggested_log_sources": suggested_log_sources,
         }
 
-        ttp_mappings = result.get("ttp_mappings", [])
-        context["ttp_mapping"] = {"mappings": ttp_mappings}
+        # Technique IDs ATT&CK does not have are dropped and recorded, never repaired (Change 31).
+        ttp_mappings, dropped_ids = split_known(result.get("ttp_mappings", []), _ATTACK_IDS)
+        context["ttp_mapping"] = {"mappings": ttp_mappings, "dropped_ids": dropped_ids}
+        if dropped_ids:
+            print(f"[{self.name}] Dropped {len(dropped_ids)} technique ID(s) not in ATT&CK: "
+                  f"{', '.join(i or '(blank)' for i in dropped_ids[:5])}"
+                  f"{'…' if len(dropped_ids) > 5 else ''}")
 
         # A suggestion with a category carries no service (Sigma's convention); an
         # unknown service without a category is marked for the analyst to confirm.

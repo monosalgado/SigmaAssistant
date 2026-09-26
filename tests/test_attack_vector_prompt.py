@@ -66,7 +66,9 @@ def test_the_stage_is_told_not_to_invent_a_network_request():
     assert "never invent a network request the text does not mention" in line
 
 
-def test_the_copy_markers_cover_the_new_example():
-    """Its invented names are counted as copies, like the old examples' were."""
-    new = EXAMPLE_MARKERS["email_iso_lnk"]
-    assert new and all(m in AV.lower() for m in new)
+def test_the_copy_markers_cover_the_current_examples():
+    """What the examples contain is counted as a copy. Since Change 30 the examples' invented
+    names are placeholders (the `email_iso_lnk` names of Change 27 left the prompt), so the
+    markers that must be in the prompt are the placeholders."""
+    current = EXAMPLE_MARKERS["placeholders"]
+    assert current and all(m in AV.lower() for m in current)

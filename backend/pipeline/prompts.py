@@ -250,7 +250,7 @@ RULE_GENERATION = """You are an expert Sigma rule author. Generate detection rul
 8. Each rule MUST include: title, id (valid UUID), status, description, references, author, date, tags, logsource, detection, falsepositives, level.
 9. The "references" field MUST be a YAML list of URLs. Include ALL relevant URLs from the Reference URLs section above, plus the MITRE ATT&CK technique URL for each rule's target TTP.
 10. Author MUST be "Sigma Assistant". Date MUST be "{current_date}".
-11. Tags MUST use `attack.tXXXX` for MITRE techniques (lowercase technique id) and `attack.<tactic_name>` for tactics — pick only techniques you can justify from the MITRE context above.
+11. Tags MUST use `attack.tXXXX` for MITRE techniques (lowercase technique id) and, for tactics, SigmaHQ's hyphenated tactic names (e.g. `attack.credential-access`: words joined with hyphens) — pick only techniques you can justify from the MITRE context above.
 12. Include specific detection criteria based on the extracted indicators; small details improve specificity.
 
 ### Few-shot Example
@@ -260,7 +260,7 @@ RULE_GENERATION = """You are an expert Sigma rule author. Generate detection rul
 {{
   "rules": [
     {{
-      "yaml_content": "title: Mimikatz Credential Dumping via LSASS Access\\nid: 12345678-1234-1234-1234-123456789abc\\nstatus: experimental\\ndescription: Detects potential credential dumping using Mimikatz by monitoring for suspicious access to the LSASS process.\\nreferences:\\n    - https://attack.mitre.org/techniques/T1003/001/\\n    - https://www.rapid7.com/blog/post/2022/mimikatz-analysis/\\nauthor: Sigma Assistant\\ndate: {current_date}\\ntags:\\n    - attack.credential_access\\n    - attack.t1003.001\\nlogsource:\\n    category: process_access\\n    product: windows\\ndetection:\\n    selection:\\n        TargetImage|endswith: '\\\\lsass.exe'\\n        SourceImage|endswith:\\n            - '\\\\mimikatz.exe'\\n            - '\\\\mimi.exe'\\n        GrantedAccess|contains:\\n            - '0x1010'\\n            - '0x1410'\\n    condition: selection\\nfalsepositives:\\n    - Legitimate security scanning tools\\n    - Antivirus software accessing LSASS\\nlevel: high",
+      "yaml_content": "title: Mimikatz Credential Dumping via LSASS Access\\nid: <new UUID>\\nstatus: experimental\\ndescription: Detects potential credential dumping using Mimikatz by monitoring for suspicious access to the LSASS process.\\nreferences:\\n    - https://attack.mitre.org/techniques/T1003/001/\\n    - https://www.rapid7.com/blog/post/2022/mimikatz-analysis/\\nauthor: Sigma Assistant\\ndate: {current_date}\\ntags:\\n    - attack.credential-access\\n    - attack.t1003.001\\nlogsource:\\n    category: process_access\\n    product: windows\\ndetection:\\n    selection:\\n        TargetImage|endswith: '\\\\lsass.exe'\\n        SourceImage|endswith:\\n            - '\\\\mimikatz.exe'\\n            - '\\\\mimi.exe'\\n        GrantedAccess|contains:\\n            - '0x1010'\\n            - '0x1410'\\n    condition: selection\\nfalsepositives:\\n    - Legitimate security scanning tools\\n    - Antivirus software accessing LSASS\\nlevel: high",
       "explanation": "This rule detects Mimikatz credential dumping by monitoring process access events targeting LSASS with suspicious access rights.",
       "target_ttp": "T1003.001"
     }}
@@ -487,7 +487,7 @@ evidence so that does not happen.
 ## Output — one JSON object with these fields
 
 ### 1. Primary attack vector (REQUIRED)
-- `initial_access_vector`: One-sentence description of HOW the attacker first interacts with the target. Focus on the attacker-visible surface (e.g. "user opens a LNK file from an ISO email attachment", "WebSocket handshake to /nginx with command-injection in remoteVersion parameter", "SMB NULL session against named pipe", "malicious Office document with macro", "local user-mode write to kernel device"). If multiple vectors exist, pick the one the write-up emphasizes. If the text does not say how the attacker first got in, describe the first attacker action it does describe — never invent a network request the text does not mention.
+- `initial_access_vector`: One-sentence description of HOW the attacker first interacts with the target. Focus on the attacker-visible surface (e.g. "user opens a LNK file from an ISO email attachment", "WebSocket handshake to /<endpoint> with command injection in the <parameter> parameter", "SMB NULL session against named pipe", "malicious Office document with macro", "local user-mode write to kernel device"). If multiple vectors exist, pick the one the write-up emphasizes. If the text does not say how the attacker first got in, describe the first attacker action it does describe — never invent a network request the text does not mention.
 - `protocol`: One of `http`, `https`, `websocket`, `smb`, `rdp`, `dns`, `ldap`, `ssh`, `rpc`, `kerberos`, `local`, `physical`, `email`, `other`, `unknown`.
 - `entry_point`: The concrete endpoint/surface the attacker targets (URL path, named pipe, device file, RPC interface, registry key, UI action...). Empty string if not inferrable.
 - `attacker_controlled_input`: What the attacker actually controls (HTTP parameter name, header name, file field, command-line arg, request body). Empty string if not inferrable.
@@ -500,7 +500,7 @@ evidence so that does not happen.
 
 ### 3. Payload signatures (REQUIRED — what rules should match)
 - `payload_signatures`: List of 1-8 concrete, observable strings/patterns that would appear in telemetry DURING EXPLOITATION. Each item has:
-  - `pattern`: The literal string or simple regex (e.g. `"-enc JAB"`, `"remoteVersion=a[$("`, `"$(nslookup"`, `"'; DROP TABLE"`, `"../../etc/passwd"`, `"rO0AB"`).
+  - `pattern`: The literal string or simple regex (e.g. `"-enc JAB"`, `"<parameter>=a[$("`, `"$(nslookup"`, `"'; DROP TABLE"`, `"../../etc/passwd"`, `"rO0AB"`).
   - `where`: Where this pattern would be observed. One of `request_uri`, `request_body`, `request_header`, `response_body`, `response_header`, `process_cmdline`, `file_content`, `network_payload`, `dns_query`, `other`.
   - `derived_from`: Short quote (<=120 chars) from the input text or PoC that justifies this pattern. If derived from vuln class (e.g. generic deserialization magic bytes), write `"inferred_from_class"`.
 
@@ -515,7 +515,7 @@ These drive the actual detection logic. Prefer patterns that real attackers MUST
 
 ### 6. Incidental strings (REQUIRED — anti-hallucination filter)
 - `incidental_artifacts`: List of strings/filenames/commands that appear in the input text but are NOT part of the attack itself. Typical categories:
-  - Patch-diff / reverse-engineering filenames (e.g. `"BT26-02-RS.nss"`, hardcoded patch passwords, internal build identifiers)
+  - Patch-diff / reverse-engineering filenames (e.g. `"<patch file>.nss"`, hardcoded patch passwords, internal build identifiers)
   - Debugger / sandbox setup (`"gdb"`, `"qemu"`, `"strace"`, `"IDA"`)
   - Researcher's lab infrastructure (their personal domains, test VM hostnames)
   - Screenshots of unrelated software, background product history
@@ -531,8 +531,13 @@ These drive the actual detection logic. Prefer patterns that real attackers MUST
 
 ### Few-shot Examples
 
+These examples are invented. Their names and values are placeholders in angle brackets, such as
+`<loader>.dll`: they show what goes in each field and how to tell attacker activity from researcher
+workflow — they are not facts about the text above. Never reuse a value, name or sentence from them;
+take every value from the input text or the PoC code.
+
 **Example A (malware delivered by email, seen on the host — no network exploit):**
-Input mentions: phishing email with an ISO attachment "Remit_8841.iso"; the ISO holds a LNK that runs rundll32.exe to load "qx7loader.dll"; the DLL adds a Run-key value "QxUpdate" for persistence; the analysts detonated the sample in their own sandbox.
+Input mentions: phishing email with an ISO attachment "<attachment>.iso"; the ISO holds a LNK that runs rundll32.exe to load "<loader>.dll"; the DLL adds a Run-key value "<run-key value>" for persistence; the analysts detonated the sample in their own sandbox.
 Output (abbreviated):
 {{
   "initial_access_vector": "User opens a LNK file inside an ISO email attachment, which runs rundll32.exe to load a malicious DLL",
@@ -545,8 +550,8 @@ Output (abbreviated):
   "cvss_attack_vector": "unknown",
   "payload_signatures": [
     {{"pattern": "rundll32.exe", "where": "process_cmdline", "derived_from": "the LNK runs rundll32.exe"}},
-    {{"pattern": "qx7loader.dll", "where": "process_cmdline", "derived_from": "rundll32 loads qx7loader.dll"}},
-    {{"pattern": "QxUpdate", "where": "other", "derived_from": "Run-key value QxUpdate for persistence"}}
+    {{"pattern": "<loader>.dll", "where": "process_cmdline", "derived_from": "rundll32 loads <loader>.dll"}},
+    {{"pattern": "<run-key value>", "where": "other", "derived_from": "Run-key value <run-key value> for persistence"}}
   ],
   "primary_telemetry": "process_creation",
   "secondary_telemetry": ["registry_event", "file_event", "email_gateway"],
@@ -559,19 +564,19 @@ Output (abbreviated):
 }}
 
 **Example B (command injection over WebSocket with heavy patch analysis in the article):**
-Input mentions: WebSocket /nginx, remoteVersion query param passed to bash arithmetic, patch BT26-02 decrypted with hardcoded password, thin-scc-wrapper binary replaced by sed script.
+Input mentions: WebSocket /<endpoint>, <parameter> query param passed to bash arithmetic, patch <patch file> decrypted with hardcoded password <patch password>, <vendor binary> binary replaced by sed script.
 Output (abbreviated):
 {{
-  "initial_access_vector": "Unauthenticated WebSocket handshake to /nginx with bash command-substitution in remoteVersion parameter",
+  "initial_access_vector": "Unauthenticated WebSocket handshake to /<endpoint> with bash command-substitution in the <parameter> parameter",
   "protocol": "websocket",
-  "entry_point": "/nginx (WebSocket upgrade)",
-  "attacker_controlled_input": "remoteVersion query parameter",
+  "entry_point": "/<endpoint> (WebSocket upgrade)",
+  "attacker_controlled_input": "<parameter> query parameter",
   "preconditions": "unauthenticated",
   "vuln_class": "command_injection",
   "cwe_hint": "CWE-78",
   "cvss_attack_vector": "AV:N",
   "payload_signatures": [
-    {{"pattern": "remoteVersion=", "where": "request_uri", "derived_from": "attacker-controlled remoteVersion param"}},
+    {{"pattern": "<parameter>=", "where": "request_uri", "derived_from": "attacker-controlled <parameter> param"}},
     {{"pattern": "$(", "where": "request_uri", "derived_from": "bash command substitution"}},
     {{"pattern": "`", "where": "request_uri", "derived_from": "alternate bash substitution"}},
     {{"pattern": "Upgrade: websocket", "where": "request_header", "derived_from": "WebSocket handshake"}}
@@ -580,30 +585,30 @@ Output (abbreviated):
   "secondary_telemetry": ["process_creation", "network_ids"],
   "kill_chain_stages": ["initial_access", "execution"],
   "incidental_artifacts": [
-    {{"value": "BT26-02-RS.nss", "reason": "vendor patch filename used during patch-diffing, not part of attack"}},
-    {{"value": "Bingb0ng, what she said; the Tw1st3d switch is RED", "reason": "hardcoded patch decryption password, used by researchers/defenders not attackers"}},
-    {{"value": "sedcp", "reason": "shell helper inside vendor's own patch script, not attacker TTP"}},
-    {{"value": "thin-scc-wrapper replacement via sed", "reason": "vendor patch mechanism, not attacker behavior"}},
-    {{"value": "bt26-02.sh", "reason": "vendor's patch installer script"}}
+    {{"value": "<patch file>.nss", "reason": "vendor patch filename used during patch-diffing, not part of attack"}},
+    {{"value": "<patch password>", "reason": "hardcoded patch decryption password, used by researchers/defenders not attackers"}},
+    {{"value": "<patch helper>", "reason": "shell helper inside vendor's own patch script, not attacker TTP"}},
+    {{"value": "<vendor binary> replacement via sed", "reason": "vendor patch mechanism, not attacker behavior"}},
+    {{"value": "<patch script>.sh", "reason": "vendor's patch installer script"}}
   ],
   "confidence": 0.75,
   "reasoning": "Article devotes significant space to patch analysis; the exploit itself is described more abstractly but PoC snippets confirm the injection vector."
 }}
 
 **Example C (local process_creation attack, no network component):**
-Input mentions: local low-priv user runs setuid binary `/usr/bin/oopsie` with crafted env var PATH to trigger library hijack.
+Input mentions: local low-priv user runs setuid binary `/usr/bin/<setuid binary>` with crafted env var PATH to trigger library hijack.
 Output (abbreviated):
 {{
   "initial_access_vector": "Local low-privileged user executes vulnerable setuid binary with crafted PATH environment variable",
   "protocol": "local",
-  "entry_point": "/usr/bin/oopsie",
+  "entry_point": "/usr/bin/<setuid binary>",
   "attacker_controlled_input": "PATH environment variable",
   "preconditions": "authenticated_low_priv",
   "vuln_class": "privilege_escalation",
   "cwe_hint": "CWE-427",
   "cvss_attack_vector": "AV:L",
   "payload_signatures": [
-    {{"pattern": "/usr/bin/oopsie", "where": "process_cmdline", "derived_from": "target setuid binary"}},
+    {{"pattern": "/usr/bin/<setuid binary>", "where": "process_cmdline", "derived_from": "target setuid binary"}},
     {{"pattern": "PATH=", "where": "process_cmdline", "derived_from": "PATH hijack"}}
   ],
   "primary_telemetry": "process_creation",
@@ -673,6 +678,7 @@ Map attack behaviors to specific MITRE ATT&CK techniques:
 2. Assign a severity level based on potential impact
 3. Only map techniques directly evidenced by indicators, not speculative
 4. Use the MITRE reference context provided above to improve accuracy
+5. List at most the 10 most relevant techniques, most relevant first
 
 Each mapping needs: technique_id, technique_name, tactic, relevance (brief explanation), severity.
 

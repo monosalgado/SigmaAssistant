@@ -66,7 +66,7 @@ _YAML_BLOCK_RE = re.compile(r"```ya?ml\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
 # many generation calls ran. Everything else in pipeline_metadata is left out
 # (e.g. enrichment sources, which are always empty on the all-local setup).
 DIAGNOSIS_FIELDS = (
-    "attack_vector", "attack_summary", "indicators", "ttp_mappings",
+    "attack_vector", "attack_summary", "indicators", "ttp_mappings", "ttp_dropped_ids",
     "logsource_suggestions", "logsource_primary", "suggested_log_sources",
     "coverage_check", "validation_issues", "poc_snippets_found",
     "generations", "generation_retried",

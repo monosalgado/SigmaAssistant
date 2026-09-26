@@ -3433,3 +3433,61 @@ Copies (`count_example_copies.py`): in the vector 1, in the rules 1 (`0033cf83`)
 payload patterns absent from the input 62 in 34 cases. Conventions
 (`count_rule_conventions.py`): tactic tags underscore / hyphen 141 / 8, pySigma tag issues 145,
 old example id 1 rule, cases with a duplicate id 0.
+
+---
+
+## 2026-09-26 — The shared run: Changes 30–33 (defect 15 a+b, plan 2.7, plan 2.8, prompt review item 1) — code done; run next
+
+User decisions (2026-09-26): 2.6b runs alone first (done), then one run carries four changes,
+each with its own committed measure; their effect on S3–S5 is reported as joint (Chapter 5,
+"Attribution"). All tests were written before the code (the Change 31/32 measures' tests with
+their code — see "Measures for the shared run"), most while the Change 29 run was in progress;
+the pipeline edits were made after it finished.
+
+### The four changes
+| Change | What | Code / prompt |
+|---|---|---|
+| **30** — defect 15 at its cause (options a + b) | The attack-vector examples keep their structure but every invented value becomes a placeholder (`<attachment>.iso`, `<loader>.dll`, `<run-key value>`, `/<endpoint>`, `<parameter>`, `<patch file>`, `<patch password>`, `<patch helper>`, `<patch script>`, `<vendor binary>`, `/usr/bin/<setuid binary>`), also in the inline field examples; a note says the examples are invented, their values are placeholders, and nothing in them may be reused — "take every value from the input text or the PoC code". Generic tool names (`rundll32.exe`, `Upgrade: websocket`) stay | prompt |
+| **31** — plan 2.7, ATT&CK ID check | `backend/pipeline/attack_ids.py`: the analysis stage's technique IDs that ATT&CK does not have are dropped and recorded (`ttp_dropped_ids`, carried to the rows); never repaired. Valid IDs: `attack_technique_ids.json`, **691** IDs built by `scripts/build_attack_technique_ids.py` from the local ATT&CK collection (216 techniques, 475 sub-techniques) | code (validation + record) |
+| **32** — plan 2.8 | Analysis prompt, technique part: "5. List at most the 10 most relevant techniques, most relevant first" | prompt |
+| **33** — prompt review item 1 | The rule writer's example: tactic tag `attack.credential-access` (hyphen), id `<new UUID>` (not a UUID, so Change 9 replaces a copy); instruction 11 asks for SigmaHQ's hyphenated tactic names | prompt |
+Unchanged: every other prompt and stage; the Change 28 table and Change 29 note.
+
+### Verification
+New tests: Change 30 — 5 (`tests/test_attack_vector_placeholders.py`; no old example value left,
+only counted placeholders, all of them present, the note, the structure kept); Change 27's
+marker test updated (its example names left the prompt by design; it now checks the
+placeholders). Change 31 — 9 (`tests/test_attack_id_check.py`; kept in order / dropped and
+recorded, invalid sub-technique not repaired, blank and non-dict entries, the committed list
+of 691, the check and its measure read one file, the stage, the rows). Change 32 — 3
+(`tests/test_technique_limit.py`). Change 33 — 6 (`tests/test_generation_example.py`; no
+underscore tactic anywhere in the prompt, the example's tags, instruction 11, the old id gone
+and the new one not a UUID, a copy replaced by Change 9, the example still a complete rule).
+All seen failing before the code except the ones that pin what is kept. Full suite **426
+passed**.
+
+### Measurement plan (fixed before the run)
+Same 60 cases; arm `p2g_shared`, `eval/results/p2g_shared60.jsonl`; paired against
+**`p2f_product60.jsonl`**. References computed on it with the committed tools:
+| Change | Measure (tool) | Reference |
+|---|---|---|
+| 30 | example text in the vector / in the rules / anywhere, incl. placeholders (`count_example_copies.py`) | 1 / 1 / 6 (placeholders 0) |
+| 30 | payload patterns absent from the input — upper bound (same) | 62 in 34 cases |
+| 31 | technique IDs written that ATT&CK does not have; rules tagged with one (`count_techniques.py`) | 0 in 0 cases; 0 |
+| 32 | techniques written per case: median / max / cases over 10 (same) | 5 / 18 / 12 |
+| 32 | cases with an answer cut at the limit (same) | 1 |
+| 33 | tactic tags underscore / hyphen; pySigma tag issues (`count_rule_conventions.py`) | 141 / 8; 145 |
+| 33 | rules with the old example id; cases with a duplicate id; placeholder ids left (same) | 1; 0; 0 |
+| joint | S3 paired (`compare_runs.py`) | 21 of 56 scored |
+| joint | top suggestion = gold, all rows (`compare_suggestions.py`) | 23 / 60 |
+| joint | S1, S4 (n = 38), S5 (n = 54) (`summarise.py`); first rule = top suggestion, added fields (`diagnose_logsource.py`) | 56/60, 0.158, 0.298; 53/56, 0/53 |
+**Expected little change for 31 and 32 on this reference** (said before the run): invented IDs
+were 90–192 in 1–4 cases per run up to step (d), all in answers that ran away (lists of
+102–111 techniques); since Change 28 there are none and lists stop at 18 — post-hoc, two runs,
+cause unknown. The two changes stay as guards; their measures will show whether that holds.
+**Risks stated before the run:** (1) placeholder examples may teach the attack-vector stage
+less, so its answers — and the suggestions built on them — could get worse (watched: the
+suggestion measure, web labels on non-web gold 15/46, S3); (2) the stage may copy placeholders
+literally (counted); (3) the 10-technique cap could cut gold techniques (S4; in the Change 25
+data 21 of the 24 gold techniques found were in the first 10); (4) none expected on S4 from the
+hyphen tags (S4 compares techniques only).
