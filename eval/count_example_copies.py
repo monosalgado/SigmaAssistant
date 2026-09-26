@@ -51,6 +51,21 @@ def copies(attack_vector: dict, model_input_text: str, rules_text: str = "") -> 
             "in_rules": leaked_markers(rules_text, model_input_text)}
 
 
+def ungrounded_patterns(attack_vector: dict, model_input_text: str) -> list:
+    """Payload-signature patterns that occur nowhere in the input (case-insensitive),
+    except those the stage marks `inferred_from_class`. An UPPER bound on invented
+    patterns: a legitimate regex or normalised form of a real string also counts."""
+    source = (model_input_text or "").lower()
+    out = []
+    for sig in attack_vector.get("payload_signatures") or []:
+        if not isinstance(sig, dict) or sig.get("derived_from") == "inferred_from_class":
+            continue
+        pattern = str(sig.get("pattern") or "").strip()
+        if pattern and pattern.lower() not in source:
+            out.append(pattern)
+    return out
+
+
 def rules_text(row: dict) -> str:
     rules = row.get("rules_yaml") or []
     return rules if isinstance(rules, str) else "\n".join(str(r) for r in rules)
@@ -90,6 +105,8 @@ def summarise(results: list) -> dict:
         "by_example_in_vector": dict(Counter(g for r in results for g in r["in_vector"])),
         "in_rules": sum(1 for r in results if r.get("in_rules")),
         "by_example_in_rules": dict(Counter(g for r in results for g in r.get("in_rules", {}))),
+        "ungrounded_cases": sum(1 for r in results if r.get("ungrounded")),
+        "ungrounded_patterns": sum(len(r.get("ungrounded") or []) for r in results),
     }
 
 
@@ -132,8 +149,10 @@ def main(argv: list) -> int:
             ctx = PreprocessStage(None, "").run(
                 {"original_query": " ".join(case["urls"]), "history": [], "media_file": None})
         text = ctx["preprocessed"]["combined_text"]
-        found = copies(av, model_input(text, github_bodies(text, url_map)), rules_text(row))
-        results.append({"rule_id": row["rule_id"], **found})
+        source = model_input(text, github_bodies(text, url_map))
+        found = copies(av, source, rules_text(row))
+        results.append({"rule_id": row["rule_id"], **found,
+                        "ungrounded": ungrounded_patterns(av, source)})
 
     s = summarise(results)
     print(f"{argv[1]}: {s['n']} recorded attack vectors")
@@ -146,6 +165,8 @@ def main(argv: list) -> int:
     for r in results:
         if r["in_rules"]:
             print(f"    {r['rule_id'][:8]}  {r['in_rules']}")
+    print(f"  payload patterns absent from the input (upper bound): {s['ungrounded_patterns']} "
+          f"patterns in {s['ungrounded_cases']} cases")
     return 0
 
 

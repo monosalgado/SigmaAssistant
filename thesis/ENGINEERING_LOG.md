@@ -3308,3 +3308,30 @@ Same 60 cases; arm `p2f_product`, `eval/results/p2f_product60.jsonl`; paired aga
   reference run (2 more first rules did not parse).
 - **Risk stated before the run:** the `product` bullet could make the rule writer drop a
   correct product (e.g. `windows`) — watched via the product field and the S3 losses.
+
+---
+
+## 2026-09-26 — Measures for the shared run (Changes 30–32), written during the Change 29 run (eval only)
+
+Fixed before the changes they measure are written (user, 2026-09-26: prepare the shared run
+while 2.6b runs). No pipeline or harness file touched; the run imports none of these files.
+- **Change 30 (defect 15 at its cause):** `eval/probe_attack_vector.py` gains a
+  **`placeholders`** marker group — the exact placeholders the rewritten examples will use
+  (`<attachment>`, `<loader>`, `<run-key value>`, `<endpoint>`, `<parameter>`, `<patch file>`,
+  `<patch password>`, `<patch helper>`, `<patch script>`, `<vendor binary>`, `<setuid
+  binary>`); a placeholder in an answer is a copy by the usual criterion. The old markers stay
+  (they should fall to 0). `count_example_copies.py` also counts **payload patterns absent from
+  the input** (`ungrounded_patterns`; `inferred_from_class` excluded) — an upper bound on
+  invented patterns, since a real string written as a regex also counts. 3 tests, written
+  first and seen failing.
+- **Changes 31 (ATT&CK ID check) and 32 (at most 10 techniques):** new
+  `eval/count_techniques.py` — per case the technique IDs the analysis stage **wrote** (after
+  Change 31: kept `ttp_mappings` + recorded `ttp_dropped_ids`), the ones ATT&CK does not have,
+  rules tagged with such an ID, and cut answers; summary: median / max / cases over 10. Valid
+  IDs: `backend/pipeline/attack_technique_ids.json`, to be built from the local ATT&CK
+  collection (691 IDs: 216 techniques, 475 sub-techniques; `T1562.339` absent) after the run.
+  **8 tests — written together with the code, not seen failing first** (a lapse in the
+  tests-first rule). Checked instead by deliberate bugs: 4 mutations of the code; 3 were
+  caught, the fourth (">10" → "≥10") was not, so a boundary test (exactly 10 is not over 10)
+  was added and catches it.
+Full suite **398 passed**.

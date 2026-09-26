@@ -16,6 +16,7 @@ from eval.count_example_copies import (
     model_input,
     rules_text,
     summarise,
+    ungrounded_patterns,
 )
 
 
@@ -112,3 +113,31 @@ def test_summary_counts_cases_with_copies_in_rules():
 def test_corpus_hits_names_the_markers_found_in_reference_texts():
     assert corpus_hits(["a rule about SAMLRequest abuse", "nothing"]) == {"samlrequest": 1}
     assert corpus_hits(["process_creation rule"]) == {}
+
+
+# --- for Change 30 (defect 15 at its cause: placeholders), fixed before its run ---------
+# The examples' invented names become placeholders such as `<loader>.dll`. A placeholder in
+# an answer is a copy by the same criterion; its markers are fixed here, before the change.
+
+def test_a_copied_placeholder_counts():
+    c = copies(_av(entry_point="/usr/bin/<setuid binary>"), "a setuid binary abused via PATH")
+    assert c["in_vector"] == {"placeholders": ["<setuid binary>"]}
+
+
+def test_payload_patterns_absent_from_the_input_are_listed():
+    av = _av(payload_signatures=[
+        {"pattern": "rundll32.exe", "derived_from": "the LNK runs rundll32"},
+        {"pattern": "CMD.exe /c", "derived_from": "seen in the report"},
+        {"pattern": "rO0AB", "derived_from": "inferred_from_class"},
+        {"pattern": "", "derived_from": "x"},
+    ])
+    assert ungrounded_patterns(av, "the loader runs cmd.exe /c whoami") == ["rundll32.exe"]
+
+
+def test_the_summary_counts_ungrounded_patterns_by_case_and_in_total():
+    results = [
+        {"rule_id": "a", "anywhere": {}, "in_vector": {}, "in_rules": {}, "ungrounded": ["x", "y"]},
+        {"rule_id": "b", "anywhere": {}, "in_vector": {}, "in_rules": {}, "ungrounded": []},
+    ]
+    s = summarise(results)
+    assert (s["ungrounded_cases"], s["ungrounded_patterns"]) == (1, 2)

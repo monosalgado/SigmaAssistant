@@ -56,6 +56,11 @@ EXAMPLE_MARKERS = {
     "websocket_nginx": ["remoteversion", "bt26-02", "thin-scc-wrapper", "sedcp",
                         "bingb0ng", "tw1st3d"],
     "setuid_oopsie": ["oopsie"],
+    # Change 30 (defect 15 at its cause): the examples' values become placeholders. Fixed
+    # 2026-09-26 before the change was written; a placeholder in an answer is a copy.
+    "placeholders": ["<attachment>", "<loader>", "<run-key value>", "<endpoint>", "<parameter>",
+                     "<patch file>", "<patch password>", "<patch helper>", "<patch script>",
+                     "<vendor binary>", "<setuid binary>"],
 }
 FAILED_PREFIX = "Extraction failed"
 
