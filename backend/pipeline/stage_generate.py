@@ -13,13 +13,21 @@ from backend.pipeline.base_stage import PipelineStage
 from backend.pipeline.stage_attack_vector import AttackVectorStage
 from backend.pipeline import prompts
 from backend.pipeline import domain_knowledge as dk
-from backend.pipeline.sigma_logsource import describe_suggestion, first_rule_logsource_block
+from backend.pipeline.sigma_logsource import (
+    describe_suggestion,
+    first_rule_logsource_block,
+    load_logsource_table,
+)
 
 
 # Top-level `id:` line. Anchored at column 0 so nested mapping keys are never
 # touched; MULTILINE so multi-document YAML has every rule's id checked.
 _ID_LINE_RE = re.compile(r"^id:[ \t]*(.*)$", re.MULTILINE)
 _TITLE_LINE_RE = re.compile(r"^title:.*$", re.MULTILINE)
+
+# Loaded once: every log source SigmaHQ's rules use (Change 28), so the first-rule
+# recommendation can say what those rules leave out of it (Change 29).
+_LOGSOURCE_TABLE = load_logsource_table()
 
 
 def _is_valid_uuid(value: str) -> bool:
@@ -265,7 +273,7 @@ class GenerateStage(PipelineStage):
         prompt = prompts.RULE_GENERATION.format(
             current_date=current_date,
             attack_vector_summary=attack_vector_summary,
-            first_rule_logsource=first_rule_logsource_block(logsource_info),
+            first_rule_logsource=first_rule_logsource_block(logsource_info, _LOGSOURCE_TABLE),
             payload_signatures=payload_signatures_text,
             incidental_blacklist=incidental_blacklist,
             attack_summary=attack_summary,

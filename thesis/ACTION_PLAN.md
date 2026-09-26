@@ -225,7 +225,9 @@ and report it as a finding rather than keep tuning.
       Why next (2026-09-26, step c run): of the 43 first rules that miss S3, 6 fail only on the
       product — 3 carry "linux-windows/apache-iis", 1 "iis" (gold web rules have none) — and
       the 5 gold rules defined by a service are always missed. The most likely step to move S3.
-- [ ] **2.6b — proposed 2026-09-26, decision open (user).** Found in the 2.6 run: the rule
+- [>] **2.6b** Change 29 — **approved 2026-09-26 (user); code done, run `p2f_product60.jsonl`
+      next** vs `p2e_table60.jsonl`; primary S3 paired; mechanism "Change 29 measure" (reference:
+      14 of 50 first rules on the suggested category add a product). Found in the 2.6 run: the rule
       writer adds a `product` to a recommended log source that has none (6 of 9 web gold cases
       with a right suggestion). Prompt only: the first-rule block states what the table says
       about the recommended source's absent fields (generated from the table, not written per

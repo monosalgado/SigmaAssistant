@@ -183,12 +183,44 @@ def normalise_suggestion(suggestion: dict, known_services: set) -> dict:
     return out
 
 
-def first_rule_logsource_block(logsource_info: dict) -> str:
+def _either(names: list) -> str:
+    return names[0] if len(names) == 1 else f"{', '.join(names[:-1])} or {names[-1]}"
+
+
+def absent_fields_note(suggestion: dict, table: dict) -> str:
+    """What SigmaHQ's rules leave out of this log source, from the table (Change 29).
+
+    A category source has no service; a category whose rules name no product (web
+    server, proxy…) has none either; the service form has no category. A category whose
+    rules do name products, suggested without one, gets them listed. A log source the
+    table does not know gets nothing.
+    """
+    category = _clean(suggestion.get("category"))
+    if category is None:
+        if _clean(suggestion.get("product")) or _clean(suggestion.get("service")):
+            return "In SigmaHQ's rules this log source has no `category`: leave it out."
+        return ""
+    row = next((r for r in table["with_category"] if r["category"] == category), None)
+    if row is None:
+        return ""
+    absent, named = [], ""
+    if _clean(suggestion.get("product")) is None:
+        if row["products"] == [None]:
+            absent.append("`product`")
+        elif None not in row["products"]:
+            named = f" SigmaHQ's rules for `{category}` name a product: {_either(row['products'])}."
+    absent.append("`service`")
+    them = "them" if len(absent) > 1 else "it"
+    return f"In SigmaHQ's rules this log source has no {' and no '.join(absent)}: leave {them} out.{named}"
+
+
+def first_rule_logsource_block(logsource_info: dict, table: Optional[dict] = None) -> str:
     """The log source the generation prompt recommends for the first rule (Change 26).
 
     The analyst's confirmation wins; otherwise the analysis stage's top suggestion, as
     ready-to-use YAML with its confidence and reasoning, so the model can weigh it. It
     is a recommendation: the prompt lets the model choose otherwise and explain why.
+    With the table (Change 29), a line says what SigmaHQ's rules leave out of it.
     """
     if logsource_info.get("user_confirmed") and logsource_info.get("primary_source"):
         return (f"Log source confirmed by the analyst: {logsource_info['primary_source']}. "
@@ -203,7 +235,8 @@ def first_rule_logsource_block(logsource_info: dict) -> str:
     why = f"Confidence: {top.get('confidence', '?')}."
     if top.get("reasoning"):
         why += f" Why: {top['reasoning']}"
-    return "\n".join(lines) + "\n" + why
+    note = absent_fields_note(top, table) if table else ""
+    return "\n".join(lines) + "\n" + why + (f"\n{note}" if note else "")
 
 
 def describe_suggestion(suggestion: dict) -> str:

@@ -165,6 +165,24 @@ def first_rule_follows_top(row: dict) -> Optional[bool]:
                for f in ("category", "product", "service"))
 
 
+def first_rule_adds_to_top(row: dict) -> Optional[set]:
+    """Change 29's measure (fixed before its run): the fields ('product', 'service') a
+    first rule adds to the analysis stage's top suggestion while keeping its category.
+    None when not applicable: no scored first rule, no suggestion, or another category.
+    Placeholders ('-', 'none'…) count as absent."""
+    logsource = (row.get("scores") or {}).get("logsource")
+    suggestions = (row.get("pipeline") or {}).get("logsource_suggestions") or []
+    if not logsource or not suggestions or not isinstance(suggestions[0], dict):
+        return None
+    clean = lambda v: None if _norm(v) in (None, "-", "none", "n/a", "null") else _norm(v)
+    fields = ("category", "product", "service")
+    rule = {f: clean((logsource["per_field"].get(f) or {}).get("predicted")) for f in fields}
+    top = {f: clean(suggestions[0].get(f)) for f in fields}
+    if rule["category"] != top["category"]:
+        return None
+    return {f for f in ("product", "service") if rule[f] is not None and top[f] is None}
+
+
 def top_suggestion_exact(row: dict) -> Optional[bool]:
     """S3 had the rule used the analysis stage's top suggestion verbatim (post-hoc)."""
     suggestions = (row.get("pipeline") or {}).get("logsource_suggestions") or []
@@ -286,6 +304,11 @@ def main(argv: list) -> int:
     print(f"\nChange 25 measure: top suggestion's service = gold's  : {sv} / {n}")
     fr = sum(1 for r in rows if diagnose_case(r) and first_rule_follows_top(r))
     print(f"Change 26 measure: first rule = top suggestion       : {fr} / {n}")
+    added = [first_rule_adds_to_top(r) for r in rows]
+    same = [a for a in added if a is not None]
+    print(f"Change 29 measure: first rules on the suggested category: {len(same)}; they add "
+          f"a product: {sum('product' in a for a in same)}, a service: {sum('service' in a for a in same)}, "
+          f"either: {sum(bool(a) for a in same)}")
     return 0
 
 

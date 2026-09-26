@@ -3254,3 +3254,57 @@ comparison in Phase 2 (Bonferroni-style threshold 0.0083): not conclusive. S5 +0
 - The case readings above (the 6 added products, the service-form cases) are post-hoc.
 - The primary is significant at 0.05 as this step's single pre-registered primary; it is one
   run, on the tuning cases (plan 2.9).
+
+---
+
+## 2026-09-26 — Change 29 (plan 2.6b): the rule writer is told what the recommended log source leaves out, and what `product` means (code done; run next)
+
+### Motivation
+Change 28's run: the analysis stage's suggestion became right for 9 of 12 web gold cases
+("webserver", no product), but S3 did not move because the rule writer added a product. The
+committed measure written for this step (below) counts it on that run: **of the 50 first
+rules that keep the suggested category, 15 add a field the suggestion lacks — 14 a product**,
+13 of them `webserver` rules given the attacked software (`fortigate`, `mikrotik`,
+`barracuda`, `globalprotect`, `confluence`, `manageengine_supportcenter_plus`…, and `webserver`
+itself 3 times). SigmaHQ's 13 `webserver` and 29 `proxy` rules carry no product. The rule
+writer never sees the table. (In step d the count is 0 — the old web suggestions carried
+the invented "linux-windows/apache-iis" product themselves.)
+
+### Design (user, 2026-09-26: go ahead; prompt only, the model still decides)
+- **`absent_fields_note(suggestion, table)`** (`sigma_logsource.py`), appended to the
+  "Log Source for the First Rule" block after the confidence line: what SigmaHQ's rules leave
+  out of the recommended log source, **from the committed table** — a category source has no
+  service; a category whose rules name no product (web server, proxy…) has none either; the
+  service form has no category; a category suggested without the product its rules do use
+  gets them listed ("name a product: linux, macos or windows"), not forbidden. A log source
+  the table does not know gets nothing. The analyst's confirmation gets no note.
+  E.g. "In SigmaHQ's rules this log source has no `product` and no `service`: leave them out."
+- **One bullet in generation instruction 5**, next to the existing `service:`/`version:`
+  bullets: "`product:` names what produces the log (the operating system, platform or
+  appliance whose log it is), not necessarily the software the attack targets. Leave it out
+  when that log source has none." ("not necessarily": for application logs the targeted
+  application is what writes the log.)
+Unchanged: the analysis stage (its prompt and table), every other stage, Change 26's section.
+
+### Verification
+Tests first, seen failing: **19 tests** (`tests/test_first_rule_absent_fields.py`) — the note
+for each form (no product, product present, missing product named, service form, unknown
+sources silent); the block (note after the confidence line; no table → as before; analyst
+confirmation → no note); the prompt bullet; the generation stage passes the committed table
+(stub client); the measure. Change 26's 10 tests pass unchanged. Full suite **387 passed**.
+
+### Measurement plan (fixed before the run)
+Same 60 cases; arm `p2f_product`, `eval/results/p2f_product60.jsonl`; paired against
+**`p2e_table60.jsonl`**.
+- **Primary: S3, paired** (`compare_runs.py`) — reference run 14/55 scored.
+- Mechanism (`diagnose_logsource.py`, "Change 29 measure", committed before the run): first
+  rules on the suggested category that add a product / a service / either — reference **14 /
+  8 / 15 of 50**.
+- Secondary: Change 26's measure (first rule = top suggestion, 35/55); S3 per field (product
+  31/55, service 43/55); `compare_suggestions.py` as a consistency check (the analysis stage is
+  unchanged; 23/60); S1, S4, S5; copies (`count_example_copies.py`; 1 in the vector, 1 in the
+  rules); cut answers.
+- **Reachable, not predicted:** 6 web gold cases lost S3 only to an added product in the
+  reference run (2 more first rules did not parse).
+- **Risk stated before the run:** the `product` bullet could make the rule writer drop a
+  correct product (e.g. `windows`) — watched via the product field and the S3 losses.
