@@ -364,6 +364,15 @@ Foundation-Sec (out of the thesis entirely); the PoC dotted-tag quirk (known lim
 CH7 item 27); `.env.example` (already done in H5a); sigma.nasbench.dev (already in the
 web-search entry). Scheduled: 2.3, 2.5, 2.6, 2.8, 3.3, 5.6 notes, H7.)*
 
+From the prompt review (2026-09-26, `thesis/PROMPT_REVIEW.md` §5) — awaiting the user:
+- M1 record the first rule before review in each row · M2 an A/A run (noise floor for S3)
+- 1 generation example: hyphen tactic tags, no fixed id (≥134 pySigma tag warnings per run)
+- 2 honest labels for model-made inputs ("MUST produce", "MUST literally contain", REQUIRED patterns)
+- 3 temperature 0 for generation (0.3) and review (0.2)
+- 4 fewer, ordered imperatives in generation · 5 review told the log-source decision (after M1)
+- 6 rules as YAML blocks, not JSON strings · 7 shorter analysis answer (after Change 32)
+- H8 delete the five unused prompts
+
 ## Security — do first (the user's action)
 
 - [x] **S1** Delete the Gemini API key in Google AI Studio / Cloud Console. The

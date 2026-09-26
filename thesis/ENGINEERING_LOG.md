@@ -3335,3 +3335,26 @@ while 2.6b runs). No pipeline or harness file touched; the run imports none of t
   caught, the fourth (">10" → "≥10") was not, so a boundary test (exactly 10 is not over 10)
   was added and catches it.
 Full suite **398 passed**.
+
+---
+
+## 2026-09-26 — Correction: generation and review do not run at temperature 0; prompt review written
+
+Found while reviewing the prompts (user's request; `thesis/PROMPT_REVIEW.md`). The notes and
+several entries say the pipeline runs at "temperature 0". It does for the attack-vector, PoC
+and analysis stages; **generation calls the model at 0.3 and review at 0.2**
+(`stage_generate.py`, `stage_review.py`, unchanged since before baseline v1). Those two stages
+write and rewrite the rules S3–S5 score, so part of the case-level churn between two runs is
+sampling — how much is unmeasured. No result changes; every paired comparison already treats
+churn as noise. The defect-19 explanation is unaffected (the loops are in the analysis stage,
+which does run at 0). Chapter 7 item 15 corrected.
+
+The prompt review itself (no pipeline change) is in `thesis/PROMPT_REVIEW.md`: five patterns
+with their evidence — the hand-written examples outweigh everything else (143 of 150 tactic
+tags in the Change 28 run use the example's underscore style, against 3,021 of 3,021 hyphenated
+in SigmaHQ's main set and 389 of 389 in the gold rules; pySigma flags each); model-made results
+handed on as facts ("strings a real attacker MUST produce"); competing absolute orders; the
+review rewriting the scored rules without the log-source decision (unmeasured — rows keep only
+the reviewed rules); YAML inside JSON. Five prompts are unused. Its candidate changes are
+proposals for the user; the counts in it come from one-off scripts over committed result files
+and need committed measures before being cited.

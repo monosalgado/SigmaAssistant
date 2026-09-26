@@ -64,8 +64,12 @@ limitation in the log belongs here too.
     not enough for fine comparisons between S4/S5 and their baselines. Measured size of
     the problem: comparing v1 and v2 paired, the 95% intervals on S4/S5 differences are
     about ±0.08 — smaller effects are invisible. (baseline-run entry; baseline v2 entry)
-15. **Temperature 0 is not bit-for-bit repeatable** on Ollama; part of any case-level
-    churn between two runs is run-to-run variation. (Change 12, defect-15 entries)
+15. **Not every stage runs at temperature 0** (corrected 2026-09-26; it read "Temperature 0 is
+    not bit-for-bit repeatable"). Attack vector, PoC and analysis run at 0 — still not
+    bit-for-bit repeatable on Ollama — but **generation runs at 0.3 and review at 0.2**, and
+    those two write and rewrite the scored rules. Part of any case-level churn between two
+    runs is sampling; how much is unmeasured (an A/A run would measure it — prompt review
+    M2). (Change 12, defect-15 entries; log correction 2026-09-26)
 16. **Subgroups are tiny**: e.g. 5 contaminated cases, 3–5 per metric. No conclusion about
     them. (Change 18)
 17. No correction for multiple comparisons yet (the outline plans Holm–Bonferroni across
