@@ -182,7 +182,10 @@ and report it as a finding rather than keep tuning.
       **Done 2026-09-25** (CITABLE): first rule follows the suggestion 24/58 → 44/57; S3 9 → 14
       of 56 (0 lost, p = 0.062); S5 +0.075 CI [+0.008, +0.146]. Cumulative vs v2: S3 7 → 14 of
       55, p = 0.016 (4 comparisons: not conclusive alone). 0 of 12 departures explained.
-- [ ] **2.3** (step d) Change: remove the attack-vector prompt's web bias (21/48 non-web
+- [>] **2.3** (step d) Change 27 **code done 2026-09-25, not yet run** (prompt only: Example A →
+      email/host malware; `primary_telemetry` = where the described activity is seen; "never invent
+      a network request"). **Before the run:** a committed counter of example text in the rows'
+      attack vectors, run on `p2c_first_rule60.jsonl` too. Run `p2d_web_bias60.jsonl`. Originally: remove the attack-vector prompt's web bias (21/48 non-web
       cases labelled web-server telemetry; 16/46 in v2; 18/46 after Change 22). Measure with
       the probe, then the harness. Includes (Inbox 2026-09-25): its worked examples were
       written from specific past cases (Example A is a real saved Citrix rule), and the stage

@@ -2825,3 +2825,48 @@ was referenced nowhere — the analysis stage uses `COMBINED_ANALYSIS` — and c
 reference table with `sysmon` as the service for every Windows category. Removed after the
 step (c) run finished, so no run spans the change; it cannot affect behaviour (never called).
 Full suite 298 passed.
+
+---
+
+## 2026-09-25 — Change 27 (plan 2.3, step d): the attack-vector prompt's web bias (code done; not yet run)
+
+### Motivation
+After Change 26 the first rule follows the analysis stage, so the remaining S3 gains depend on
+the suggestions, which follow the attack-vector stage. That stage labelled **18 of 46** non-web
+cases with web telemetry (`p2c_first_rule60.jsonl`). Read by hand: some are genuine web
+exploits whose gold rule detects the host follow-up (e.g. WSUS, CVE-2025-59287), but **4 of the
+18 vectors contain Example A's text** — "Pandemic Registry Key", a Windows implant, became
+"Unauthenticated HTTP POST to /saml/login with oversized/malformed SAMLRequest"; a browser
+exploit became "HTTP POST to browser". Causes in the prompt: two of three worked examples were
+web exploits; Example A was written from one real past case (Citrix, `NSC_TASS` — the rule in
+`data/saved_rules.json`); the inline examples led with the same SAML request; and
+`primary_telemetry` was "where the initial exploit would be visible", even for reports that
+describe no exploit.
+
+### Design — prompt only, the model still decides (user, 2026-09-25)
+| Edit | Why |
+|---|---|
+| Example A replaced by **malware delivered by email, seen on the host** (ISO → LNK → rundll32 → DLL → Run key; invented names `Remit_8841.iso`, `qx7loader.dll`, `QxUpdate`) | Examples now 1 web (B, unchanged), 2 host (A, C); the most-copied real-case text is gone |
+| `primary_telemetry` = "where the attacker activity this text describes would be most directly visible" — for an exploit of a network service, where the request arrives; for malware, intrusion or host activity, usually host telemetry; "decide from what the text actually describes" | The old definition forced an "initial exploit" onto every report |
+| `initial_access_vector`: if the text does not say how the attacker got in, describe the first action it does describe — "never invent a network request the text does not mention" | "HTTP POST to browser" |
+| Inline examples: the SAML request → "user opens a LNK file from an ISO email attachment"; pattern example `SAMLRequest=asdf` → `-enc JAB` | Same imbalance in miniature |
+| Probe markers: `email_iso_lnk` group added (`remit_8841`, `qx7loader`, `qxupdate`); the old `saml` group kept to count residual copying | Copying of the new example is measured the same way |
+Unchanged: Example B (web) and C (local), the 13-label vocabulary, every other stage.
+
+### Verification
+Tests first, seen failing (6 of 7): **7 tests** (`tests/test_attack_vector_prompt.py`) — the
+real-case strings are gone; the examples are 1 web and 2 host; every example is valid JSON with
+all 15 fields; one example has no network exploit (email, host telemetry); the new
+`primary_telemetry` definition; the "never invent" clause; the markers cover the new example.
+Full suite **305 passed**. Not run on the Spark (user: no run tonight).
+
+### Measurement plan (fixed before the run)
+Same 60 cases; arm `p2d_web_bias`, `eval/results/p2d_web_bias60.jsonl`; paired against
+**`p2c_first_rule60.jsonl`**.
+- Primary: non-web gold cases whose attack-vector telemetry is web (`diagnose_logsource.py`,
+  "attack-vector telemetry web") — **18 of 46** in the reference.
+- Secondary: example text copied into the recorded attack vector (a committed counter over the
+  rows, to be written and run on the reference file **before** the run — plan); analysis top
+  suggestion web (10); rule web (16); S3 paired (reference 14/57); the buckets; S1, S4, S5.
+- Risk stated before the run: genuine web exploits could lose their web label; the web gold
+  cases (webserver/proxy, 11 of 57) are watched separately for losses.

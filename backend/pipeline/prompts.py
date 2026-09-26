@@ -486,7 +486,7 @@ evidence so that does not happen.
 ## Output — one JSON object with these fields
 
 ### 1. Primary attack vector (REQUIRED)
-- `initial_access_vector`: One-sentence description of HOW the attacker first interacts with the target. Focus on the attacker-visible surface (e.g. "unauthenticated HTTP POST to /saml/login with a crafted SAMLRequest body", "WebSocket handshake to /nginx with command-injection in remoteVersion parameter", "SMB NULL session against named pipe", "malicious Office document with macro", "local user-mode write to kernel device"). If multiple vectors exist, pick the one the write-up emphasizes.
+- `initial_access_vector`: One-sentence description of HOW the attacker first interacts with the target. Focus on the attacker-visible surface (e.g. "user opens a LNK file from an ISO email attachment", "WebSocket handshake to /nginx with command-injection in remoteVersion parameter", "SMB NULL session against named pipe", "malicious Office document with macro", "local user-mode write to kernel device"). If multiple vectors exist, pick the one the write-up emphasizes. If the text does not say how the attacker first got in, describe the first attacker action it does describe — never invent a network request the text does not mention.
 - `protocol`: One of `http`, `https`, `websocket`, `smb`, `rdp`, `dns`, `ldap`, `ssh`, `rpc`, `kerberos`, `local`, `physical`, `email`, `other`, `unknown`.
 - `entry_point`: The concrete endpoint/surface the attacker targets (URL path, named pipe, device file, RPC interface, registry key, UI action...). Empty string if not inferrable.
 - `attacker_controlled_input`: What the attacker actually controls (HTTP parameter name, header name, file field, command-line arg, request body). Empty string if not inferrable.
@@ -499,14 +499,14 @@ evidence so that does not happen.
 
 ### 3. Payload signatures (REQUIRED — what rules should match)
 - `payload_signatures`: List of 1-8 concrete, observable strings/patterns that would appear in telemetry DURING EXPLOITATION. Each item has:
-  - `pattern`: The literal string or simple regex (e.g. `"SAMLRequest=asdf"`, `"remoteVersion=a[$("`, `"$(nslookup"`, `"'; DROP TABLE"`, `"../../etc/passwd"`, `"rO0AB"`).
+  - `pattern`: The literal string or simple regex (e.g. `"-enc JAB"`, `"remoteVersion=a[$("`, `"$(nslookup"`, `"'; DROP TABLE"`, `"../../etc/passwd"`, `"rO0AB"`).
   - `where`: Where this pattern would be observed. One of `request_uri`, `request_body`, `request_header`, `response_body`, `response_header`, `process_cmdline`, `file_content`, `network_payload`, `dns_query`, `other`.
   - `derived_from`: Short quote (<=120 chars) from the input text or PoC that justifies this pattern. If derived from vuln class (e.g. generic deserialization magic bytes), write `"inferred_from_class"`.
 
 These drive the actual detection logic. Prefer patterns that real attackers MUST produce, not patterns that only appear in the specific PoC transcript.
 
 ### 4. Telemetry surfaces (REQUIRED)
-- `primary_telemetry`: Where the initial exploit would be visible. One of `web_proxy`, `webserver_access_log`, `waf`, `network_ids`, `firewall`, `dns`, `process_creation`, `file_event`, `registry_event`, `cloud_audit`, `email_gateway`, `auth_log`, `other`.
+- `primary_telemetry`: Where the attacker activity this text describes would be most directly visible. For an exploit against a network service, that is where the exploit request arrives (e.g. `webserver_access_log`); when the text describes malware, an intrusion or activity on a host rather than an exploit request, it is usually host telemetry (`process_creation`, `file_event`, `registry_event`). Decide from what the text actually describes. One of `web_proxy`, `webserver_access_log`, `waf`, `network_ids`, `firewall`, `dns`, `process_creation`, `file_event`, `registry_event`, `cloud_audit`, `email_gateway`, `auth_log`, `other`.
 - `secondary_telemetry`: List of additional log sources that would see follow-on activity (post-exploit). Same vocabulary as above.
 
 ### 5. Kill-chain coverage (REQUIRED)
@@ -530,31 +530,31 @@ These drive the actual detection logic. Prefer patterns that real attackers MUST
 
 ### Few-shot Examples
 
-**Example A (memory disclosure over HTTP):**
-Input mentions: unauthenticated POST to /saml/login with oversized SAMLRequest triggering out-of-bounds read, leaked memory returned in NSC_TASS cookie, vendor's patch analysis with file "patch.nss".
+**Example A (malware delivered by email, seen on the host — no network exploit):**
+Input mentions: phishing email with an ISO attachment "Remit_8841.iso"; the ISO holds a LNK that runs rundll32.exe to load "qx7loader.dll"; the DLL adds a Run-key value "QxUpdate" for persistence; the analysts detonated the sample in their own sandbox.
 Output (abbreviated):
 {{
-  "initial_access_vector": "Unauthenticated HTTP POST to /saml/login with oversized/malformed SAMLRequest body triggering out-of-bounds read",
-  "protocol": "https",
-  "entry_point": "/saml/login",
-  "attacker_controlled_input": "SAMLRequest POST parameter",
-  "preconditions": "unauthenticated",
-  "vuln_class": "memory_disclosure",
-  "cwe_hint": "CWE-125",
-  "cvss_attack_vector": "AV:N",
+  "initial_access_vector": "User opens a LNK file inside an ISO email attachment, which runs rundll32.exe to load a malicious DLL",
+  "protocol": "email",
+  "entry_point": "LNK file inside the ISO attachment",
+  "attacker_controlled_input": "the attached ISO and the files inside it",
+  "preconditions": "social_engineering",
+  "vuln_class": "other",
+  "cwe_hint": "",
+  "cvss_attack_vector": "unknown",
   "payload_signatures": [
-    {{"pattern": "POST /saml/login", "where": "request_uri", "derived_from": "unauthenticated POST to the SAML endpoint"}},
-    {{"pattern": "SAMLRequest=", "where": "request_body", "derived_from": "attacker-controlled SAMLRequest parameter"}},
-    {{"pattern": "NSC_TASS=", "where": "response_header", "derived_from": "leaked memory returned in session cookie"}}
+    {{"pattern": "rundll32.exe", "where": "process_cmdline", "derived_from": "the LNK runs rundll32.exe"}},
+    {{"pattern": "qx7loader.dll", "where": "process_cmdline", "derived_from": "rundll32 loads qx7loader.dll"}},
+    {{"pattern": "QxUpdate", "where": "other", "derived_from": "Run-key value QxUpdate for persistence"}}
   ],
-  "primary_telemetry": "webserver_access_log",
-  "secondary_telemetry": ["web_proxy", "network_ids"],
-  "kill_chain_stages": ["initial_access", "collection"],
+  "primary_telemetry": "process_creation",
+  "secondary_telemetry": ["registry_event", "file_event", "email_gateway"],
+  "kill_chain_stages": ["initial_access", "execution", "persistence"],
   "incidental_artifacts": [
-    {{"value": "patch.nss", "reason": "vendor patch file analyzed by researchers, never touched by attackers"}}
+    {{"value": "sandbox detonation", "reason": "the analysts' own analysis environment, not attacker activity"}}
   ],
-  "confidence": 0.85,
-  "reasoning": "Write-up includes a clear PoC request and a concrete leaked-data signature."
+  "confidence": 0.8,
+  "reasoning": "No exploit request is described: the attacker's activity becomes visible on the host once the user opens the attachment."
 }}
 
 **Example B (command injection over WebSocket with heavy patch analysis in the article):**

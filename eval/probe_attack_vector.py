@@ -49,8 +49,10 @@ from eval.run_eval import (  # noqa: E402
 )
 
 # Invented strings that appear only in the prompt's examples (prompts.py:560-685).
+# "saml" was Example A until Change 27 (2026-09-25); kept to count residual copying of it.
 EXAMPLE_MARKERS = {
     "saml": ["/saml/login", "samlrequest", "nsc_tass", "patch.nss"],
+    "email_iso_lnk": ["remit_8841", "qx7loader", "qxupdate"],
     "websocket_nginx": ["remoteversion", "bt26-02", "thin-scc-wrapper", "sedcp",
                         "bingb0ng", "tw1st3d"],
     "setuid_oopsie": ["oopsie"],
