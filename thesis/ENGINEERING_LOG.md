@@ -2870,3 +2870,26 @@ Same 60 cases; arm `p2d_web_bias`, `eval/results/p2d_web_bias60.jsonl`; paired a
   suggestion web (10); rule web (16); S3 paired (reference 14/57); the buckets; S1, S4, S5.
 - Risk stated before the run: genuine web exploits could lose their web label; the web gold
   cases (webserver/proxy, 11 of 57) are watched separately for losses.
+
+---
+
+## 2026-09-26 — A committed counter for copied example text, run before Change 27's run
+
+`eval/count_example_copies.py` (7 offline tests, `tests/test_count_example_copies.py`,
+written first; full suite 312 passed). It applies the defect-15 criterion
+(`probe_attack_vector.leaked_markers`: an invented example-only marker present in the output
+and absent from the input) to a finished run's recorded attack vectors, offline. Input = the
+case's extracted text (preprocessed from the snapshots) plus the bodies of the GitHub files the
+PoC stage fetched — a superset of what the stage saw, so the count is a **lower bound**.
+"In the vector itself" = initial access vector, entry point, attacker-controlled input, payload
+signatures; "anywhere" also includes the incidental list and the reasoning.
+
+### Before Change 27 (the pre-registered secondary measure's reference)
+| Run | Copied anywhere | In the vector itself |
+|---|---|---|
+| `baseline60_v2.jsonl` | 11 of 60 (`saml` 6, `websocket_nginx` 8) | **4** (all `saml`) |
+| `p2c_first_rule60.jsonl` (reference for step d) | 10 of 60 (`saml` 6, `websocket_nginx` 6) | **4** (all `saml`) |
+The same four cases both times: `f6a711f3`, `47e0852a` (with the example's `NSC_TASS` cookie),
+`29fd07fc`, `a1507d71` (the rootkit report). **Cross-check:** the defect-15 probe, a different
+method (it reruns the stage and keeps the exact model input), measured 4 of 60 "in the vector
+itself" after Change 12 — the same figure.
