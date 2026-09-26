@@ -375,6 +375,11 @@ From the prompt review (2026-09-26, `thesis/PROMPT_REVIEW.md` §5) — awaiting 
 - 6 rules as YAML blocks, not JSON strings · 7 shorter analysis answer (after Change 32)
 - H8 delete the five unused prompts
 
+From the retrieval check (2026-09-26, user: a and b to the Inbox) — awaiting triage:
+- a record what each retrieval returned (document ids per collection) in every row — measurement only
+- b the analysis stage searches ATT&CK with `combined_text[:500]` — URLs plus, often, the site menu
+  (Securelist case: the Kaspersky menu); the attack-vector summary exists by then. Mainly S4.
+
 ## Security — do first (the user's action)
 
 - [x] **S1** Delete the Gemini API key in Google AI Studio / Cloud Console. The
@@ -423,6 +428,9 @@ so removing one is reversible; untracked and ignored files have no such safety n
       drifted (8 declared fields vs 15 real, no attack-vector model).
 
 ## Parking lot — good ideas, deliberately not scheduled
+
+- **A run without retrieval (RAG ablation)** — user, 2026-09-26: later, with the proper testing
+  (Phase 5). Answers "does the RAG help?"; never measured (`--arm` is a label, no ablation is wired).
 
 - **Web search for local models**, and following links from the article.
   Researched 2026-09-23. **Provider settled: Ollama's web search API — the user
