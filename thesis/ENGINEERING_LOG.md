@@ -2893,3 +2893,40 @@ The same four cases both times: `f6a711f3`, `47e0852a` (with the example's `NSC_
 `29fd07fc`, `a1507d71` (the rootkit report). **Cross-check:** the defect-15 probe, a different
 method (it reruns the stage and keeps the exact model input), measured 4 of 60 "in the vector
 itself" after Change 12 — the same figure.
+
+---
+
+## 2026-09-26 — S3 tested against chance: a committed one-sample test (eval only; written during the step (d) run)
+
+### Why
+Phase 2's exit criterion is "S3 significantly above the null baseline (0.173)". Paired tests
+compare two runs; nothing tested one run against chance. Written while the step (d) run was in
+progress — measurement code only (`eval/summarise.py`), no pipeline file touched.
+
+### Design (fixed before looking at any number)
+- **Exact binomial test, one-sided** ("is S3 above 0.173?"), alpha 0.05, plus a 95% **Wilson**
+  interval; standard library only (`math.comb`). The null is treated as fixed (it is measured
+  over many mismatched gold pairs, Change 4) — disclosed.
+- **Pre-registered use:** applied **once, to the final Phase 2 run**, for the exit decision.
+  Values on earlier runs are descriptive (testing every run would reintroduce the
+  multiple-comparison problem).
+- The summariser prints, under S3: k/n, the Wilson interval, the p-value, and the smallest k
+  that would give p < 0.05 at this n.
+
+### Verification
+Tests first, seen failing: **10 tests** (`tests/test_chance_test.py`) — p-values and Wilson
+intervals against anchors computed once with scipy (hard-coded; scipy is not a declared
+dependency and is not imported), including 56/1024 by hand and the Wilson interval the
+Chapter 6 notes already cite for baseline v1 (0.076–0.262, reproduced); the "needed k" helper;
+the summary fields. Full suite **322 passed**.
+
+### Descriptive values on the finished runs
+| Run | S3 | 95% Wilson | one-sided p | p < 0.05 needs |
+|---|---|---|---|---|
+| baseline v1 | 8/55 | 0.076–0.262 | 0.758 | ≥ 15/55 |
+| baseline v2 | 7/57 | 0.061–0.232 | 0.884 | ≥ 16/57 |
+| Change 22 (`p2a…_r2`) | 11/53 | 0.120–0.335 | 0.304 | ≥ 15/53 |
+| Change 25 (`p2b…`) | 9/58 | 0.084–0.269 | 0.693 | ≥ 16/58 |
+| Change 26 (`p2c…`) | 14/57 | 0.152–0.371 | 0.104 | ≥ 16/57 |
+S3 is **not yet shown to be above chance**; after Change 26 it is two first rules short of the
+threshold at n = 57.

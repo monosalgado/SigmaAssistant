@@ -497,6 +497,13 @@ itself; it gives up after ~12 min, shorter than a drop that needs the user.
 Worth one paragraph in the thesis: the stop rule was designed after defect 12 and here
 it caught a real instance — that is the evidence it earns its place.
 
+### One run against chance `[DESIGN]` (added 2026-09-26)
+Is S3 above the chance level (0.173)? Exact binomial test, **one-sided**, alpha 0.05, with a 95%
+Wilson interval, printed by `eval/summarise.py` under S3 (with the smallest k that would reach
+p < 0.05). Standard library; 10 tests anchored to scipy values. `[DISCLOSE]` Pre-registered to be
+applied **once**, to the final Phase 2 run; earlier values are descriptive. The null is treated
+as fixed. Descriptive after Change 26: 14/57, CI 0.152–0.371, p = 0.104 — not yet above chance.
+
 ### Comparing two runs — paired, not unpaired `[DESIGN]` (added 2026-09-24)
 Two runs on the same cases must be compared **case by case**: each metric only on cases
 scored in both runs; exact McNemar for S1/S3 (discordant pairs), paired bootstrap 95% CI

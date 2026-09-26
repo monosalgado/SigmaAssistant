@@ -214,8 +214,9 @@ and report it as a finding rather than keep tuning.
 
 Order agreed with the user (2026-09-24/25): (c) 2.2 → (d) 2.3 → 2.5 → 2.6 → 2.7 → 2.8.
 
-**Before the exit decision:** a committed one-sample exact binomial test of S3 against the
-null (0.173) — no tool does this yet (S3 14/57 = 0.246 after step c).
+**Exit test (built 2026-09-26, `eval/summarise.py`):** exact binomial, one-sided, alpha 0.05,
+against 0.173 — applied **once, to the final Phase 2 run** (pre-registered). Descriptive so far:
+after step (c) S3 = 14/57, p = 0.104; p < 0.05 needs ≥ 16/57.
 **Exit criteria:** S3 significantly above the null baseline, or the time-box is
 spent and the result is written up as a finding.
 

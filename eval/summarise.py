@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import statistics
+from math import comb, sqrt
 from pathlib import Path
 
 # Measured in Change 4: score of a gold rule against a *different* gold rule.
@@ -37,6 +38,31 @@ def load(path: Path) -> list:
         if line.strip():
             rows.append(json.loads(line))
     return rows
+
+
+def binom_p_above(k: int, n: int, p0: float) -> float:
+    """Exact one-sided binomial p-value: P(X >= k) for X ~ Binomial(n, p0).
+
+    S3 against chance (pre-registered 2026-09-26): one-sided, alpha 0.05, applied once
+    to the final Phase 2 run; values on earlier runs are descriptive. The null p0 is
+    treated as fixed (it is measured over many mismatched gold pairs, Change 4).
+    """
+    return min(1.0, sum(comb(n, i) * p0 ** i * (1 - p0) ** (n - i) for i in range(k, n + 1)))
+
+
+def min_k_above(n: int, p0: float, alpha: float = 0.05) -> int:
+    """Smallest count of n that binom_p_above would call above chance at alpha."""
+    return next(k for k in range(n + 2) if k > n or binom_p_above(k, n, p0) < alpha)
+
+
+def wilson_ci(k: int, n: int, z: float = 1.959963984540054) -> tuple:
+    """95% Wilson score interval for a proportion k/n."""
+    if n == 0:
+        return (None, None)
+    p = k / n
+    centre = (p + z * z / (2 * n)) / (1 + z * z / n)
+    half = z * sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / (1 + z * z / n)
+    return (centre - half, centre + half)
 
 
 def _mean(values: list):
@@ -86,6 +112,11 @@ def summarise(rows: list) -> dict:
         "mean_issues": _mean(issues),
         "logsource_exact": _mean(logsource),
         "n_logsource": len(logsource),
+        "logsource_k": int(sum(logsource)),
+        "logsource_p_above_chance": (binom_p_above(int(sum(logsource)), len(logsource),
+                                                   NULL_BASELINES["logsource_exact"])
+                                     if logsource else None),
+        "logsource_ci": wilson_ci(int(sum(logsource)), len(logsource)),
         "attack_f1": _mean(attack),
         "n_attack": len(attack),
         "detection_f1": _mean(detection),
@@ -216,6 +247,12 @@ def report(name: str, s: dict) -> None:
         if value is not None:
             marker = "  <-- at/below chance" if value <= baseline else ""
         print(f"  {label} : {_fmt(value)}  (n={n}, chance={baseline}){marker}")
+        if key == "logsource_exact" and s.get("n_logsource"):
+            lo, hi = s["logsource_ci"]
+            need = min_k_above(s["n_logsource"], baseline)
+            print(f"    vs chance          : {s['logsource_k']}/{s['n_logsource']}, 95% Wilson CI "
+                  f"[{lo:.3f}, {hi:.3f}], one-sided exact binomial p = "
+                  f"{s['logsource_p_above_chance']:.3f} (p < 0.05 needs >= {need}/{s['n_logsource']})")
 
     print(f"  rules per case       : {_fmt(s['mean_rules'], 2)}")
     print(f"  mean tokens/case     : {_fmt(s['mean_tokens'], 0)}")
