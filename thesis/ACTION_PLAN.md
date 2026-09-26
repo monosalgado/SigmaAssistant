@@ -340,7 +340,7 @@ so removing one is reversible; untracked and ignored files have no such safety n
       `run_mac.sh` into the README (the script also binds the server to
       `0.0.0.0` — fixed in H5a). Also: `.env.example` still says `gemini` is the only
       supported `LLM_PROVIDER`.
-- [ ] **H7** (user approved 2026-09-25) Delete the unused `LOG_SOURCE_SUGGESTION` prompt in
+- [x] **H7** (user approved 2026-09-25; **done** after the step (c) run) Delete the unused `LOG_SOURCE_SUGGESTION` prompt in
       `backend/pipeline/prompts.py` (nothing calls it; it carries its own "sysmon" table).
       **After** the step (c) run finishes — no code changes during a run.
 - [x] **H6** Decide in Phase 3: `backend/pipeline/schemas.py` is imported by

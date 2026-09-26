@@ -2815,3 +2815,13 @@ Phase 2 exit decision (plan).
 
 ### Status
 Plan 2.2 done. `p2c_first_rule60.jsonl` is the reference for step (d).
+
+---
+
+## 2026-09-25 — Housekeeping H7: the unused `LOG_SOURCE_SUGGESTION` prompt removed
+
+Approved by the user in the Inbox triage. The prompt (72 lines, `backend/pipeline/prompts.py`)
+was referenced nowhere — the analysis stage uses `COMBINED_ANALYSIS` — and carried its own
+reference table with `sysmon` as the service for every Windows category. Removed after the
+step (c) run finished, so no run spans the change; it cannot affect behaviour (never called).
+Full suite 298 passed.
