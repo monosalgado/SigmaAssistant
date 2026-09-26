@@ -225,9 +225,10 @@ and report it as a finding rather than keep tuning.
       Why next (2026-09-26, step c run): of the 43 first rules that miss S3, 6 fail only on the
       product — 3 carry "linux-windows/apache-iis", 1 "iis" (gold web rules have none) — and
       the 5 gold rules defined by a service are always missed. The most likely step to move S3.
-- [>] **2.6b** Change 29 — **approved 2026-09-26 (user); code done, run `p2f_product60.jsonl`
-      next** vs `p2e_table60.jsonl`; primary S3 paired; mechanism "Change 29 measure" (reference:
-      14 of 50 first rules on the suggested category add a product). Found in the 2.6 run: the rule
+- [x] **2.6b** Change 29 — approved 2026-09-26 (user); run `p2f_product60.jsonl` vs
+      `p2e_table60.jsonl`. **Done 2026-09-26** (CITABLE): **S3 14 → 21 of 55, p = 0.039**; added
+      products 15 → 0; first rule on the suggestion 35 → 53/56; cumulative vs v2 6 → 21 of 54,
+      p < 0.001 (tuning cases). `p2f_product60.jsonl` = reference for the shared run. Found in the 2.6 run: the rule
       writer adds a `product` to a recommended log source that has none (6 of 9 web gold cases
       with a right suggestion). Prompt only: the first-rule block states what the table says
       about the recommended source's absent fields (generated from the table, not written per
@@ -273,7 +274,7 @@ against 0.173 — applied **once, to the final pipeline's held-out run (2.9, ste
 (pre-registered for "the final Phase 2 run"; revised 2026-09-26 before any held-out result, so
 the test is not run on the cases the changes were tuned on). Descriptive so far:
 after step (c) S3 = 14/57, p = 0.104; p < 0.05 needs ≥ 16/57. After step (d) 13/56, p = 0.160;
-needs ≥ 16/56. After 2.6: 14/55, p = 0.082; needs ≥ 15/55.
+needs ≥ 16/56. After 2.6: 14/55, p = 0.082; needs ≥ 15/55. After 2.6b: 21/56, p < 0.001 (descriptive; tuning cases).
 **Exit criteria:** S3 significantly above the null baseline, or the time-box is
 spent and the result is written up as a finding.
 

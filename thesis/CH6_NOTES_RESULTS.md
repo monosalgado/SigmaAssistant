@@ -298,6 +298,21 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
     rules do not parse. The service form (Windows Security…) was never suggested (0 of 60).
   - For the thesis: the throughline again — the analysis stage is now right far more often,
     and a later stage rewrites part of its answer. `[DISCLOSE]` one run, on the tuning cases.
+- `[MEASURED] 2026-09-26` **Change 29 (the first-rule recommendation says what SigmaHQ's rules
+  leave out of that log source — generated from the table — plus one sentence on what `product`
+  means), measured** (`p2f_product60.jsonl`, CITABLE, measures fixed before the run):
+  - **S3 14 → 21 of 55 (8 gained, 1 lost, exact McNemar p = 0.039)** — the pre-registered
+    primary; first rules adding a product or service **15 → 0**; first rule on the suggested
+    log source 35 → 53 of 56; product field right 31 → 38.
+  - All 6 cases reachable in the plan (web rules that lost S3 only to an added product) were
+    gained (read case by case); the other gain and the loss followed the analysis stage's own
+    run-to-run variation.
+  - Cumulative vs baseline v2: **S3 6 → 21 of 54 (16 gained, 1 lost, p < 0.001)**; unpaired
+    21/56 = 0.375 against a chance level of 0.173 (descriptive).
+  - For the thesis: **the log-source chain now holds from suggestion to rule** — S3 is at the
+    ceiling the analysis stage's suggestion sets. The gain came from telling the model a fact
+    it lacked (generated from SigmaHQ's own rules), not from enforcing anything.
+    `[DISCLOSE]` tuning cases; the claim waits for the held-out confirmation (plan 2.9).
 
 ### 6.4.5 A field invented instead of generated — rule identifiers (defect 10) `[MEASURED]`
 - The model emitted UUID-shaped ids with non-hex characters

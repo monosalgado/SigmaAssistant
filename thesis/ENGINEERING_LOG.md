@@ -3375,3 +3375,61 @@ old example id, cases with a duplicate id, rules still carrying the new placehol
 **Correction to the previous entry:** its "143 of 150" came from a one-off count that also
 matched text outside the `tags` field; the committed measure gives **137 of 143** on the same
 run. The review document is corrected; the conclusion is unchanged.
+
+---
+
+## 2026-09-26 — Change 29 measured (plan 2.6b): S3 rises; the rule writer no longer adds a product
+
+`eval/results/p2f_product60.jsonl`, arm `p2f_product`, code `e692701` (Changes 22 + 24–29), same
+60 cases, 160.5 min, no relaunch, no manual step; no pipeline or harness file changed during
+the run. **CITABLE.** Answers cut at the limit: 1 call in 1 case.
+
+### Pre-registered measures, against `p2e_table60.jsonl`
+| Measure | Before | After | Test / tool |
+|---|---|---|---|
+| **Primary: S3 exact, paired (n = 55)** | **14** | **21** | **8 gained, 1 lost; exact McNemar p = 0.039** (`compare_runs.py`) |
+| Mechanism: first rules on the suggested category that add a product / a service / either | 14 / 8 / 15 of 50 | **0 / 0 / 0 of 53** | `diagnose_logsource.py`, "Change 29 measure" |
+| First rule = top suggestion (Change 26's measure) | 35 / 55 | **53 / 56** | same |
+| S3 per field: product / service | 31 / 43 of 55 | 38 / 50 of 56 | same |
+| Top suggestion = gold, all 60 rows (consistency: the analysis stage is unchanged) | 23 | 23 | 1 gained, 1 lost; p = 1.0 (`compare_suggestions.py`) |
+| S1 valid first rule (n = 60) | 55 | 56 | p = 1.0 |
+| S4 ATT&CK F1 (n = 37) | 0.151 | 0.149 | −0.002, 95% CI [−0.041, +0.045] |
+| S5 detection F1 (n = 53) | 0.274 | 0.303 | +0.029, 95% CI [−0.024, +0.085] |
+| Tokens / seconds per case | — | — | no difference |
+Buckets: right_suggested 21 → 22, overridden 1 → 0, wrong_elsewhere 2 → 0, followed_wrong 20 → 23.
+Post-hoc: S3 had the rule used the top suggestion verbatim 20/56 — S3 (21/56) is now at the
+ceiling the suggestion sets. **Stated risk (dropping a correct product): not seen** — the
+product field is right more often (31 → 38).
+
+### The changed cases (read case by case)
+- **All 6 cases "reachable" in the plan were gained** — the web gold rules that lost S3 only to
+  an added product (`20c6ed1c` sitecore/shell, `b014ea07` and `fce2c2e2` webserver, `a2e97350`
+  fortigate, `f0500377` http/web, `181f49fa` iis/owa): each first rule is now `webserver` with
+  no product and no service.
+- `a62298a3`: the first rule now follows the `process_creation` suggestion instead of an
+  initial-access web rule (`sysaid`/`httpd`).
+- `29fd07fc` gained and `64a871dd` lost with their **suggestions**, which swapped between
+  `process_creation` and `file_event` from one run to the next — the analysis stage's own
+  run-to-run variation (its code is unchanged), cancelling out in the consistency check.
+
+### Cumulative, against baseline v2 (not pre-registered as a test)
+S3 paired **6 → 21 of 54, 16 gained, 1 lost, exact McNemar p < 0.001** (0.0003) — the seventh
+paired comparison in Phase 2; it passes a Bonferroni-style threshold for seven (0.0071). S5
++0.082, 95% CI [−0.011, +0.181]; S4 −0.023, CI spans zero.
+S3 against chance (descriptive; the pre-registered test is for the held-out run, plan 2.9):
+21/56 = 0.375, 95% Wilson [0.260, 0.506], one-sided p < 0.001 — above chance on the tuning
+cases for the first time.
+
+### Reading
+- A generated note — what SigmaHQ's rules leave out of the recommended log source — and one
+  sentence on what `product` means removed the added products entirely (15 → 0) and moved S3
+  by exactly the cases it could reach. Nothing is enforced; the model chose.
+- Phase 2's log-source chain now holds end to end: the rule follows the suggestion in 53 of 56
+  cases, so S3 is limited by the analysis stage's suggestion (23 of 60 right).
+- `[DISCLOSE]` All of this is on the 60 tuning cases; the claim waits for the held-out run.
+
+### Other counts on this run (the shared run's reference)
+Copies (`count_example_copies.py`): in the vector 1, in the rules 1 (`0033cf83`), anywhere 6;
+payload patterns absent from the input 62 in 34 cases. Conventions
+(`count_rule_conventions.py`): tactic tags underscore / hyphen 141 / 8, pySigma tag issues 145,
+old example id 1 rule, cases with a duplicate id 0.
