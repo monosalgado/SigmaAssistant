@@ -239,6 +239,20 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
     suggestion — the override step (c) targets.
   - Finding: the analysis stage never suggests a log source *without* a category; the 6 gold
     rules defined by a service (e.g. Windows Security) are always missed there.
+- `[MEASURED] 2026-09-25` **Change 26 (the prompt recommends the analysis's log source for the
+  first rule; nothing enforced), measured** (`p2c_first_rule60.jsonl`, CITABLE):
+  - first rule follows the suggestion **24/58 → 44/57**; overrides 6 → 2; non-Sigma categories 3 → 0;
+  - **S3 9 → 14 of 56, 0 lost (p = 0.062)**; **S5 +0.075, 95% CI [+0.008, +0.146]** — the first
+    quality interval that excludes zero; S4 unchanged;
+  - cumulative vs baseline v2: **S3 7 → 14 of 55, 0 lost, p = 0.016** — `[DISCLOSE]` four paired
+    comparisons in Phase 2, so not conclusive alone (Bonferroni threshold 0.0125); not yet
+    tested against the chance level (14/57 = 0.246 vs 0.173).
+  - For the thesis: **the stages were right more often than the rules showed** — once the
+    rule writer is told to use the analysis's log source, S3 approaches what the suggestion
+    allows (16/57). The bottleneck has moved upstream, to the suggestion itself.
+  - The model ignored the instruction to explain a departure (0 of 12) — relevant to the
+    assistant's promise of explanations: they have to be asked for differently, or produced
+    by a separate step.
 
 ### 6.4.5 A field invented instead of generated — rule identifiers (defect 10) `[MEASURED]`
 - The model emitted UUID-shaped ids with non-hex characters

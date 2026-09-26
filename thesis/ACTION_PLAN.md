@@ -175,10 +175,13 @@ and report it as a finding rather than keep tuning.
       marked `service_to_confirm` for the analyst. Run `p2b_service60.jsonl`.
       **Done 2026-09-25** (CITABLE): suggestion's service right 0/53 → 51/58; S3-if-copied
       0 → 15/58; S3 paired 11 → 8 of 53 (3 lost, p = 0.25; 2 are rules written as `email`).
-- [>] **2.2** (step c) Change 26 (prompt precedence, nothing enforced — user: "I want them to
+- [x] **2.2** (step c) Change 26 (prompt precedence, nothing enforced — user: "I want them to
       think"). Run `p2c_first_rule60.jsonl` vs `p2b_service60.jsonl`. Originally: make the (suggested or confirmed) logsource an explicit
       constraint in generation, checked after generation (defect 11); resolve the
       conflict with generation rule 2 ("initial access MANDATORY"). Measure.
+      **Done 2026-09-25** (CITABLE): first rule follows the suggestion 24/58 → 44/57; S3 9 → 14
+      of 56 (0 lost, p = 0.062); S5 +0.075 CI [+0.008, +0.146]. Cumulative vs v2: S3 7 → 14 of
+      55, p = 0.016 (4 comparisons: not conclusive alone). 0 of 12 departures explained.
 - [ ] **2.3** (step d) Change: remove the attack-vector prompt's web bias (21/48 non-web
       cases labelled web-server telemetry; 16/46 in v2; 18/46 after Change 22). Measure with
       the probe, then the harness. Includes (Inbox 2026-09-25): its worked examples were
@@ -193,6 +196,8 @@ and report it as a finding rather than keep tuning.
       rules defined by a service (Windows Security ×3, …) are always missed. Give its prompt a
       complete reference table (service-based sources too; no "windows/sysmon"). Prompt
       change: the model chooses. Its own run.
+      Also (Change 26 run): the table's "linux-windows/apache-iis" cell is copied into the
+      web suggestions' `product` (5 of 12 departures); no gold web rule has a product.
 - [ ] **2.7** (user, was 2.2e) ATT&CK ID check: drop technique IDs that do not exist in
       ATT&CK (the `mitre` collection), like the rule-id check (Change 9). Changes finished
       answers → its own run. Measure S4 and invented-ID counts.
@@ -206,6 +211,8 @@ and report it as a finding rather than keep tuning.
 
 Order agreed with the user (2026-09-24/25): (c) 2.2 → (d) 2.3 → 2.5 → 2.6 → 2.7 → 2.8.
 
+**Before the exit decision:** a committed one-sample exact binomial test of S3 against the
+null (0.173) — no tool does this yet (S3 14/57 = 0.246 after step c).
 **Exit criteria:** S3 significantly above the null baseline, or the time-box is
 spent and the result is written up as a finding.
 

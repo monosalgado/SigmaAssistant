@@ -2762,3 +2762,56 @@ Same 60 cases; arm `p2c_first_rule`, `eval/results/p2c_first_rule60.jsonl`; pair
   rules state a reason for departing (read by hand, not scored).
 - Expectation, stated before the run: compliance up; S3 up at most to ~15; the web bias
   remains (the analysis suggests web in 10 cases) — step (d).
+
+---
+
+## 2026-09-25 — Change 26 measured (plan 2.2, step c)
+
+`eval/results/p2c_first_rule60.jsonl`, arm `p2c_first_rule`, code `469f8a0` (Changes 22 + 24 +
+25 + 26), same 60 cases, 202.6 min, no relaunch, no manual step. **CITABLE**. Answers cut at
+the output limit: 7 calls in 5 cases, **all in the analysis stage** (13 of 13 over two runs).
+
+### Pre-registered measures, against `p2b_service60.jsonl` (paired)
+| Measure | Before | After | Note |
+|---|---|---|---|
+| **Primary: first rule's log source = top suggestion** | **24 / 58** | **44 / 57** | the change's purpose |
+| S3 exact, paired (n = 56) | 9 | **14** | 5 gained, 0 lost; exact McNemar p = 0.062 |
+| S5 detection F1, paired (n = 54) | 0.210 | **0.285** | **+0.075, 95% CI [+0.008, +0.146]** — the first quality interval to exclude zero |
+| S4 ATT&CK F1, paired (n = 37) | 0.111 | 0.105 | −0.006, CI [−0.018, 0.000]; 36 of 37 unchanged |
+| S1 valid first rule | 58 | 57 | p = 1.0 |
+| Tokens / seconds per case | — | — | no difference |
+Buckets: overridden 6 → 2; wrong_elsewhere 7 → 1; followed_wrong 16 → 21; right_suggested
+18 → 22. Categories no SigmaHQ rule uses: 3 → 0. S3 had the rule copied the suggestion:
+16/57 — the rule writer (14/57) is now close to the ceiling the suggestion sets.
+
+### Cumulative, against baseline v2 (not pre-registered as a test)
+S3 paired **7 → 14 of 55, 7 gained, 0 lost, exact McNemar p = 0.016**; S5 +0.070, CI [+0.004,
++0.143]; S4 −0.031, CI spans zero. **Caveat:** Phase 2 has now run four paired comparisons
+(Changes 22, 25, 26, and this cumulative one); under a Bonferroni-style correction for four
+tests the threshold is 0.0125, which 0.016 does not pass. Strong, one-directional (no case
+lost), not conclusive on its own.
+
+### Is S3 above chance yet? — not shown
+Unpaired S3 is 14/57 = 0.246 against a null of 0.173 (≈ 9.9 of 57 expected). No committed
+tool tests one file against the null; a one-sample exact binomial test is needed before the
+Phase 2 exit decision (plan).
+
+### The departures (12 first rules not on the suggestion), read by hand
+- **0 of 12 explain the departure** in the description, as instruction 1 asked (keyword
+  search plus reading). This model does not follow the "say why" part as phrased.
+- 6: an initial-access web rule first despite a `process_creation` suggestion — the
+  attack-vector pull remains (step d).
+- 5: web suggestions whose **product is "linux-windows/apache-iis"** — the analysis prompt's
+  reference-table cell copied into the field; no gold web rule has a product (step 2.6).
+- 1: `firewall/-` → `firewall/fortios`.
+
+### Reading
+- Precedence by prompt works: the first rule now follows the analysis stage in 44 of 57
+  cases, overrides nearly vanish, and S3 rises with no case lost. Nothing is enforced.
+- Detection fields improve (S5) — plausible, not shown: a rule written for the recommended
+  log source picks fields from that log source.
+- S3 is now limited by the **suggestion** (ceiling 16/57): the remaining gains have to come
+  from the analysis stage (steps d, 2.6).
+
+### Status
+Plan 2.2 done. `p2c_first_rule60.jsonl` is the reference for step (d).
