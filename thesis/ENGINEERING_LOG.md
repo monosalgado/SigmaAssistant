@@ -3134,3 +3134,48 @@ absent from the input can only have come from the prompt's examples.
 This reproduces the one-off search in "Change 27 measured" (now citable) and adds a finding:
 **every example copied into the vector also reached the rules** (10 of 10 case-runs). The
 attack vector feeds generation, so an invented string there becomes a detection string.
+
+---
+
+## 2026-09-26 — Audit: does anything steer results toward the answers? Held-out confirmation added (plan 2.9); the chance test moves to it
+
+### The audit (user's question: "none of this is hard-coding the results?")
+- **The pipeline cannot see the gold.** No file under `backend/` reads the manifest, `eval/`, or
+  `rules-emerging-threats` (searched). Everything the pipeline reads — the retrieval index,
+  Change 25's service list, Change 28's table — comes from `data/sigma/rules`, which holds **0
+  of the 437** manifest rule ids.
+- **Nothing is chosen per case.** Change 28's table is complete and generated; no row was
+  added because a test case needed it.
+- **Where code changes a model answer** (all of Phase 1–2; checked in `stage_generate.py`,
+  `stage_review.py`, `orchestrator.py`, `stage_analysis.py`):
+  | Change | What code does | Scored? |
+  |---|---|---|
+  | 8 | routes a bare URL to rule generation instead of asking the intent classifier | routing, not rule content |
+  | 9 | replaces invalid rule ids | ids are not scored |
+  | 24 | stops an answer at 16,384 tokens | bounds time; the cut answer is scored as a failure |
+  | 25 | drops `service` from a suggestion that has a category (Sigma's convention; user's rule; value kept in `service_dropped`) | acts on the suggestion, not the rule — the rule writer still chooses its log source |
+  Changes 22, 26, 27, 28 are prompt or context only (22's label → category translation is a
+  fixed vocabulary map, written once, not per case). Checks that only report back: pySigma
+  validation and the ATT&CK tactic check (`stage_review.py`) produce issues that go to the
+  review model or trigger a regeneration — the model makes the fix; code edits no tag or
+  detection.
+- **The real risk is not hard-coding but tuning to the test set.** Every Phase 2 change was
+  found by reading failures in the same 60 cases (seed 0) it was then measured on. The fixes
+  are general, but gains measured on the cases that motivated them can be optimistic.
+
+### Held-out confirmation (plan 2.9; user, 2026-09-26)
+After the last run on the 60 tuning cases: 60 new cases, drawn by a committed script
+(stratified, seed 0) from the **242 corpus cases that appear in no result file** (61 distinct
+cases have ever been run, across 23 result files; a new seed alone would share 13–15 of the
+60). The case list is committed before any run on it; no one reads held-out outputs and no
+pipeline file changes until both runs are done. Runs: the final Phase 2 pipeline, and baseline
+v2's code (`5627e91`, to be confirmed) on the same cases, for a paired before/after on unseen
+cases. Page snapshots exist for all 242 (checked); PoC GitHub snapshots to be checked at
+preflight.
+
+### Revision of a pre-registration (made before any held-out result exists)
+"S3 tested against chance" (this log, 2026-09-26) pre-registered the one-sided binomial test
+for **"the final Phase 2 run"**. It is revised to: applied **once, to the final pipeline's
+held-out run** (2.9). Reason: the final run on the 60 would be on the cases the changes were
+tuned on. The test, its alpha (0.05), its null (0.173) and its one-sidedness are unchanged; the
+value on the last tuning run is reported descriptively, like every earlier one.

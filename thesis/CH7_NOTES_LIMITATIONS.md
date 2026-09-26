@@ -178,6 +178,15 @@ limitation in the log belongs here too.
     which the gold rules share — intended, since the task is to write rules in that
     convention, and it would have to be said at the defence. The one gold log source only in
     the emerging-threats set (`fortios`/`sslvpnd`) is not on the table. (Change 28)
+44. **Phase 2 was tuned on the cases it was measured on** (the 60 seed-0 cases): each change
+    came from reading failures there. Gains on those cases may be optimistic. Mitigation
+    planned: a held-out confirmation on 60 never-run cases (plan 2.9), where the chance test
+    is applied. Until it runs, Phase 2's paired results are "on the tuning set". (Chapter 5,
+    "Held-out confirmation"; log 2026-09-26 "Audit")
+45. **Code edits model output in three places** — rule ids (Change 9), the length limit
+    (Change 24), and the service of a suggestion with a category (Change 25) — plus Change
+    8's routing of bare URLs. None looks at the gold. Change 25 is the only one that touches
+    a log-source decision, and it acts on the suggestion, not the scored rule. (log "Audit")
 
 ---
 

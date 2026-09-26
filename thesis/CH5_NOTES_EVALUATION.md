@@ -501,8 +501,10 @@ it caught a real instance — that is the evidence it earns its place.
 Is S3 above the chance level (0.173)? Exact binomial test, **one-sided**, alpha 0.05, with a 95%
 Wilson interval, printed by `eval/summarise.py` under S3 (with the smallest k that would reach
 p < 0.05). Standard library; 10 tests anchored to scipy values. `[DISCLOSE]` Pre-registered to be
-applied **once**, to the final Phase 2 run; earlier values are descriptive. The null is treated
-as fixed. Descriptive after Change 26: 14/57, CI 0.152–0.371, p = 0.104 — not yet above chance.
+applied **once**, to the final Phase 2 run; earlier values are descriptive. **Revised
+2026-09-26, before any held-out result existed:** applied once to the final pipeline's
+**held-out** run (next section), not to the 60 cases the changes were tuned on; test, alpha,
+null and sidedness unchanged. The null is treated as fixed. Descriptive after Change 26: 14/57, CI 0.152–0.371, p = 0.104 — not yet above chance.
 After Change 27: 13/56, CI 0.141–0.358, p = 0.160.
 
 ### Comparing two runs — paired, not unpaired `[DESIGN]` (added 2026-09-24)
@@ -525,6 +527,15 @@ once copied from an earlier run — log, "Correction: two … denominators").
 `eval/compare_suggestions.py` compares the analysis stage's top suggestion with the gold log
 source over **all** rows — the gold comes from the manifest, not from the scored first rule —
 paired, exact McNemar; a case with no suggestion counts as a miss. 9 tests.
+
+### Held-out confirmation — the answer to "did you tune on your test set?" `[DESIGN]` (added 2026-09-26)
+Every Phase 2 change was found by reading failures in the 60 seed-0 cases and measured on the
+same 60. The final check (plan 2.9) uses **60 cases no run has ever touched**: drawn by a
+committed script (stratified, seed 0) from the 242 corpus cases absent from every result file
+(61 distinct cases were ever run, in 23 files; a new seed alone would reuse 13–15 of the 60).
+The list is committed before any run; nobody reads held-out outputs and no pipeline file
+changes until both runs are done. Two runs on it — the final pipeline and baseline v2's code —
+give a paired before/after on unseen cases, and the chance test (above) is applied there.
 
 ### Attribution: one run per change, with one planned exception `[DESIGN]` (added 2026-09-26)
 Phase 2 ran one 60-case run per change so each effect could be attributed (user, 2026-09-24).
