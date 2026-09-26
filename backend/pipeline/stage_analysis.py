@@ -10,10 +10,20 @@ import json
 from backend.pipeline.base_stage import PipelineStage
 from backend.pipeline.stage_attack_vector import AttackVectorStage
 from backend.pipeline import prompts
-from backend.pipeline.sigma_logsource import load_known_services, normalise_suggestion
+from backend.pipeline.sigma_logsource import (
+    format_category_table,
+    format_service_table,
+    load_known_services,
+    load_logsource_table,
+    normalise_suggestion,
+)
 
 # Loaded once: the (product, service) pairs SigmaHQ uses without a category (Change 25).
 _KNOWN_SERVICES = load_known_services()
+# Loaded once: every log source SigmaHQ's rules use, for the prompt's tables (Change 28).
+_LOGSOURCE_TABLE = load_logsource_table()
+_LOGSOURCE_CATEGORIES = format_category_table(_LOGSOURCE_TABLE)
+_LOGSOURCE_SERVICES = format_service_table(_LOGSOURCE_TABLE)
 
 
 class AnalysisStage(PipelineStage):
@@ -58,6 +68,8 @@ class AnalysisStage(PipelineStage):
             attack_vector_summary=attack_vector_summary,
             incidental_blacklist=incidental_blacklist,
             mitre_context=mitre_context,
+            logsource_categories=_LOGSOURCE_CATEGORIES,
+            logsource_services=_LOGSOURCE_SERVICES,
         )
 
         try:

@@ -521,6 +521,16 @@ fell 18/48 → 14/45, but only 4 cases changed label; 2 of the 4-case drop were 
 the count. Such counts are reported as counts, not tested; a paired, all-rows version would
 need its own committed tool. Every denominator is quoted from the tool's output (two were
 once copied from an earlier run — log, "Correction: two … denominators").
+`[DESIGN]` (added 2026-09-26, Change 28) **The first measure built to avoid it:**
+`eval/compare_suggestions.py` compares the analysis stage's top suggestion with the gold log
+source over **all** rows — the gold comes from the manifest, not from the scored first rule —
+paired, exact McNemar; a case with no suggestion counts as a miss. 9 tests.
+
+### Attribution: one run per change, with one planned exception `[DESIGN]` (added 2026-09-26)
+Phase 2 ran one 60-case run per change so each effect could be attributed (user, 2026-09-24).
+From 2.6 on (user, 2026-09-26): 2.6 still runs alone; defect 15's fix, 2.7 and 2.8 then share
+one run. Each keeps a mechanism measure counted by code (example copies, invented technique
+IDs, list length and cut answers); their effect on S3–S5 is reported as joint.
 
 ## 5.7 Status — what exists vs. what is claimed (2026-09-24)
 

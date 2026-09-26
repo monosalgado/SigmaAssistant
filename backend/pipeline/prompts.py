@@ -677,25 +677,27 @@ Each mapping needs: technique_id, technique_name, tactic, relevance (brief expla
 
 ## PART 3: Log Source Recommendation
 
-Determine the best Sigma log sources for detecting this attack:
+Determine the best Sigma log sources for detecting this attack.
 
-| Category | Product | Typical Fields |
-|----------|---------|----------------|
-| process_creation | windows/sysmon | Image, CommandLine, ParentImage, ParentCommandLine, User |
-| process_access | windows/sysmon | SourceImage, TargetImage, GrantedAccess, CallTrace |
-| file_event | windows/sysmon | TargetFilename, Image, CreationUtcTime |
-| registry_event | windows/sysmon | TargetObject, Details, Image, EventType |
-| network_connection | windows/sysmon | DestinationIp, DestinationPort, SourceIp, Image |
-| dns_query | windows/sysmon | QueryName, QueryResults, Image |
-| image_load | windows/sysmon | ImageLoaded, Image, Signed, SignatureStatus |
-| pipe_created | windows/sysmon | PipeName, Image |
-| ps_script | windows/powershell | ScriptBlockText |
-| webserver | linux-windows/apache-iis | cs-uri-query, cs-method, c-ip |
-| firewall | - | src_ip, dst_ip, dst_port, action |
-| proxy | - | cs-host, cs-uri, c-useragent |
-| cloud | aws/azure/gcp | eventName, operationName, methodName |
+A Sigma log source takes one of two forms:
+1. **A category and a product, with no service** (first table below). The category names
+   what was recorded — a process started, a file was written, a web request arrived —
+   whichever tool recorded it. Some categories have no product: leave it empty for those.
+2. **A product and a service, without a category** (second table below), for logs that no
+   category describes, such as a specific event log or a cloud audit trail.
 
-Each suggestion needs: category, product, service, confidence (0-1), reasoning, relevant_fields.
+The tables list every log source used by the SigmaHQ rule set, with the fields its rules
+match on most often. Write the names as they appear in the tables; "(none)" means leave
+that field empty.
+
+### Log sources with a category (no service)
+{logsource_categories}
+
+### Log sources without a category (product + service)
+{logsource_services}
+
+Each suggestion needs: category, product, service (null for a field its form leaves empty),
+confidence (0-1), reasoning, relevant_fields.
 
 ---
 
@@ -721,13 +723,13 @@ Respond with JSON only:
     {{
       "category": "process_access",
       "product": "windows",
-      "service": "sysmon",
+      "service": null,
       "confidence": 0.95,
       "reasoning": "why this log source captures the attack",
       "relevant_fields": ["SourceImage", "TargetImage", "GrantedAccess"]
     }}
   ],
-  "logsource_primary": "process_access (Sysmon Event ID 10)"
+  "logsource_primary": "process_access / windows"
 }}"""
 
 

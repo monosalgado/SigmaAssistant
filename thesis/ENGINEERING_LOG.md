@@ -3035,3 +3035,79 @@ S3 against chance (descriptive; the test is pre-registered for the final Phase 2
 ### Status
 Plan 2.3 done. Next: 2.6 (plan order). Open for the user: whether and when to treat defect 15
 at its cause (options in the plan).
+
+---
+
+## 2026-09-26 — Change 28 (plan 2.6): the analysis prompt's log-source table is generated from SigmaHQ's rules (code done; run next)
+
+### Motivation
+After Change 27 the web bias no longer limits S3; the analysis stage's suggestion does. Its
+reference table was hand-written: 13 rows, "Product" cells that mixed product and service
+(`windows/sysmon`, `linux-windows/apache-iis`, `aws/azure/gcp`), and **no log source without a
+category** — so gold rules defined by a service (Windows Security, zeek/http) were never
+suggested (0 of 5 in these 60 cases). In the step (d) run, **19 top suggestions are not a log
+source SigmaHQ uses, and all 19 come from those cells** (read case by case: 16
+`webserver` + "linux-windows/apache-iis" verbatim, 1 `webserver` + "linux", 2 with `sysmon` as
+the product). No SigmaHQ web rule has a product.
+
+### Design (user, 2026-09-26: complete table; the model still chooses)
+- **Generated, not written**: `scripts/build_sigma_logsource_table.py` →
+  `backend/pipeline/sigma_logsource_table.json` (committed; SigmaHQ commit `dc3880459`). Built
+  from `data/sigma/rules` — the rules the retrieval index uses — **never
+  `rules-emerging-threats`, which holds the gold rules (checked: 0 of 437 manifest rule ids are
+  in the main set)**. Same loader as Change 25's known-services list; a test pins that the
+  table's service rows are exactly that list.
+- **Complete**: all **35 categories** (with the products their rules use; "(none)" where the
+  rules carry no product) and all **75 sources without a category** (product + service), each
+  with the 5 fields its rules match on most (modifiers stripped). No threshold (user: include
+  the one-rule sources). Rows alphabetical, so order says nothing about frequency; no counts.
+- **Prompt, Part 3**: the two forms of a Sigma log source explained in general terms
+  (category + product with no service / product + service without a category) — no single
+  example pair to copy (the defect-15 lesson) — then the two tables; "write the names as they
+  appear; '(none)' means leave that field empty". The output example's suggestion now has
+  `"service": null`, and `logsource_primary` reads "process_access / windows" (was
+  "process_access (Sysmon Event ID 10)"; free text, nothing parses it).
+- **`on_table(suggestion, table)`** (spec check, `sigma_logsource.py`): used to measure only;
+  nothing is enforced. Available to Phase 3.5's quality guard.
+- Size: the tables are ~6,600 characters against ~1,000 before (an estimated ~1,400 more
+  prompt tokens per analysis call — to be measured by the run's token counts).
+Unchanged: every other stage and prompt, Change 25's normalisation, Change 26's first-rule
+section.
+
+### Verification
+Tests first, seen failing: **31 tests** (`tests/test_logsource_table.py`) — building from a
+fixture rule set (products per category, "no product" kept as such, the service form,
+category rules naming a service listed under the category only, fields without modifiers
+ranked by use and capped, keyword detections, unreadable files, alphabetical order);
+rendering; `on_table` in both forms (11 cases, incl. the invented product); the committed
+table (35 categories, `webserver`/`proxy` without product, Windows Security / zeek/http /
+CloudTrail present, fortios/sslvpnd absent) and its equality with a fresh build; the prompt
+(old cells gone, both tables in, both forms explained, example without service or Sysmon); the
+stage puts the committed tables in its prompt (stub client, no LLM).
+A new committed measure, **`eval/compare_suggestions.py`** (9 tests,
+`tests/test_compare_suggestions.py`): the top suggestion against the gold log source over
+**all rows** — gold from `eval/manifest.jsonl`, so a case counts whether or not its first rule
+parses (avoids this morning's denominator trap), paired, exact McNemar. Full suite **362
+passed**.
+
+### Measurement plan (fixed before the run)
+Same 60 cases; arm `p2e_table`, `eval/results/p2e_table60.jsonl`; paired against
+**`p2d_web_bias60.jsonl`**. Reference values computed before the run with the committed tool:
+| Measure (`compare_suggestions.py`, all 60 rows) | Reference (step d) |
+|---|---|
+| **Primary: top suggestion = gold log source** | **13 / 60** |
+| Top suggestion on the table | 39 / 60 |
+| Top suggestion without a category | 0 |
+| No suggestion at all | 2 |
+| = gold, gold defined by a service | 0 / 5 |
+| = gold, web gold (webserver/proxy) | 0 / 12 |
+| = gold, other category gold | 13 / 43 |
+Secondary: S3 paired (`compare_runs.py`; reference 13 of 56 scored); Change 26's measure
+(first rule = top suggestion, 47/56); the buckets; S1, S4, S5; tokens and seconds (expected to
+rise with the longer prompt); answers cut at the limit.
+**Reachable, not predicted:** 4 of the 5 service-based gold rules are on the table
+(`fortios`/`sslvpnd` is emerging-threats only, so the table cannot offer it).
+**Risks stated before the run:** (1) a longer table could dilute attention or pull
+suggestions toward rare sources — watched as losses among "other category" gold (13); (2)
+service-based suggestions could replace a correct category — watched via "without a
+category" and the losses; (3) the new fields column could change what generation writes (S5).
