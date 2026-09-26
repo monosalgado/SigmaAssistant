@@ -226,7 +226,9 @@ spent and the result is written up as a finding.
 
 ## Phase 3 — Assistant backend (after Phase 0 approves it)
 
-Design: `thesis/ASSISTANT_DESIGN.md` (draft, still to be reviewed by the user).
+Design: `thesis/ASSISTANT_DESIGN.md` — **reviewed with the user 2026-09-26**; decisions in its §9
+(analyst-confirmed facts are final; state in the persisted session; the revise button in scope,
+later; SIEM/EDR conversion pending Phase 0).
 
 - [x] 3.0 Defect 13 fixed (`663f005`) — design step 1
 - [ ] **3.1** Report builder: a pure function from pipeline context to the report *(offline)*
@@ -406,6 +408,7 @@ so removing one is reversible; untracked and ignored files have no such safety n
 | 2026-09-24 | Keep Change 12 (whole source): token and time cost is not a concern — everything is local and unbilled; rule quality is the priority, and full context matters for it | user |
 | 2026-09-24 | Phase 2 order from 2.1: (a) one vocabulary, (b) the suggestion's service, (c) 2.2 precedence, (d) 2.3 web bias; 2.4 dropped | user |
 | 2026-09-24 | One 60-case run per Phase 2 change, so each change's effect can be attributed | user |
+| 2026-09-26 | Assistant design reviewed: analyst-confirmed facts are final (one model rewrite, then shown), model suggestions stay recommendations; Phase A state in the persisted session; "revise this rule" in scope later; SIEM/EDR conversion pending Phase 0 | user |
 | 2026-09-26 | Phase 2 reordered: after (d), 2.6 (reference table) next — most likely to move S3; 2.5 (invented categories) moved to Phase 3.5 as a quality guard for generated and edited rules | user |
 | 2026-09-25 | Inbox triage: 2.5 (invented categories) and 2.6 (complete reference table) added after (d); order (d) → 2.5 → 2.6 → ATT&CK ID check → 10 most relevant techniques; Foundation-Sec out of the thesis; paraphrased evidence is fine; delete the unused suggestion prompt | user |
 | 2026-09-25 | No hardcoding to get results: the LLM stages decide; code validates against a spec and records. Step (c) is a prompt change with no enforcement | user |
