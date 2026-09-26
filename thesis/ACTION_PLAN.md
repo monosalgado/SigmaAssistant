@@ -198,8 +198,9 @@ and report it as a finding rather than keep tuning.
       still copies example text into answers (`/saml/login` on a rootkit report) — count that
       before and after, with a committed script.
 - [ ] **Defect 15 at its cause — decided 2026-09-26: (a) + (b) as one change, in the shared run
-      with 2.7 and 2.8; (c) in Phase 3.** Before that run: extend the copy counter to the
-      generated rules (committed, tests first) and add the placeholders as markers. The model
+      with 2.7 and 2.8; (c) in Phase 3.** Before that run: ~~extend the copy counter to the
+      generated rules~~ **done 2026-09-26** (`in_rules`; v2 4, step c 4, step d 2 — every vector
+      copy reached the rules); add the placeholders as markers (with the change). The model
       copies a concrete worked example into reports that resemble it; replacing the example
       moved the copying (web exploits → email malware), and the invented names reach rules.
       Options: (a) prompt — say the examples come from other, invented reports and none of

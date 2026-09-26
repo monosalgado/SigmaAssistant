@@ -166,10 +166,12 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
   SAML example's text in the vector itself **4 → 0**; the new email/ISO/LNK example's text
   **0 → 2** — the Qakbot and Emotet-LNK reports received its initial-access sentence word for
   word and its invented `qx7loader.dll` / `QxUpdate`. Total in the vector itself 4 → 2.
-- `[MEASURED — one-off search, not a committed measure]` The copied names **reach the
-  generated rules**: the new example's names in the rules of those 2 cases; the old
-  example's strings in the rules of 4 cases in the reference run. Detection strings for
-  files that do not exist; S3 cannot see them (both new cases had the right log source).
+- `[MEASURED] 2026-09-26` The copied names **reach the generated rules** (`in_rules`, added to
+  the committed counter the same day; first found by a one-off search): the new example's
+  names in the rules of those 2 cases; the old example's strings in the rules of 4 cases in
+  baseline v2 and in step (c). **Every example copied into the vector also reached the rules**
+  (10 of 10 case-runs). Retrieval is ruled out as a source: no marker occurs in any retrieval
+  collection. Detection strings for files that do not exist; S3 cannot see them.
 - For the thesis: with this model, a concrete worked example is copied into reports that
   resemble it. Which example is copied depends on which reports look like it; changing the
   example does not remove the behaviour. Defect 15 stays open (options in the plan).

@@ -162,8 +162,8 @@ limitation in the log belongs here too.
     web example with an email-malware one removed the old example's text from the vectors
     (4 → 0) but the new one was copied into 2 look-alike reports, and its invented file names
     reached the generated rules. S3 does not detect this (both cases had the right log
-    source); the example-copy count is a lower bound (item 30), and copies in the rules were
-    found by a one-off search, not a committed measure. Defect 15 is reduced, not fixed.
+    source); the example-copy count is a lower bound (item 30). Copies in the rules are counted
+    by the committed counter since 2026-09-26. Defect 15 is reduced, not fixed.
     ("Change 27 measured")
 41. **Some diagnosis counts compare different case sets.** The web-label counts are taken
     over cases whose first rule parses, so each run has its own denominator; they are

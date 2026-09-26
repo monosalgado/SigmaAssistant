@@ -3111,3 +3111,26 @@ rise with the longer prompt); answers cut at the limit.
 suggestions toward rare sources — watched as losses among "other category" gold (13); (2)
 service-based suggestions could replace a correct category — watched via "without a
 category" and the losses; (3) the new fields column could change what generation writes (S5).
+
+---
+
+## 2026-09-26 — The copy counter now counts copies that reach the generated rules (eval only; written during the Change 28 run)
+
+For the shared defect-15 run (plan), before its changes are written. `eval/count_example_copies.py`
+gains **`in_rules`**: an example marker in the case's generated rules and absent from its input
+(the same criterion). 6 new tests, written first (`tests/test_count_example_copies.py`, 13 in
+all); full suite **368 passed**. No pipeline file touched.
+**Why retrieval is not a source:** generation also reads retrieved documents, so a marker in a
+rule could in principle come from one. `--check-retrieval` (committed) scans the local
+retrieval collections: **no marker in any of them** (sigma_rules 3,104 documents, mitre_attack
+691, cwe_kb 944, sigma_taxonomy 332, sysmon_info 18; run 2026-09-26). A marker in a rule that is
+absent from the input can only have come from the prompt's examples.
+
+| Run | In the vector itself | In the generated rules |
+|---|---|---|
+| `baseline60_v2.jsonl` | 4 (`saml`) | **4** — the same 4 cases |
+| `p2c_first_rule60.jsonl` | 4 (`saml`) | **4** — the same 4 cases |
+| `p2d_web_bias60.jsonl` | 2 (`email_iso_lnk`) | **2** — the same 2 cases |
+This reproduces the one-off search in "Change 27 measured" (now citable) and adds a finding:
+**every example copied into the vector also reached the rules** (10 of 10 case-runs). The
+attack vector feeds generation, so an invented string there becomes a detection string.
