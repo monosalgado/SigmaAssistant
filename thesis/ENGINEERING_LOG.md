@@ -3179,3 +3179,78 @@ for **"the final Phase 2 run"**. It is revised to: applied **once, to the final 
 held-out run** (2.9). Reason: the final run on the 60 would be on the cases the changes were
 tuned on. The test, its alpha (0.05), its null (0.173) and its one-sidedness are unchanged; the
 value on the last tuning run is reported descriptively, like every earlier one.
+
+---
+
+## 2026-09-26 — Change 28 measured (plan 2.6): the suggestions improve; the rule writer adds its own product
+
+`eval/results/p2e_table60.jsonl`, arm `p2e_table`, code `c190477` (Changes 22 + 24–28), same 60
+cases, 160.8 min, no relaunch, no manual step; no pipeline or harness file changed during the
+run. **CITABLE.** Answers cut at the limit: 1 call in 1 case (`e710a880`, rescued by the retry).
+
+### Pre-registered measures, against `p2d_web_bias60.jsonl`
+| Measure (`compare_suggestions.py`, all 60 rows, paired) | Before | After | Test |
+|---|---|---|---|
+| **Primary: top suggestion = gold log source** | **13** | **23** | 12 gained, 2 lost; **exact McNemar p = 0.013** |
+| Top suggestion on the table | 39 | 59 | 21 gained, 1 lost; p < 0.001 |
+| Top suggestion without a category | 0 | 0 | — |
+| No suggestion at all | 2 | 1 | — |
+| = gold, gold defined by a service (5) | 0 | 0 | — |
+| = gold, web gold (12) | 0 | **9** | — |
+| = gold, other category gold (43) | 13 | 14 | — |
+| Measure (`compare_runs.py`, paired) | Before | After | Test |
+|---|---|---|---|
+| S3 exact (n = 53) | 12 | 13 | 2 gained, 1 lost; p = 1.0 |
+| S1 valid first rule (n = 60) | 56 | 55 | p = 1.0 |
+| S4 ATT&CK F1 (n = 34) | 0.191 | 0.164 | −0.027, 95% CI [−0.088, +0.025] |
+| S5 detection F1 (n = 51) | 0.286 | 0.272 | −0.014, 95% CI [−0.086, +0.050] |
+| Tokens / seconds per case | — | — | no difference (CIs span zero) |
+`diagnose_logsource.py` (over parsed first rules; denominators 56 → 55): Change 26's measure,
+first rule = top suggestion, **47/56 → 35/55**; per field category 23 → 22, product 32 → 31,
+service 49 → 43; buckets right_suggested 22 → 21, overridden 0 → 1, ranked_low 10 → 10,
+followed_wrong 20 → 20, wrong_elsewhere 3 → 2. Post-hoc: S3 had the rule used the top
+suggestion 11/56 → 20/55. The attack-vector stage was unchanged, and its numbers match step (d):
+web telemetry on non-web gold 14/45; example copies in the vector 2 → 1, in the rules 2 → 1
+(`0033cf83`, the same case as in step d).
+S3 against chance (descriptive): 14/55, 95% Wilson [0.158, 0.383], p = 0.082; p < 0.05 needs
+≥ 15/55.
+Risks stated before the run: (1) dilution — "other category" 13 → 14, no sign of it; (2) the
+service form replacing a right category — the service form was never used; (3) S5 — no
+detectable change.
+
+### Where the gain went (read case by case; post-hoc)
+- **The rule writer adds a product the suggestion does not have.** 10 cases have a right top
+  suggestion and a first rule that does not score: **8 are web gold**, and in **6** of them the
+  rule adds a product (and often a service) — `fortigate`, `iis`/`owa`, `sitecore`/`shell`,
+  `http`/`web`, and twice `webserver` as the product; in 2 the first rule does not parse. The
+  other 2: `e710a880` (does not parse) and `a62298a3` (an initial-access web rule first,
+  `sysaid`/`httpd`). The model reads Sigma's `product` as the attacked application; in Sigma it
+  is the platform that writes the log, and SigmaHQ's web rules have none (13 of 13 `webserver`,
+  29 of 29 `proxy` rules in the main set). The rule writer never sees the table.
+- **The service form is never suggested** (0 of 60). The 4 reachable service-based gold rules
+  (Windows Security ×3, zeek/http) get host categories (`process_creation`…) or `webserver`,
+  which are plausible choices; the table alone did not change that.
+- The 2 suggestion losses: `29fd07fc` → `file_event`; `b7155193` → none: the analysis answer
+  failed to parse ("Invalid \escape") — defect 5, here in the analysis stage.
+- Case `9a2d8b3e`, which looped in the analysis stage in all three previous runs, finished
+  without a cut answer; 1 cut call in the run (6 in step d, 7 in step c). One run: not a finding.
+
+### Cumulative, against baseline v2 (not pre-registered as a test)
+S3 paired 6 → 14 of 54 (9 gained, 1 lost), exact McNemar p = 0.021 — the sixth paired
+comparison in Phase 2 (Bonferroni-style threshold 0.0083): not conclusive. S5 +0.053, CI
+[−0.029, +0.144]; S4 −0.020, CI spans zero.
+
+### Reading
+- **The pre-registered primary moved: the complete table makes the analysis stage's log source
+  right far more often** (13 → 23 of 60, p = 0.013), almost entirely on web gold (0 → 9), and
+  its suggestions are now real SigmaHQ log sources in 59 of 60 cases.
+- **S3 did not follow, because the next stage rewrites the product.** The same throughline as
+  defect 11 (§6.4.4): a stage gets it right, a later stage changes it. It now matters beyond
+  S3: a rule converted to a SIEM query with an invented product would target the wrong index.
+- Proposed next (user's decision): tell the rule writer what the table says about the
+  recommended log source's absent fields, and what `product` means in Sigma — prompt only.
+
+### Limitations to disclose
+- The case readings above (the 6 added products, the service-form cases) are post-hoc.
+- The primary is significant at 0.05 as this step's single pre-registered primary; it is one
+  run, on the tuning cases (plan 2.9).

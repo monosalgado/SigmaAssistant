@@ -505,7 +505,7 @@ applied **once**, to the final Phase 2 run; earlier values are descriptive. **Re
 2026-09-26, before any held-out result existed:** applied once to the final pipeline's
 **held-out** run (next section), not to the 60 cases the changes were tuned on; test, alpha,
 null and sidedness unchanged. The null is treated as fixed. Descriptive after Change 26: 14/57, CI 0.152–0.371, p = 0.104 — not yet above chance.
-After Change 27: 13/56, CI 0.141–0.358, p = 0.160.
+After Change 27: 13/56, CI 0.141–0.358, p = 0.160. After Change 28: 14/55, CI 0.158–0.383, p = 0.082.
 
 ### Comparing two runs — paired, not unpaired `[DESIGN]` (added 2026-09-24)
 Two runs on the same cases must be compared **case by case**: each metric only on cases

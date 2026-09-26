@@ -284,6 +284,20 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
   - The model ignored the instruction to explain a departure (0 of 12) — relevant to the
     assistant's promise of explanations: they have to be asked for differently, or produced
     by a separate step.
+- `[MEASURED] 2026-09-26` **Change 28 (the analysis prompt's table generated from SigmaHQ's
+  main rule set: every category and service-based source, with their fields), measured**
+  (`p2e_table60.jsonl`, CITABLE, measures fixed before the run, all 60 rows counted):
+  - **top suggestion = gold log source 13 → 23 of 60 (12 gained, 2 lost, exact McNemar
+    p = 0.013)** — the step's pre-registered primary; web gold 0 → 9 of 12; suggestions that
+    are real SigmaHQ log sources 39 → 59 of 60;
+  - **S3 on the rule 12 → 13 of 53 (p = 1.0)**; first rule follows the suggestion 47 → 35;
+    S1, S4, S5 no detectable change.
+  - Why (read case by case, post-hoc): in 6 of the 9 web gold cases with a right suggestion the
+    rule writer **adds a product** (`fortigate`, `iis`, `sitecore`, `webserver`…) — it reads
+    `product` as the attacked application, while SigmaHQ's web rules carry none; 2 more first
+    rules do not parse. The service form (Windows Security…) was never suggested (0 of 60).
+  - For the thesis: the throughline again — the analysis stage is now right far more often,
+    and a later stage rewrites part of its answer. `[DISCLOSE]` one run, on the tuning cases.
 
 ### 6.4.5 A field invented instead of generated — rule identifiers (defect 10) `[MEASURED]`
 - The model emitted UUID-shaped ids with non-hex characters

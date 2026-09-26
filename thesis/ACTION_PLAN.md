@@ -209,10 +209,14 @@ and report it as a finding rather than keep tuning.
       string in an answer that is absent from the input, shown in the assistant's report
       (Phase 3). (a)/(b) change prompts → one run each. S3 does not see these copies (both
       cases were right), so they do not block the Phase 2 exit.
-- [>] **2.6** Change 28 **code done 2026-09-26, run `p2e_table60.jsonl` next** (runs alone) vs
+- [x] **2.6** Change 28 (runs alone) vs
       `p2d_web_bias60.jsonl`: generated table (35 categories, 75 service sources, from
       `data/sigma/rules`); primary = top suggestion = gold over all 60 rows
-      (`eval/compare_suggestions.py`), reference 13/60. Originally: The analysis stage never suggests a log source without a category, so the 6 gold
+      (`eval/compare_suggestions.py`), reference 13/60.
+      **Done 2026-09-26** (`p2e_table60.jsonl`, CITABLE): **primary 13 → 23 of 60, p = 0.013**
+      (web gold 0 → 9 of 12; on-table 39 → 59); **S3 12 → 13 of 53, p = 1.0** — in 6 web cases
+      the rule writer adds a product the suggestion does not have (`fortigate`, `iis`…); the
+      service form is never suggested. Originally: The analysis stage never suggests a log source without a category, so the 6 gold
       rules defined by a service (Windows Security ×3, …) are always missed. Give its prompt a
       complete reference table (service-based sources too; no "windows/sysmon"). Prompt
       change: the model chooses. Its own run.
@@ -221,6 +225,12 @@ and report it as a finding rather than keep tuning.
       Why next (2026-09-26, step c run): of the 43 first rules that miss S3, 6 fail only on the
       product — 3 carry "linux-windows/apache-iis", 1 "iis" (gold web rules have none) — and
       the 5 gold rules defined by a service are always missed. The most likely step to move S3.
+- [ ] **2.6b — proposed 2026-09-26, decision open (user).** Found in the 2.6 run: the rule
+      writer adds a `product` to a recommended log source that has none (6 of 9 web gold cases
+      with a right suggestion). Prompt only: the first-rule block states what the table says
+      about the recommended source's absent fields (generated from the table, not written per
+      case), and one sentence on what Sigma's `product` means (the platform that writes the
+      log, not the attacked application). S3-relevant → its own run, before the shared run.
 - [ ] **2.7** (user, was 2.2e) ATT&CK ID check: drop technique IDs that do not exist in
       ATT&CK (the `mitre` collection), like the rule-id check (Change 9). Changes finished
       answers → its own run. Measure S4 and invented-ID counts.
@@ -259,7 +269,7 @@ against 0.173 — applied **once, to the final pipeline's held-out run (2.9, ste
 (pre-registered for "the final Phase 2 run"; revised 2026-09-26 before any held-out result, so
 the test is not run on the cases the changes were tuned on). Descriptive so far:
 after step (c) S3 = 14/57, p = 0.104; p < 0.05 needs ≥ 16/57. After step (d) 13/56, p = 0.160;
-needs ≥ 16/56.
+needs ≥ 16/56. After 2.6: 14/55, p = 0.082; needs ≥ 15/55.
 **Exit criteria:** S3 significantly above the null baseline, or the time-box is
 spent and the result is written up as a finding.
 
