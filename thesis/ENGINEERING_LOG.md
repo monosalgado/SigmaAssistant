@@ -3612,3 +3612,22 @@ two (and `eval/manifest.jsonl`) are unchanged since `5627e91`, so **both arms ge
 only the code differs**. Checks: its own suite, **203 passed** — the count baseline v2's preflight
 reported, an independent confirmation that this is baseline v2's code; both harnesses' dry runs
 load the same 60 cases (2 flagged as contaminated, reported apart as usual).
+
+---
+
+## 2026-09-27 — Held-out run 2 stopped on one case; the pre-registered rule applied
+
+The overnight chain (one background command, kept awake with `caffeinate`): **run 1 (final
+pipeline) finished 60 of 60** (preflight passed 22:40; 156.8 min; wrapper exit 0). Run 2 (baseline
+v2's code, `5627e91`) passed its preflight (01:23; 203 tests; smoke CITABLE), wrote 14 rows
+(01:28–02:28), then **stopped at case `54e57ce3` six times** — the first stop and five relaunches,
+each after about 33 minutes — every time on the analysis call ("APITimeoutError: Request timed
+out"); the wrapper gave up (exit 2) at 05:17. No other case failed. At 06:13 the Spark answered
+(HTTP 200) and the VPN was up: an infrastructure cause is not indicated; an unbounded answer on
+code without Change 24's output limit is (the case that plan anticipated).
+**Rule fixed before the run** (entry "Phase 2 frozen…"): a case run 2 stops on three times is
+removed from run 2 by a documented manual step, reported as a baseline failure, and left out of the
+paired comparison (both arms). Applied: `eval/manifest_heldout_without_54e57ce3.jsonl` = the
+held-out list minus that line (59 cases; written by a one-off script with assertions, committed
+before the resume). Run 2 resumes on it — same output file, so its 14 rows are kept. No row or score
+of either run has been read. The primary test on run 1 (all 60) is unaffected.
