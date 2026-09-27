@@ -546,6 +546,9 @@ give a paired before/after on unseen cases, and the chance test (above) is appli
 pipeline was frozen first (`a6e9157`). Baseline v2's code (`5627e91`) and the final pipeline are
 scored by the same, unchanged scorer. `[DISCLOSE]` baseline v2's code has no output limit: a case it
 cannot finish is removed from both arms of the paired comparison and reported (rule fixed in advance).
+**Done 2026-09-27** — results in CH6 §6.0. The rule was applied to two cases (one stopped six times;
+one stopped three times, then finished on a fourth attempt — excluded as the rule says, decided before
+any score was read, with the comparison also reported including it: same p).
 
 ### Attribution: one run per change, with one planned exception `[DESIGN]` (added 2026-09-26)
 Phase 2 ran one 60-case run per change so each effect could be attributed (user, 2026-09-24).

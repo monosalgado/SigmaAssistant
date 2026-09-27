@@ -183,14 +183,20 @@ limitation in the log belongs here too.
     convention, and it would have to be said at the defence. The one gold log source only in
     the emerging-threats set (`fortios`/`sslvpnd`) is not on the table. (Change 28)
 44. **Phase 2 was tuned on the cases it was measured on** (the 60 seed-0 cases): each change
-    came from reading failures there. Gains on those cases may be optimistic. Mitigation
-    planned: a held-out confirmation on 60 never-run cases (plan 2.9), where the chance test
-    is applied. Until it runs, Phase 2's paired results are "on the tuning set". (Chapter 5,
+    came from reading failures there. **Addressed 2026-09-27** by the held-out confirmation (60
+    never-run cases): the gain held (S3 0.455, p = 1.2 × 10⁻⁶ against chance; paired vs baseline v2
+    p = 0.013). Remaining: it is one held-out sample of 60, and the per-change results (Changes
+    22–33) are still tuning-set results — only the final pipeline was confirmed. (Chapter 5,
     "Held-out confirmation"; log 2026-09-26 "Audit")
 45. **Code edits model output in three places** — rule ids (Change 9), the length limit
     (Change 24), and the service of a suggestion with a category (Change 25) — plus Change
     8's routing of bare URLs. None looks at the gold. Change 25 is the only one that touches
     a log-source decision, and it acts on the suggestion, not the scored rule. (log "Audit")
+46. **Two held-out cases are out of the paired comparison** — baseline v2's code (no output limit)
+    could not finish them. Removed by a rule fixed in advance; one of them finished on a fourth
+    attempt after three stops and was excluded as the rule says (decided before any score was read;
+    including it gives the same p). Both were S3-correct in the final pipeline: the exclusion works
+    against the result, not for it. (log 2026-09-27)
 
 ---
 

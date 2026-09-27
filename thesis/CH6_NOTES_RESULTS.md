@@ -27,6 +27,32 @@ the output. All surfaced only by measuring. This is the outline's §6.4 argument
 
 ---
 
+## 6.0 Headline — the log-source result, confirmed on unseen cases `[MEASURED] 2026-09-27`
+
+The Phase 2 result, measured on **60 held-out cases no change was designed on** (drawn by committed
+code from the 242 never-run corpus cases before any run; pipeline frozen; analysis plan and
+exclusion rule fixed in advance; no output read until both runs finished — CH5 "Held-out
+confirmation"; log 2026-09-26/27):
+- **S3 of the final pipeline: 25 / 55 = 0.455** (95% Wilson 0.330–0.585) against a chance level of
+  0.173 — **one-sided exact binomial p = 1.2 × 10⁻⁶**. The pre-registered exit test, applied once.
+- **Against baseline v2's code on the same cases, paired: S3 10 → 21 of 50** (14 gained, 3 lost;
+  exact McNemar **p = 0.013**); with the one case excluded by the rule put back, 11 → 22 of 51, same p.
+  Baseline v2's code alone: 12/55 = 0.218, not distinguishable from chance (p = 0.234).
+- On the tuning cases the same pipeline scored 22/52 = 0.423: **the gain held on unseen cases**
+  (net +11 cases against +16 there, because baseline v2 happens to score higher on these cases).
+- **S4 and S5 did not change** (−0.001, +0.007 on held-out). Phase 2 fixed *where* the rule looks, not
+  *what* it looks for.
+- `[DISCLOSE]` Baseline v2's code (no output limit) could not finish 2 held-out cases (answers ran to the
+  timeout); by the pre-registered rule they are out of the paired comparison. Both were S3-correct in
+  the final pipeline, so the exclusion is conservative.
+- For the thesis: the throughline turned into a method — find where a correct decision is lost
+  between stages, give the model the fact it lacks (generated from SigmaHQ's own rules, nothing
+  enforced), measure each link. The chain from suggestion to rule now holds (first rule = suggestion
+  48/55 held-out); the remaining limit is the analysis stage's suggestion (web 12/15, host categories
+  11/37, service-based 0/6).
+
+---
+
 ## 6.1 Baseline system performance — baseline v1 `[MEASURED] 2026-09-19`
 
 `eval/results/baseline60.jsonl` · 60 cases, stratified sample (seed 0) of 303 ·

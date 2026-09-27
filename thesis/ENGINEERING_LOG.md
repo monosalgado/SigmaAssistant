@@ -3646,3 +3646,59 @@ Files: `eval/results/heldout_v2_60.jsonl` — all 59 rows as written (kept uncha
 `eval/results/heldout_v2_rule.jsonl` — the same minus `af688c76` (58 rows; written by a one-off
 script with assertions: 59 unique held-out ids, `54e57ce3` absent). The paired comparison uses the
 latter; the primary test on run 1 uses all 60 rows.
+
+---
+
+## 2026-09-27 — Held-out confirmation measured (plan 2.9): Phase 2's exit criterion is met on unseen cases
+
+Run 1 — `eval/results/heldout_final60.jsonl` (final pipeline, frozen `a6e9157`; arm `heldout_final`;
+60 rows; 156.8 min; **CITABLE**; 2 answers cut at the limit, in 2 cases, scored as usual). Run 2 —
+`eval/results/heldout_v2_60.jsonl` (baseline v2's code `5627e91`; arm `heldout_v2`; 59 rows;
+**CITABLE**), paired through `eval/results/heldout_v2_rule.jsonl` (58 rows, rule applied). Analysed in
+the pre-registered order, after both runs had finished and the exclusion had been decided.
+
+### Primary — the exit test (applied once, as pre-registered)
+**S3 of the final pipeline on the held-out cases: 25 / 55 = 0.455, 95% Wilson [0.330, 0.585];
+one-sided exact binomial against 0.173: p = 1.2 × 10⁻⁶** (`summarise.py`; p < 0.05 needed ≥ 15/55).
+Clean cases (no detection rule in the input): 25/54. **Phase 2's exit criterion — S3 significantly
+above the null baseline — is met, on cases no Phase 2 change was designed on.**
+
+### Secondary — did Phase 2 improve unseen cases? (baseline v2's code → final pipeline, paired)
+| Metric (`compare_runs.py`, rule applied) | n | Baseline v2 code | Final pipeline | Test |
+|---|---|---|---|---|
+| **S3 exact** | 50 | **10** | **21** | **14 gained, 3 lost; exact McNemar p = 0.013** |
+| S1 valid first rule | 58 | 54 | 53 | p = 1.0 |
+| S4 ATT&CK F1 | 38 | 0.208 | 0.207 | −0.001, 95% CI [−0.044, +0.039] |
+| S5 detection F1 | 50 | 0.332 | 0.339 | +0.007, 95% CI [−0.057, +0.078] |
+| Tokens / seconds / rules per case | 58 | — | — | no difference (CIs span zero) |
+**Sensitivity (the excluded `af688c76` included):** S3 11 → 22 of 51, 14 gained, 3 lost, p = 0.013 —
+the conclusion does not depend on the exclusion. Both excluded cases (`54e57ce3`, `af688c76`) were
+**S3-correct in the final pipeline** (`54e57ce3` after one answer cut at the limit and retried —
+Change 24 at work), so excluding them makes the paired comparison conservative.
+Unpaired: baseline v2's code 12/55 = 0.218 (95% Wilson [0.129, 0.344], p = 0.234 against chance —
+not distinguishable from chance, as on the tuning cases).
+
+### Next to the tuning set (descriptive; no test of the difference)
+| | Baseline v2 code | Final pipeline | Paired change |
+|---|---|---|---|
+| Tuning cases (60, seed 0) | 7/57 = 0.123 | 22/52 = 0.423 | 6 → 22 of 50 (+18 / −2) |
+| **Held-out cases (60, never run)** | **12/55 = 0.218** | **25/55 = 0.455** | **10 → 21 of 50 (+14 / −3)** |
+The gain holds on unseen cases: smaller in net cases (+11 against +16) because baseline v2 scores
+higher on these cases, while the final pipeline's level is the same or higher (0.455 against 0.423).
+
+### The mechanism, on the held-out cases (`diagnose_logsource.py`, `compare_suggestions.py`)
+First rule = the analysis stage's top suggestion **48 / 55**; S3 = the suggestion's own ceiling
+(25/55 each); first rules adding a product or service the suggestion lacks: 1 of 50. The
+suggestion matches the gold log source in 23 of 58 rows — web gold **12 of 15**, other categories
+11 of 37, service-based 0 of 6. (Baseline v2's suggestions score 0 by construction: they carried
+`service: sysmon`, which Change 25 removed.) Product field right 45/55.
+
+### Reading
+- **The claim stands on unseen cases:** the final pipeline writes the human rule's log source in 45%
+  of first rules, far above chance and about twice baseline v2's rate on the same cases (paired
+  p = 0.013). Measured exactly as planned: list drawn by committed code before any run, analysis
+  plan and exclusion rule fixed in advance, no output read before both runs finished.
+- **S4 and S5 did not change** (held-out: −0.001 and +0.007). Phase 2 fixed where the rule looks,
+  not what it looks for — the next phase's question.
+- What limits S3 now is the analysis stage's suggestion — right for web attacks (12/15) far more
+  often than for host categories (11/37), and never for service-based sources (0/6).

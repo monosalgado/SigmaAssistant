@@ -242,10 +242,11 @@ and report it as a finding rather than keep tuning.
       a median of 6, more than 10 in 14 of 58 cases, 108 in one; of the gold techniques it
       finds (24), 21 are in its first 10 but only 15 in its first 5. All 6 looping answers
       were in the analysis stage. Prompt change → its own run. Measure S4 and answers cut.
-- [>] **2.9 Held-out confirmation** (user, 2026-09-26) — last Phase 2 step, after the shared
-      run. **Phase 2 frozen at `a6e9157` (user, 2026-09-26). Drawn and committed:
-      `eval/manifest_heldout.jsonl` (60 of the 242 never-run cases). Next: run 1 (final pipeline),
-      then run 2 (baseline v2 code `5627e91`, confirmed); plan fixed in the log.** Why: every Phase 2 change was found by reading failures in the same 60 cases it was
+- [x] **2.9 Held-out confirmation** (user, 2026-09-26) — last Phase 2 step, after the shared
+      run. Phase 2 frozen at `a6e9157`; `eval/manifest_heldout.jsonl` (60 of the 242 never-run cases).
+      **Done 2026-09-27** (both runs CITABLE): **exit test met — S3 25/55 = 0.455, one-sided exact
+      binomial p = 1.2 × 10⁻⁶**; paired vs baseline v2's code **10 → 21 of 50, p = 0.013** (2 cases
+      excluded by the pre-registered rule; including one gives the same p). S4, S5 unchanged. CH6 §6.0. Why: every Phase 2 change was found by reading failures in the same 60 cases it was
       measured on, so its gains may be optimistic there (tuning to the test set).
       1. A committed script (tests first) draws **60 cases** — stratified, `stratified_sample`,
          seed 0 — from the **242 corpus cases that appear in no result file** (61 have ever been
@@ -283,6 +284,7 @@ after step (c) S3 = 14/57, p = 0.104; p < 0.05 needs ≥ 16/57. After step (d) 1
 needs ≥ 16/56. After 2.6: 14/55, p = 0.082; needs ≥ 15/55. After 2.6b: 21/56, p < 0.001 (descriptive; tuning cases). After the shared run: 22/52.
 **Exit criteria:** S3 significantly above the null baseline, or the time-box is
 spent and the result is written up as a finding.
+**→ Met 2026-09-27 on the held-out cases (plan 2.9). Phase 2 is complete.**
 
 ---
 
