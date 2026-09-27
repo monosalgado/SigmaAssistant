@@ -41,6 +41,7 @@ every item. Review it (below), then **Generate rules** at the bottom of the pane
 | *(stops)* Your review | **What the LLM understood** — the analyst confirms, rejects, or changes the log source, *before* any rule is written. |
 | Generation → Review | Rules written from the analysis as reviewed (no second analysis), then checked by pySigma; errors go back for one rewrite. |
 | Coverage check | Do the rules cover the attack vector? If they miss it, **one** regeneration with the gaps as feedback (fixed 2026-09-27 — before, the web app said "regenerating" but never did: defect 20). Remaining gaps are listed in the panel. |
+| Check against your review | Code compares the rules with the review. A first rule off your log source, or a tag of a technique you rejected → **one rewrite** with the reason; what remains is shown under "Your review". A string you rejected that a rule still detects on is **shown, not rewritten** — it can be right inside a larger condition. |
 
 **The review, in the Analysis panel** — *what the model understood; check it against the report*: the
 attack vector and each pattern with the model's basis (**Confirm / Reject**); strings excluded as
@@ -62,8 +63,8 @@ ysoserial is usually run on the *attacker's* machine to build the payload, so it
 up on the victim's server. This is why an analyst has to verify what the model understood.
 **With the review (tested live 2026-09-27: analysis 113 s, generation 134 s):**
 1. Log source: `webserver` is the model's first suggestion and right — **Use this**.
-2. Attack patterns: **Reject** `ysoserial.exe` (say why, as above). The same value is also an
-   indicator — reject it there too; rejecting a pattern does not reject it elsewhere (known gap).
+2. Attack patterns: **Reject** `ysoserial.exe` (say why, as above). Its copy in the indicators is
+   crossed out with it ("rejected with its copy in the other list").
 3. ATT&CK: **Reject** T1566.002 (spearphishing) and T1204.002 (user execution) — neither fits a
    server exploit; **Confirm** T1190.
 4. **Generate rules.** In the live test the first attempt missed 4 of 7 patterns; the app said

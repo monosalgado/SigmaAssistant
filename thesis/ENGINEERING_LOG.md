@@ -3859,3 +3859,46 @@ ysoserial.exe to generate ViewState payloads"), which is correct context; the de
 `__VIEWSTATEGENERATOR` on the server. The same value was also an indicator and a PoC behaviour, which the
 analyst did not reject: rejecting a pattern does not reject the same string elsewhere. A check of the
 analyst's rejections (design P4) should look at detection values, not the whole rule text.
+
+---
+
+## 2026-09-27 — Change 35: one decision per string, and the rules checked against the analyst's review (design P4) (user)
+
+User: "go ahead with option 1 and then the P4 check". Branch `analyst-review`.
+**Option 1 — one decision per string.** The model often lists the same string as an attack pattern
+and as an indicator; both reach the rule writer. Live on SharePoint, `ysoserial.exe` was rejected as a
+pattern and still reached it as an indicator. Now rejecting a pattern or an indicator also rejects its
+copies in both lists (`apply_review`): matched **exactly**, case and spacing aside — never "contains",
+so rejecting the bare pattern `sudo` leaves the indicator `sudo -u#-1 id`. Copies are recorded as
+`linked`; confirming a copy of a rejected string is refused (a contradiction). The panel crosses the
+copy out ("rejected with its copy in the other list") and disables its buttons; the bar counts copies.
+Tests first (5 failed).
+**P4 — the rules checked against the review.** `review_departures(rules, context)` (pure; YAML parsed,
+a rule that does not parse is left to validation): the **first** rule's log source against the
+analyst's choice (the prompt asks for it on the first rule; later rules may observe other stages —
+SharePoint's ASPX file); every rule's **ATT&CK tags** against the rejected techniques (a parent of a
+rejected sub-technique is not a departure); every rule's **detection values** against the rejected
+strings and their copies (exact, without `*` wildcards or a leading path separator — `\ysoserial.exe`
+detects on ysoserial.exe; a description naming the string is not a departure). In
+`_generation_events`, after the coverage step: departures → **one rewrite** with the reason in a new
+prompt slot ("What departs from the analyst's review … final"), apart from the one regeneration for
+errors/gaps; what remains is recorded (`analyst_check`), shown in "Your review", listed under the
+rules, and never edited by code. A review that asks nothing of the rules adds no step. `run_sync`
+untouched (it never has a review). Tests first.
+**First live test (sudo, analyst chose `linux / auditd`, rejected the bare `sudo` and T1548.004,
+T1059.001, T1562.001) showed two problems, both fixed with tests first:**
+1. **The rewrite's answer could not be read** (`Invalid \escape` — defect 5) and gave **0 rules**; the
+   check then said the rules "follow your review after one rewrite" (true of no rules) and the three
+   earlier rules were lost. Now a rewrite that gives no rules **puts back the rules before it** and says
+   so ("The rewrite gave no rules; the earlier rules are kept"), with the departures still listed.
+2. **Rules 2 and 3 were flagged for detecting on `sudo`** — almost certainly `Image|endswith: '/sudo'`
+   AND the `-u#-1` argument, which is right. Rejecting the bare pattern meant "not on its own"; for
+   `ysoserial.exe` rejecting means "never". Code cannot tell which, so **only the unambiguous
+   decisions get the rewrite** (`ENFORCED_DEPARTURES`: the log source and rejected techniques); a
+   rejected string used in a detection is **shown, not rewritten** ("Rejected strings used in
+   detection … check whether each rule depends on it"). A departure from what was described to the
+   user before building ("detection values … one rewrite"), for the reason above.
+The first departure of that run was real: the first rule was `process_creation / linux / auditd`
+where the analyst chose `linux / auditd` (Sigma's service form has no category).
+Tests: 521 passed (+31). **Live retest of the fixed code: pending** — the VPN dropped (Spark
+unreachable) after the fixes.

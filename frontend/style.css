@@ -637,6 +637,16 @@ select:focus-visible {
     text-decoration: line-through;
 }
 
+.an-linked-note {
+    align-self: center;
+    font-size: 0.7rem;
+    color: var(--text-3);
+}
+
+.an-linked-note[hidden] {
+    display: none;
+}
+
 .an-select,
 .an-textarea {
     width: 100%;

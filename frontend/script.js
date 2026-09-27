@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 'generation', label: 'Rule Generation' },
         { id: 'review', label: 'Validation & Optimization' },
         { id: 'coverage_check', label: 'Coverage Gap Check' },
+        { id: 'analyst_check', label: 'Check Against Your Review' },
     ];
 
     // --- Navigation Logic ---
@@ -719,6 +720,10 @@ level: medium`;
     const DECIDE = [['confirmed', 'Confirm'], ['rejected', 'Reject']];
     const RESTORE = [['restored', 'Restore']];
     const KIND_LABELS = { patterns: 'Patterns', excluded: 'Excluded strings', techniques: 'Techniques', indicators: 'Indicators' };
+    const STATUS_LABELS = { confirmed: 'confirmed', rejected: 'rejected', restored: 'restored', linked: 'rejected as copies' };
+    // One decision per string: a rejected pattern or indicator takes its copies in the other list
+    // with it, matched exactly (case and spacing aside) - the backend applies the same rule.
+    const LINKED = ['patterns', 'indicators'];
 
     async function loadLogsourceChoices() {
         if (logsourceChoices) return logsourceChoices;
@@ -734,7 +739,13 @@ level: medium`;
 
     async function startReview(analysisId, context, meta) {
         await loadLogsourceChoices();
-        review = { analysisId, techniques: {}, indicators: {}, patterns: {}, excluded: {}, logsource: null, note: '' };
+        review = {
+            analysisId, techniques: {}, indicators: {}, patterns: {}, excluded: {}, logsource: null, note: '',
+            values: {
+                patterns: ((meta && meta.attack_vector && meta.attack_vector.payload_signatures) || []).map(p => p.pattern),
+                indicators: ((meta && meta.indicators) || []).map(i => i.value),
+            },
+        };
         renderContext(context, meta);
         updateReviewBar();
     }
@@ -757,31 +768,71 @@ level: medium`;
         return (logsourceChoices || []).some(c => sameSource(c, ls));
     }
 
-    function decisionButtons(item, kind, index, statuses) {
+    function sameString(v) {
+        return String(v === undefined || v === null ? '' : v).split(/\s+/).filter(Boolean).join(' ').toLowerCase();
+    }
+
+    function rejectedStrings() {
+        const out = new Set();
+        LINKED.forEach(kind => Object.entries(review[kind]).forEach(([i, status]) => {
+            if (status === 'rejected') out.add(sameString(review.values[kind][i]));
+        }));
+        out.delete('');
+        return out;
+    }
+
+    function decisionButtons(item, kind, index, statuses, value) {
+        item.dataset.kind = kind;
+        item.dataset.index = String(index);
+        if (LINKED.includes(kind)) item.dataset.link = sameString(value);
         const bar = el('div', 'an-actions');
         statuses.forEach(([status, label]) => {
             const b = el('button', 'an-act', label);
             b.type = 'button';
             b.dataset.status = status;
             b.onclick = () => {
-                if (review[kind][index] === status) delete review[kind][index];
-                else review[kind][index] = status;
-                paintDecision(item, bar, review[kind][index]);
+                if (review[kind][index] === status) {
+                    delete review[kind][index];
+                } else {
+                    review[kind][index] = status;
+                    // A confirmed copy of a string rejected now goes with it.
+                    if (status === 'rejected' && item.dataset.link) {
+                        LINKED.forEach(k => Object.keys(review[k]).forEach(i => {
+                            if (review[k][i] === 'confirmed' && sameString(review.values[k][i]) === item.dataset.link) delete review[k][i];
+                        }));
+                    }
+                }
+                paintDecisions();
                 updateReviewBar();
             };
             bar.appendChild(b);
         });
-        paintDecision(item, bar, review[kind][index]);
+        if (item.dataset.link !== undefined) {
+            const note = el('span', 'an-linked-note', 'rejected with its copy in the other list');
+            note.hidden = true;
+            bar.appendChild(note);
+        }
         return bar;
     }
 
-    function paintDecision(item, bar, status) {
-        item.classList.remove('is-confirmed', 'is-rejected', 'is-restored');
-        if (status) item.classList.add(`is-${status}`);
-        bar.querySelectorAll('.an-act').forEach(b => {
-            const on = b.dataset.status === status;
-            b.classList.toggle('on', on);
-            b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    function paintDecisions() {
+        if (!review) return;
+        const rejected = rejectedStrings();
+        document.querySelectorAll('#context-content .an-item[data-kind]').forEach(item => {
+            const own = review[item.dataset.kind][item.dataset.index];
+            const linked = !own && item.dataset.link !== undefined && rejected.has(item.dataset.link);
+            const status = own || (linked ? 'rejected' : null);
+            item.classList.remove('is-confirmed', 'is-rejected', 'is-restored');
+            if (status) item.classList.add(`is-${status}`);
+            item.classList.toggle('is-linked', linked);
+            item.querySelectorAll('.an-act').forEach(b => {
+                const on = b.dataset.status === status;
+                b.classList.toggle('on', on);
+                b.setAttribute('aria-pressed', on ? 'true' : 'false');
+                b.disabled = linked;
+            });
+            const note = item.querySelector('.an-linked-note');
+            if (note) note.hidden = !linked;
         });
     }
 
@@ -823,6 +874,8 @@ level: medium`;
         ['techniques', 'indicators', 'patterns', 'excluded'].forEach(kind =>
             Object.values(review[kind]).forEach(status => { counts[status] += 1; }));
         const parts = Object.entries(counts).filter(([, n]) => n).map(([status, n]) => `${n} ${status}`);
+        const copies = document.querySelectorAll('#context-content .an-item.is-linked').length;
+        if (copies) parts.push(`${copies} cop${copies === 1 ? 'y' : 'ies'} rejected with them`);
         parts.push(review.logsource ? `log source: ${logsourceName(review.logsource)}` : "log source: the model's suggestion");
         document.getElementById('review-summary').textContent = parts.join(' · ');
         document.getElementById('generate-btn').disabled = false;
@@ -940,10 +993,36 @@ level: medium`;
             }
             Object.entries(KIND_LABELS).forEach(([kind, label]) => {
                 Object.entries(rec[kind] || {}).forEach(([status, items]) => {
-                    if (items.length) add(s.body, kv(`${label} ${status}`, items.join(', '), true));
+                    if (items.length) add(s.body, kv(`${label} ${STATUS_LABELS[status] || status}`, items.join(', '), true));
                 });
             });
             if (rec.note) add(s.body, kv('Your note', rec.note));
+            // The rules checked against the review by code (design P4)
+            const chk = meta.analyst_check;
+            if (chk) {
+                const line = d => `Rule ${d.rule} "${d.title}": ${d.message}`;
+                const deps = chk.departures || [];
+                const flagged = chk.flagged || [];
+                if (chk.rewrite_failed) {
+                    deps.forEach(d => add(s.body, el('div', 'an-warn', line(d))));
+                    add(s.body, el('div', 'an-note', 'The rewrite gave no rules (its answer could not be read), so these ' +
+                        'are the rules from before it. They were not edited - check them before use.'));
+                } else if (deps.length) {
+                    deps.forEach(d => add(s.body, el('div', 'an-warn', line(d))));
+                    add(s.body, el('div', 'an-note', 'Still departing after one rewrite. The rules were not edited - check them before use.'));
+                } else if (chk.rewritten) {
+                    add(s.body, el('div', 'an-ok', 'Checked: the log source and techniques follow your review after one rewrite.'));
+                    add(s.body, el('div', 'an-note', `Before the rewrite: ${(chk.departures_before || []).map(line).join('; ')}`));
+                } else {
+                    add(s.body, el('div', 'an-ok', 'Checked: the log source and techniques follow your review.'));
+                }
+                if (flagged.length) {
+                    add(s.body, el('div', 'an-subhead', 'Rejected strings used in detection'));
+                    flagged.forEach(d => add(s.body, el('div', 'an-warn', line(d))));
+                    add(s.body, el('div', 'an-note', 'Shown, not rewritten: a rejected string can be right inside a larger ' +
+                        'condition (the process is sudo AND the argument is -u#-1). Check whether each rule depends on it.'));
+                }
+            }
             if (s.body.children.length === 0) add(s.body, el('div', 'an-note', 'Generated without changes: every item stayed the model\'s suggestion.'));
             root.appendChild(s.details);
         }
@@ -968,7 +1047,7 @@ level: medium`;
                     add(item, head, basis(sig.derived_from === 'inferred_from_class'
                         ? 'Inferred from the vulnerability class, not from the text'
                         : sig.derived_from));
-                    if (review) add(item, decisionButtons(item, 'patterns', i, DECIDE));
+                    if (review) add(item, decisionButtons(item, 'patterns', i, DECIDE, sig.pattern));
                     s.body.appendChild(item);
                 });
             }
@@ -983,7 +1062,7 @@ level: medium`;
             inc.forEach((it, i) => {
                 const item = el('div', 'an-item');
                 add(item, el('code', 'an-code', typeof it === 'string' ? it : it.value), basis(it.reason));
-                if (review) add(item, decisionButtons(item, 'excluded', i, RESTORE));
+                if (review) add(item, decisionButtons(item, 'excluded', i, RESTORE, typeof it === 'string' ? it : it.value));
                 s.body.appendChild(item);
             });
             if (review) add(s.body, el('div', 'an-note', 'A restored string becomes a pattern the rules may match.'));
@@ -1060,7 +1139,7 @@ level: medium`;
                 add(head, el('code', 'an-code', t.technique_id), el('span', 'an-name', t.technique_name),
                     t.severity ? el('span', `severity-badge ${t.severity}`, t.severity) : null);
                 add(item, head, t.tactic ? el('div', 'an-fields', t.tactic) : null, basis(t.relevance));
-                if (review) add(item, decisionButtons(item, 'techniques', i, DECIDE));
+                if (review) add(item, decisionButtons(item, 'techniques', i, DECIDE, t.technique_id));
                 s.body.appendChild(item);
             });
             if (dropped.length) add(s.body, el('div', 'an-note', `Removed, not in ATT&CK: ${dropped.join(', ')}`));
@@ -1081,7 +1160,7 @@ level: medium`;
                 list.forEach(([ind, i]) => {
                     const item = el('div', 'an-item compact');
                     add(item, el('code', 'an-code', ind.value), basis(ind.context));
-                    if (review) add(item, decisionButtons(item, 'indicators', i, DECIDE));
+                    if (review) add(item, decisionButtons(item, 'indicators', i, DECIDE, ind.value));
                     s.body.appendChild(item);
                 });
             });
@@ -1155,6 +1234,7 @@ level: medium`;
         }
 
         if (!root.children.length) root.appendChild(el('p', 'empty-state', 'No analysis was recorded for this answer.'));
+        paintDecisions();
     }
 
     if (sendBtn) sendBtn.addEventListener('click', handleSend);

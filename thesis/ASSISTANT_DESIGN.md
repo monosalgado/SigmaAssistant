@@ -241,8 +241,14 @@ behaviour and needs a 60-case rerun (~3 h 20 min since Change 12, VPN) to measur
   analyst's decision (the Change 26 slot). **Confirming** a technique, indicator or pattern is
   recorded only. A rejected pattern is *not* added to the excluded strings (tried first; the coverage
   check then flagged every rule containing the rejected substring — log 2026-09-27).
-- **Not yet:** P4's check (step 5 — the one-rewrite rule when a rule violates the analyst's log
-  source), editing values, the report builder (step 2), evidence quotes (step 4), Phase C.
+- **Change 35 (same day): one decision per string** — a rejected pattern or indicator takes its exact
+  copies in the other list with it — and **P4's check (step 5)**: after generation, code compares the
+  rules with the review. As built, P4 is narrower than §3 wrote it: only the **unambiguous** decisions
+  get the one rewrite — the first rule's log source and rejected techniques. A rejected **string** used
+  in a detection is shown, not rewritten, because the same click can mean "not on its own" (the bare
+  `sudo`; a rule on the sudo process AND `-u#-1` is right) or "never" (`ysoserial.exe`), and code cannot
+  tell which. A rewrite that gives no rules (defect 5) keeps the rules before it.
+- **Not yet:** editing values, the report builder (step 2), evidence quotes (step 4), Phase C.
 
 Steps 4 and 5 both change prompts. Measuring them separately costs two runs but
 keeps each effect attributable; measuring them together is cheaper but

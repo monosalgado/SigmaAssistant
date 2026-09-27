@@ -205,8 +205,11 @@ limitation in the log belongs here too.
     branch `analyst-review`; a test now holds the web app to the harness path's stage calls.
 48. **The analyst's review is built but not measured** `[UNMEASURED]` (Change 34). Two live runs on
     one case showed the rules following the analyst's log source and technique choices — anecdotes,
-    not evidence. Confirming an item is recorded but changes nothing the rule writer receives; a rule
-    that departs from the analyst's log source is not yet caught (P4's check not built). What it is
+    not evidence. Confirming an item is recorded but changes nothing the rule writer receives. Since
+    Change 35 code checks the rules against the review and gives one rewrite for the analyst's log
+    source and rejected techniques; **a rejected string used in a detection is only shown**, because
+    code cannot tell "not on its own" from "never". The rewrite shares generation's JSON fragility
+    (defect 5): once live it gave no rules, and the earlier rules are now kept. What the review is
     worth is for the simulated-analyst experiment (plan 5.3); there is no user study. (log 2026-09-27)
 
 ---

@@ -224,3 +224,54 @@ def test_every_choice_from_the_real_table_is_on_the_table():
     choices = logsource_choices(table)
     assert all(on_table(c, table) for c in choices)
     assert len(choices) == sum(len(r["products"]) for r in table["with_category"]) + len(table["without_category"])
+
+
+# --- one decision per value: rejecting a string rejects its copies (user, 2026-09-27) ----------
+# The model often lists the same string as an attack pattern and as an indicator; both reach the
+# rule writer. Live (SharePoint): `ysoserial.exe` was rejected as a pattern and still reached the
+# rule writer as an indicator. Copies are matched exactly (case and spacing aside), never by
+# "contains": rejecting the bare pattern `sudo` must not reject the indicator `sudo -u#-1 id`.
+
+def _with_copies():
+    ctx = _context()
+    ctx["attack_vector"]["payload_signatures"].append(
+        {"pattern": "ysoserial.exe", "where": "process cmdline", "derived_from": "the report"})
+    ctx["extraction"]["indicators"].append(
+        {"value": "  YSoSerial.exe ", "type": "file_name", "context": "c", "confidence": "high"})
+    return ctx
+
+
+def test_rejecting_a_pattern_rejects_the_same_string_as_an_indicator():
+    out = apply_review(_with_copies(), {"patterns": {"2": "rejected"}}, TABLE)
+    assert "ysoserial.exe" not in [s["pattern"] for s in out["attack_vector"]["payload_signatures"]]
+    assert [i["value"] for i in out["extraction"]["indicators"]] == [
+        "sudo -u#-1 id", "/etc/sudoers", "ALL=(ALL, !root)"]
+    assert out["analyst_review"]["patterns"]["rejected"] == ["ysoserial.exe"]
+    assert out["analyst_review"]["indicators"]["linked"] == ["  YSoSerial.exe "]
+
+
+def test_rejecting_an_indicator_rejects_the_same_string_as_a_pattern():
+    out = apply_review(_with_copies(), {"indicators": {"3": "rejected"}}, TABLE)
+    assert [s["pattern"] for s in out["attack_vector"]["payload_signatures"]] == [
+        "sudo -u#-1", "-u#4294967295"]
+    assert out["analyst_review"]["patterns"]["linked"] == ["ysoserial.exe"]
+
+
+def test_copies_are_matched_exactly_not_by_contains():
+    ctx = _context()
+    ctx["attack_vector"]["payload_signatures"].append({"pattern": "sudo", "where": "x", "derived_from": "x"})
+    out = apply_review(ctx, {"patterns": {"2": "rejected"}}, TABLE)
+    assert [i["value"] for i in out["extraction"]["indicators"]][0] == "sudo -u#-1 id"
+    assert out["analyst_review"]["indicators"]["linked"] == []
+
+
+def test_confirming_a_copy_of_a_rejected_string_is_a_contradiction():
+    with pytest.raises(ReviewError):
+        apply_review(_with_copies(), {"patterns": {"2": "rejected"}, "indicators": {"3": "confirmed"}}, TABLE)
+
+
+def test_nothing_is_linked_when_nothing_is_rejected():
+    out = apply_review(_with_copies(), {"patterns": {"2": "confirmed"}}, TABLE)
+    assert len(out["extraction"]["indicators"]) == 4
+    assert out["analyst_review"]["indicators"]["linked"] == []
+    assert out["analyst_review"]["patterns"]["linked"] == []

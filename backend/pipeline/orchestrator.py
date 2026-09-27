@@ -10,6 +10,7 @@ Optimized for Gemini free tier:
 """
 
 from __future__ import annotations
+import copy
 import json
 import re
 import datetime
@@ -24,7 +25,9 @@ from backend.pipeline.stage_analysis import AnalysisStage
 from backend.pipeline.stage_generate import GenerateStage
 from backend.pipeline.stage_review import ReviewStage
 from backend.pipeline import prompts
-from backend.pipeline.analyst_review import apply_review
+from backend.pipeline.analyst_review import (
+    ENFORCED_DEPARTURES, apply_review, format_departures, has_checks, review_departures,
+)
 from backend.pipeline.sigma_logsource import load_logsource_table
 from backend.telemetry import stage_scope
 
@@ -33,6 +36,9 @@ _URL_RE = re.compile(r"https?://\S+")
 
 # SigmaHQ's log sources: the analyst's choice is validated against them.
 LOGSOURCE_TABLE = load_logsource_table()
+
+# What a rewrite replaces; kept, to put back if the rewrite gives no rules.
+_RULE_STATE = ("generation", "validation", "optimization", "coverage_check")
 
 # Left out of the saved analysis: the conversation is already in the session, and the
 # media file is not needed once the input is preprocessed.
@@ -474,8 +480,63 @@ class PipelineOrchestrator:
                 ),
             }}
 
+        # The analyst's review is final (design P4): the rules are checked against it. A rule off
+        # the analyst's log source, or tagged with a rejected technique, gets one rewrite with the
+        # reason, apart from the regeneration above; a rewrite that gives no rules keeps the rules
+        # before it. A rejected string used in a detection is shown, not rewritten: it can be fine
+        # inside a larger condition (the process is sudo AND the argument is -u#-1). Code never
+        # edits a rule.
+        if has_checks(context):
+            found = review_departures(self._final_rules(context), context)
+            departures = [d for d in found if d["kind"] in ENFORCED_DEPARTURES]
+            remaining, failed = departures, False
+            if departures:
+                yield {"event": "stage", "data": {
+                    "stage": "analyst_check", "status": "complete",
+                    "detail": f"{len(departures)} departure(s) from your review — rewriting...",
+                }}
+                yield {"event": "stage", "data": {
+                    "stage": "generation", "status": "running",
+                    "detail": "Rewriting to follow your review...",
+                }}
+                before = {k: copy.deepcopy(context[k]) for k in _RULE_STATE if k in context}
+                context["analyst_check_feedback"] = format_departures(departures)
+                context = self.generate.run(context)
+                context.pop("analyst_check_feedback", None)
+                context = self.review.run(context)
+                self._run_coverage_check(context)
+                if self._final_rules(context):
+                    found = review_departures(self._final_rules(context), context)
+                    remaining = [d for d in found if d["kind"] in ENFORCED_DEPARTURES]
+                else:
+                    failed = True
+                    context.update(before)
+            flagged = [d for d in found if d["kind"] not in ENFORCED_DEPARTURES]
+            context["analyst_check"] = {
+                "departures_before": departures,
+                "departures": remaining,
+                "flagged": flagged,
+                "rewritten": bool(departures),
+                "rewrite_failed": failed,
+            }
+            yield {"event": "stage", "data": {
+                "stage": "analyst_check", "status": "complete",
+                "detail": (
+                    "The rewrite gave no rules; the earlier rules are kept — see Your review" if failed
+                    else f"{len(remaining)} departure(s) remain after one rewrite — see Your review" if remaining
+                    else f"{len(flagged)} rejected string(s) used in detection — see Your review" if flagged
+                    else "Rules follow your review after one rewrite" if departures
+                    else "Rules follow your review"
+                ),
+            }}
+
         # Final result
         yield {"event": "result", "data": self._format_output(context)}
+
+    @staticmethod
+    def _final_rules(context: dict) -> list:
+        """The rules as returned: after review if it ran, else as generated."""
+        return context.get("optimization", {}).get("rules", []) or context.get("generation", {}).get("rules", [])
 
     def _should_regenerate_for_coverage(self, context: dict) -> bool:
         """Decide whether to run a single coverage-directed regeneration pass.
@@ -631,6 +692,17 @@ class PipelineOrchestrator:
             )
             parts.append("\n".join(warning_block))
 
+        # What the check against the analyst's review left (design P4)
+        check = context.get("analyst_check") or {}
+        if check.get("departures"):
+            heading = ("**Departures from your review** (The rewrite failed - these are the rules before it; "
+                       "they were not edited):" if check.get("rewrite_failed")
+                       else "**Departures from your review** (after one rewrite; the rules were not edited):")
+            parts.append("\n".join(["\n---", heading, format_departures(check["departures"])]))
+        if check.get("flagged"):
+            parts.append("\n".join(["\n---", "**Rejected strings used in detection** (shown, not rewritten - "
+                                     "check whether each rule depends on it):", format_departures(check["flagged"])]))
+
         response_text = "\n\n".join(parts) if parts else "I was unable to generate a rule. Please provide more details about the attack technique."
 
         return {
@@ -683,4 +755,6 @@ class PipelineOrchestrator:
         }
         if "analyst_review" in context:
             pipeline_metadata["analyst_review"] = context["analyst_review"]
+        if "analyst_check" in context:
+            pipeline_metadata["analyst_check"] = context["analyst_check"]
         return pipeline_metadata

@@ -303,8 +303,9 @@ later; SIEM/EDR conversion pending Phase 0).
       session, the analyst confirms/rejects patterns, techniques and indicators, restores excluded
       strings, chooses the log source (validated against SigmaHQ's table) and adds a note; generation
       starts from the saved analysis (`generate_after_review`). `run_sync` untouched (P5). Tested live
-      twice (sudo). Not yet: P4's check on the analyst's log source (next), editing values, the report
-      builder (3.1), evidence quotes (3.3), rule validation (3.5).
+      twice (sudo). **Change 35:** one decision per string (copies linked) and P4's check (log source and
+      rejected techniques → one rewrite; rejected strings in detection shown). Not yet: editing values,
+      the report builder (3.1), evidence quotes (3.3), rule validation (3.5).
 - [ ] **3.1** Report builder: a pure function from pipeline context to the report *(offline)*
       Include (user, 2026-09-25): suggestions marked `service_to_confirm` (Change 25) are
       shown for the analyst to confirm, with `service_dropped` explained.
@@ -407,10 +408,10 @@ From Change 34's live test (2026-09-27) — awaiting triage:
 - ~~**Defect 20**: the web app's coverage retry never runs~~ — **fixed 2026-09-27 on `analyst-review`**
   (user): decided once, as `run_sync` does; a test holds the stream to the harness path's calls
 - the review stage merged 3 generated rules into 1 ("Merged duplicate rules") — measure how often review drops rules (needs M1)
-- P4 check: a rule that violates the analyst's chosen log source → one rewrite with the reason, then shown
+- ~~P4 check~~ — **built 2026-09-27 (Change 35)**: log source + rejected techniques → one rewrite; rejected strings in detection shown, not rewritten; a rewrite with no rules keeps the rules before it. Live retest pending
 - remove the unused `feedback_data` / `_apply_user_feedback` path (superseded by Change 34)
 - the Analysis panel (and so the review) is hidden under 900 px wide
-- rejecting a pattern does not reject the same string as an indicator or PoC behaviour (SharePoint: `ysoserial.exe` in all three); link them, or say so in the panel
+- ~~rejecting a pattern does not reject the same string as an indicator~~ — **linked 2026-09-27 (Change 35)**, exact match; PoC behaviours are display-only and do not reach generation
 
 ## Security — do first (the user's action)
 

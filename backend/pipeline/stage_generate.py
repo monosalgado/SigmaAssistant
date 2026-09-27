@@ -250,6 +250,12 @@ class GenerateStage(PipelineStage):
         if validation_feedback:
             user_query += f"\n\n### Validation Feedback (fix these issues):\n{validation_feedback}"
 
+        # Set only for the one rewrite after the analyst's review (design P4).
+        analyst_feedback = context.get("analyst_check_feedback", "")
+        if analyst_feedback:
+            user_query += ("\n\n### What departs from the analyst's review (the analyst's decisions are final - "
+                           f"rewrite the rules to follow them):\n{analyst_feedback}")
+
         logsource_text = ""
         if logsource_info.get("suggestions"):
             logsource_text = "\n\n### Recommended Log Sources (from analysis)\n"

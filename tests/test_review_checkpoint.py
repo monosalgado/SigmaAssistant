@@ -50,8 +50,9 @@ class FakeStage:
         return context
 
 
-def _orchestrator(first_review_valid=True, rules_cover_from=1):
-    """rules_cover_from: the first generation whose rule covers the attack vector."""
+def _orchestrator(first_review_valid=True, rules_cover_from=1, rule_after_analyst_feedback=None):
+    """rules_cover_from: the first generation whose rule covers the attack vector.
+    rule_after_analyst_feedback: the rule written when told of departures from the review."""
     orch = PipelineOrchestrator.__new__(PipelineOrchestrator)
     orch.calls = []
     orch.seen_by_generation = []
@@ -77,8 +78,12 @@ def _orchestrator(first_review_valid=True, rules_cover_from=1):
             "retry": bool(c.get("validation_feedback")),
         })
         covers = len(orch.seen_by_generation) >= rules_cover_from
-        c["generation"] = {"rules": [{"yaml_content": RULE if covers else MISSES_VECTOR, "explanation": "why"}],
-                           "notes": ""}
+        orch.seen_by_generation[-1]["analyst_feedback"] = c.get("analyst_check_feedback")
+        yaml = RULE if covers else MISSES_VECTOR
+        if c.get("analyst_check_feedback") and rule_after_analyst_feedback is not None:
+            yaml = rule_after_analyst_feedback
+        # An empty string stands for an answer that could not be read: no rules (defect 5).
+        c["generation"] = {"rules": [{"yaml_content": yaml, "explanation": "why"}] if yaml else [], "notes": ""}
         c["rag_sigma"], c["rag_sysmon"] = ["sigma doc"], ["sysmon doc"]
 
     def review(c):
@@ -296,3 +301,114 @@ def test_the_stream_regenerates_exactly_when_the_harness_path_does(first_review_
     web = _orchestrator(first_review_valid, rules_cover_from)
     list(web.run_stream(URL))
     assert web.calls == harness.calls
+
+
+# --- design P4: the rules are checked against the analyst's review ----------------
+# RULE is process_creation/linux. Confirming the model's first suggestion (windows) makes it depart.
+
+RULE_WINDOWS = RULE.replace("product: linux", "product: windows")
+CHOOSE_WINDOWS = {"logsource": {"category": "process_creation", "product": "windows"}}
+
+
+def test_a_rule_that_departs_from_the_review_gets_one_rewrite_with_the_reason():
+    orch = _orchestrator(rule_after_analyst_feedback=RULE_WINDOWS)
+    state = _saved(orch)
+    orch.calls.clear()
+    events = list(orch.generate_after_review(state, CHOOSE_WINDOWS))
+    assert orch.calls == ["generate", "review", "generate", "review"]
+    feedback = orch.seen_by_generation[1]["analyst_feedback"]
+    assert "process_creation/linux" in feedback and "process_creation/windows" in feedback
+    check = events[-1]["data"]["pipeline_metadata"]["analyst_check"]
+    assert check["rewritten"] is True and check["departures"] == []
+    assert len(check["departures_before"]) == 1
+    steps = _steps(events)
+    assert ("stage", "analyst_check", "complete", "1 departure(s) from your review — rewriting...") in steps
+    assert steps[-1] == ("stage", "analyst_check", "complete", "Rules follow your review after one rewrite")
+
+
+def test_a_departure_that_survives_the_rewrite_is_shown_not_fixed_by_code():
+    orch = _orchestrator()                       # keeps writing linux
+    state = _saved(orch)
+    orch.calls.clear()
+    events = list(orch.generate_after_review(state, CHOOSE_WINDOWS))
+    assert orch.calls == ["generate", "review", "generate", "review"]   # one rewrite, no more
+    result = events[-1]["data"]
+    assert len(result["pipeline_metadata"]["analyst_check"]["departures"]) == 1
+    assert "product: linux" in result["rule"]                           # the rule is not edited
+    assert "Departures from your review" in result["rule"]
+    assert _steps(events)[-1] == ("stage", "analyst_check", "complete",
+                                  "1 departure(s) remain after one rewrite — see Your review")
+
+
+def test_rules_that_follow_the_review_are_not_rewritten():
+    orch = _orchestrator()
+    state = _saved(orch)
+    orch.calls.clear()
+    events = list(orch.generate_after_review(state, {"logsource": {"category": "process_creation", "product": "linux"},
+                                                     "techniques": {"1": "rejected"}}))
+    assert orch.calls == ["generate", "review"]
+    assert _steps(events)[-1] == ("stage", "analyst_check", "complete", "Rules follow your review")
+    assert events[-1]["data"]["pipeline_metadata"]["analyst_check"]["rewritten"] is False
+
+
+def test_the_rewrite_does_not_count_against_the_one_regeneration_for_errors_and_gaps():
+    orch = _orchestrator(first_review_valid=False, rule_after_analyst_feedback=RULE_WINDOWS)
+    state = _saved(orch)
+    orch.calls.clear()
+    list(orch.generate_after_review(state, CHOOSE_WINDOWS))
+    assert orch.calls == ["generate", "review", "generate", "review", "generate", "review"]
+
+
+def test_a_review_with_nothing_to_check_adds_no_step():
+    orch = _orchestrator()
+    state = _saved(orch)
+    events = list(orch.generate_after_review(state, {"techniques": {"0": "confirmed"}}))
+    assert "analyst_check" not in [e["data"].get("stage") for e in events if e["event"] == "stage"]
+    assert "analyst_check" not in events[-1]["data"]["pipeline_metadata"]
+
+
+# Live, 2026-09-27 (sudo, the analyst chose linux/auditd and rejected the bare pattern `sudo`):
+# (1) the rewrite's answer could not be read (defect 5) and gave no rules - the check then said the
+# rules "follow your review", and the earlier rules were lost; (2) rules selecting the sudo process
+# (`Image|endswith: '/sudo'` AND the `-u#-1` argument) were flagged for the rejected bare pattern.
+# A rejected string can be fine inside a larger condition, so code shows it and does not rewrite.
+
+def test_a_rewrite_that_yields_no_rules_keeps_the_rules_before_it():
+    orch = _orchestrator(rule_after_analyst_feedback="")
+    state = _saved(orch)
+    result = list(orch.generate_after_review(state, CHOOSE_WINDOWS))[-1]["data"]
+    check = result["pipeline_metadata"]["analyst_check"]
+    assert check["rewrite_failed"] is True
+    assert len(check["departures"]) == 1                      # still departs: not "follows your review"
+    assert "product: linux" in result["rule"]                  # the earlier rule is kept
+    assert "The rewrite failed" in result["rule"]
+
+
+def test_the_progress_line_says_when_the_rewrite_failed():
+    orch = _orchestrator(rule_after_analyst_feedback="")
+    state = _saved(orch)
+    steps = _steps(list(orch.generate_after_review(state, CHOOSE_WINDOWS)))
+    assert steps[-1] == ("stage", "analyst_check", "complete",
+                         "The rewrite gave no rules; the earlier rules are kept — see Your review")
+
+
+def test_a_rejected_string_in_a_detection_is_shown_not_rewritten():
+    orch = _orchestrator()                       # RULE detects on 'sudo -u#-1'
+    state = _saved(orch)
+    orch.calls.clear()
+    events = list(orch.generate_after_review(state, {"patterns": {"0": "rejected"}}))
+    assert orch.calls == ["generate", "review"]
+    check = events[-1]["data"]["pipeline_metadata"]["analyst_check"]
+    assert check["rewritten"] is False and check["departures"] == []
+    assert [d["kind"] for d in check["flagged"]] == ["value"]
+    assert "sudo -u#-1" in events[-1]["data"]["rule"].split("Rejected strings used in detection")[1]
+    assert _steps(events)[-1] == ("stage", "analyst_check", "complete",
+                                  "1 rejected string(s) used in detection — see Your review")
+
+
+def test_a_rewrite_for_the_log_source_is_not_told_about_rejected_strings():
+    orch = _orchestrator(rule_after_analyst_feedback=RULE_WINDOWS)
+    state = _saved(orch)
+    list(orch.generate_after_review(state, dict(CHOOSE_WINDOWS, patterns={"0": "rejected"})))
+    feedback = orch.seen_by_generation[1]["analyst_feedback"]
+    assert "log source" in feedback and "sudo -u#-1" not in feedback
