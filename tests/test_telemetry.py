@@ -21,6 +21,7 @@ from backend.telemetry import (
     extract_gemini_usage,
     extract_openai_usage,
     stage_scope,
+    summarise_calls,
 )
 
 
@@ -123,6 +124,20 @@ def test_reset_clears_calls(tel):
     _record(tel)
     tel.reset()
     assert tel.summary()["n_calls"] == 0
+
+
+def test_a_chosen_list_of_calls_is_summarised_like_a_whole_record(tel):
+    """The simulated-analyst run (plan 5.3) costs each arm as the analysis plus its own
+    generation, from lists of calls it keeps between resets."""
+    _record(tel, tier="primary")
+    _record(tel, tier="economy", model="qwen3-coder:30b", backend="ollama",
+            usage={"prompt_tokens": 40, "completion_tokens": 60, "total_tokens": 100})
+    calls = tel.calls()
+    whole = tel.summary()
+    tel.reset()
+    assert summarise_calls(calls) == whole
+    assert summarise_calls(calls[1:])["total_tokens"] == 100
+    assert summarise_calls([])["n_calls"] == 0
 
 
 def test_tokens_are_summed_per_tier(tel):

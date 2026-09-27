@@ -320,7 +320,9 @@ later; SIEM/EDR conversion pending Phase 0).
       Includes former 2.5 (user: important): flag a logsource category that does not exist in
       Sigma (`email`, `security`, `network`: 4 of 237 rules in the step (c) run, none first) and
       ask the model to fix it — the same check for generated and analyst-edited rules.
-- [ ] **3.6** Regression: automated path against baseline v2, within run-to-run noise
+- [-] **3.6** Regression: automated path against baseline v2, within run-to-run noise — **deferred
+      2026-09-27:** `run_sync` stays separate from the review path, so it is unaffected by
+      construction; needed only if it is ever routed through analyse → review → generate
 
 Decisions needed before 3.4: where the checkpoint state is stored; whether "ask the
 assistant to revise this rule" is in scope.
@@ -342,8 +344,36 @@ Which of these run depends on the contributions agreed in Phase 0.
 - [ ] **5.1** Final reference run on the finished system
 - [ ] **5.2** Chosen ablations. Not all of A1–A7: the likely core is A1 (no RAG) and
       A5 (single prompt vs pipeline), and the naive-baseline arm
-- [ ] **5.3** Simulated-analyst experiment: confirm the gold logsource/techniques,
-      regenerate, rescore
+- [>] **5.3** Simulated-analyst experiment: confirm the gold logsource/techniques,
+      regenerate, rescore. **Moved up 2026-09-27 (user accepted the order).**
+      **Measurement plan — PROPOSED 2026-09-27, awaiting the user's approval; fixed before any run:**
+      - *Question:* when the analyst gets the log source right, how much better are the rules?
+        An upper bound — what confirmation is worth when the analyst is right (no user study).
+      - *Cases:* the **60 tuning cases** (`--sample 60 --seed 0`), snapshots, no web search.
+        (First written as the held-out cases; changed the same day, before any run: reading
+        oracle-run failures on held-out cases would spoil them for the next phase's confirmation.)
+      - *Design, paired within case:* the analysis runs **once** (`analyse_for_review`); then two
+        generations from that same analysis — arm **U** (unreviewed, no review: the automated path)
+        and arm **O** (oracle): the gold rule's log source given as the analyst's choice, when that
+        log source is in SigmaHQ's table (otherwise the case is out of O, counted). **Nothing else
+        from the gold rule reaches the pipeline.** Same analysis in both arms, so only the
+        analyst's decision differs.
+      - *Primary measure:* **S5 (detection-field F1)**, O − U, paired on the cases in both, mean
+        difference with a paired bootstrap 95% CI (`eval/compare_runs.py`). Does the right log
+        source lead to the right detection fields? (The next direction: detection quality.)
+      - *Reported, not tested:* S3 in O = **adherence** to the analyst's log source (high by
+        construction — the check enforces it with one rewrite; never reported as a gain); rewrites
+        and remaining departures; S1, S4; tokens and seconds per arm.
+      - *By-product:* U against `p2g_shared60` (same pipeline `a6e9157`, same cases, another run) =
+        the run-to-run noise floor (Inbox M2) — descriptive, no test.
+      - *Rules:* the harness's stop rule (a failed LLM call → the case is redone); a case that
+        stops 3 times is excluded (as in 2.9); both arms' rows are written only when both finished.
+      - *Not in this run:* a techniques oracle (rejecting non-gold techniques makes S4 mechanical).
+      - *Output:* `eval/results/oracle_ls60_unreviewed.jsonl`, `eval/results/oracle_ls60_oracle.jsonl`.
+      - *Built and smoke-tested 2026-09-27* (log): 58 of 60 cases choosable; ~3–6 min per case in the
+        smoke runs, so the run is likely 4–6 h — **start only on the user's approval**:
+        `eval/run_resilient.py -- --sample 60 --seed 0 --no-web-enrich --oracle-logsource --arm oracle_ls --out eval/results/oracle_ls60.jsonl`
+        (the stall watchdog watches `oracle_ls60_unreviewed.jsonl`: both rows are written together)
 - [ ] **5.4** Evidence metrics from 3.3: verified-quote rate, report accuracy vs gold
 - [-] **5.5** User study — dropped by the user 2026-09-23
 - [ ] **5.6** Detonation testing (R1/R2) — only if agreed in Phase 0. Needs both
@@ -522,6 +552,7 @@ so removing one is reversible; untracked and ignored files have no such safety n
 | 2026-09-26 | Prompt review item 1 (the rule writer's example: hyphen tactic tags, no fixed id) joins the shared run as Change 33 | user |
 | 2026-09-27 | Interface: a visual-only polish before the live demo (no emojis, own sober look), one revertable commit; the real GUI work stays Phase 4 | user |
 | 2026-09-27 | Direction after Phase 2: improve **detection quality**, and in the assistant keep the analyst in the loop to **verify what the LLM understood about the attack** — the tool must not depend on generated rules being right ("it is almost impossible to always produce Sigma rules that are true"). Pending the professor (Phase 0) | user |
+| 2026-09-27 | Order after Changes 34–35: the simulated-analyst experiment (5.3) first, then defect 5 (rules as YAML blocks, prompt-review item 6); 3.6 only if `run_sync` is ever routed through the review path; merge `analyst-review` into `main` after the demo. No A/A run on its own (it comes as 5.3's by-product) | user |
 | 2026-09-27 | Start the confirm/correct step now (Phases 3/4 before the professor's sign-off); first slice = log source + reject items (confirm/reject patterns, techniques, indicators; restore excluded; choose any SigmaHQ log source; a note). Built on a branch; `main` stays the demo's code | user |
 | 2026-09-26 | Phase 2 frozen at `a6e9157` before the held-out confirmation; open items (quota, defect 5, prompt review, retrieval) go to the next phase | user |
 | 2026-09-26 | 2.9 held-out confirmation added: final pipeline and baseline v2 on 60 cases never run before; the chance test moves to the final pipeline's held-out run | user |

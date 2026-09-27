@@ -75,6 +75,19 @@ def test_a_log_source_the_analyst_chose_is_given_as_yaml():
     assert "confirmed by the analyst" in block.lower()
 
 
+def test_the_analysts_choice_keeps_the_note_on_what_sigmahq_leaves_out():
+    # Found by the simulated-analyst smoke run (2026-09-27): given `webserver` as the analyst's
+    # choice without Change 29's note, the rule writer added `product: webserver`, and kept it
+    # after the rewrite - the model's own suggestion carried the note, the analyst's did not.
+    table = {"with_category": [{"category": "webserver", "products": [None], "fields": []}],
+             "without_category": []}
+    block = first_rule_logsource_block({"user_confirmed": True, "primary_source": "webserver",
+        "confirmed_logsource": {"category": "webserver", "product": None, "service": None}}, table)
+    assert block.startswith("logsource:\n    category: webserver\n")
+    assert "confirmed by the analyst" in block.lower()
+    assert "no `product` and no `service`: leave them out" in block
+
+
 def test_no_recommendation_says_so():
     block = first_rule_logsource_block({"suggestions": []})
     assert "no log source was recommended" in block.lower()

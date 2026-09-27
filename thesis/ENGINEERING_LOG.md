@@ -3928,3 +3928,38 @@ rules**, description included. 164 s.
 **Observed:** a model that keeps a non-standard log-source form after one explicit rewrite (sudo) — the
 check's value is that the analyst sees it; code does not force it. Adding a technique the model missed
 (T1190) is outside this slice ("editing values", not built).
+
+---
+
+## 2026-09-27 — The simulated-analyst run built (plan 5.3), and a Change 34 regression it found (user)
+
+User, leaving for a few hours: no A/A run on its own; "keep working on the other changes on the order"
+— the order: 5.3 first, then defect 5 (plan Decisions log). Measurement plan for 5.3 written into
+`ACTION_PLAN.md` before any run, as a proposal for the user to approve.
+**Cases changed before any run:** first written as the 60 held-out cases, then the **60 tuning cases**
+(seed 0) — reading oracle-run failures on held-out cases would spoil them for the next confirmation.
+On the tuning cases arm U against `p2g_shared60` (same code `a6e9157`) is the A/A noise floor.
+**Built** (tests first, each seen to fail):
+- `eval/run_eval.py --oracle-logsource`: `run_oracle_case` — the analysis once
+  (`analyse_for_review`), then generation twice from its state: arm **U** with no review, arm **O**
+  with the gold log source as the analyst's choice (`oracle_review`: in Sigma's form, only when
+  SigmaHQ's table has it — the check a real analyst's choice passes; nothing else from the gold rule).
+  Each arm scored against the gold rule and costed as the analysis plus its own generation; rows
+  labelled `<arm>_unreviewed` / `<arm>_oracle`; the oracle row keeps `oracle_review`,
+  `analyst_review`, `analyst_check`. `run_oracle_cases` writes both rows or neither (the stop rule).
+  `load_done` shared by both modes. `run_case` split into `_base_row` / `_record_result` /
+  `_record_error` without change (its tests pass unchanged).
+- `backend/telemetry.summarise_calls(calls)`: the summary of any list of calls; `summary()` uses it.
+- Dry run (committed code): **58 of the 60 tuning cases** have a gold log source in SigmaHQ's table
+  (57 of 60 held-out).
+**Smoke run, 1 tuning case (a4a899e8, webserver; scratch output, not cited):** wiring right — one
+analysis, two arms, per-arm cost, the check recorded. **It found a regression from Change 34:** the
+analyst's `webserver` was given to the rule writer as YAML **without Change 29's note** ("no
+`product` and no `service`: leave them out"), which the model's own suggestion carries; the rule
+writer wrote `product: webserver`, the check rewrote once, the model kept it — S3 wrong *with* the
+right answer. Fixed: the analyst's choice gets the same note (test first). Rerun of the same case:
+first rule `category: webserver` only, no departure, S3 right in both arms, 3.3 min. Also: the
+unreviewed arm's S5 on that case was 0.0 in the first smoke and 0.667 in the second — sampling at
+generation's 0.3, the reason for the paired design and the noise floor. A closing-message crash for
+output outside the repo fixed. Tests: 535 passed. **The 60-case run has not started** — the plan
+awaits the user.
