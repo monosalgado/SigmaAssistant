@@ -14,6 +14,9 @@ import json
 
 # New Imports for Rules & Translation
 import backend.saved_rules as saved_rules
+import backend.review_sessions as review_sessions
+from backend.pipeline.analyst_review import ReviewError, logsource_choices
+from backend.pipeline.orchestrator import LOGSOURCE_TABLE
 from backend.translation import LLMTranslator
 from sigma.collection import SigmaCollection
 from sigma.backends.insight_idr import InsightIDRBackend
@@ -77,6 +80,7 @@ def load_sessions():
         try:
             with open(SESSIONS_FILE, "r") as f:
                 sessions = json.load(f)
+            review_sessions.reset_interrupted(sessions)
             print(f"Loaded {len(sessions)} sessions.")
         except Exception as e:
             print(f"Failed to load sessions: {e}")
@@ -112,6 +116,12 @@ class AttackRequest(BaseModel):
     description: str
     session_id: Optional[str] = None
     feedback_data: Optional[Dict] = None  # User corrections from feedback loop
+    review: bool = False  # stop after the analysis for the analyst's review
+
+class GenerateRequest(BaseModel):
+    session_id: str
+    analysis_id: str
+    review: Dict = Field(default_factory=dict)  # see backend/pipeline/analyst_review.py
 
 class RuleCreateRequest(BaseModel):
     content: str
@@ -127,7 +137,8 @@ class TranslateRequest(BaseModel):
 
 @app.get("/")
 def read_root():
-    return FileResponse('frontend/index.html')
+    # Never a stale page: the assets are versioned, the page itself is not.
+    return FileResponse('frontend/index.html', headers={"Cache-Control": "no-cache"})
 
 @app.get("/style.css")
 def style():
@@ -162,7 +173,7 @@ def create_session():
     # Send initial greeting
     sessions[session_id].append({
         "role": "assistant", 
-        "content": "Paste the URL of a threat report, or describe an attack. The pipeline reads the source, identifies the attack vector and the log source where it would be visible, and drafts Sigma rules mapped to MITRE ATT&CK — for you to review before use."
+        "content": "Paste the URL of a threat report, or describe an attack. The pipeline reads the source and identifies the attack vector, the log source where it would be visible and the ATT&CK techniques, then stops so you can confirm or correct what it understood before it writes the Sigma rules."
     })
     save_sessions()
     return {"id": session_id}
@@ -179,7 +190,12 @@ def delete_session(session_id: str):
 def get_session_history(session_id: str):
     if session_id not in sessions:
         raise HTTPException(status_code=404, detail="Session not found")
-    return sessions[session_id]
+    return review_sessions.public_messages(sessions[session_id])
+
+@app.get("/logsource_choices")
+def get_logsource_choices():
+    """Every log source in SigmaHQ's rules, for the analyst to choose from."""
+    return logsource_choices(LOGSOURCE_TABLE)
 
 @app.post("/analyze")
 def analyze_attack(request: AttackRequest):
@@ -295,12 +311,31 @@ def analyze_stream(request: AttackRequest):
     save_sessions()
 
     history = sessions[session_id][:-1]
+    if request.review:
+        events = _guarded(agent.orchestrator.analyse_for_review(request.description, history=history))
+    else:
+        events = agent.analyze_attack_stream(request.description, history=history, feedback_data=request.feedback_data)
 
     def event_generator():
         final_data = None
-        for event in agent.analyze_attack_stream(request.description, history=history, feedback_data=request.feedback_data):
+        for event in events:
             event_type = event.get("event", "stage")
             data = event.get("data", {})
+
+            if event_type == "checkpoint":
+                # The analysis waits in the session for the analyst's review.
+                final_data = data
+                analysis_id = str(uuid.uuid4())
+                sessions[session_id].append(review_sessions.checkpoint_message(analysis_id, data))
+                save_sessions()
+                event_type = "review"
+                data = {
+                    "analysis_id": analysis_id,
+                    "session_id": session_id,
+                    "content": review_sessions.READY_TEXT,
+                    "pipeline_metadata": data["pipeline_metadata"],
+                    "context": data["context"],
+                }
 
             if event_type == "result":
                 final_data = data
@@ -331,6 +366,77 @@ def analyze_stream(request: AttackRequest):
             })
             save_sessions()
             yield f"event: result\ndata: {json.dumps(error_data)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+def _guarded(events):
+    """A pipeline error becomes a result event, as in SigmaAgent.analyze_attack_stream."""
+    try:
+        yield from events
+    except Exception as e:
+        print(f"Pipeline stream error: {e}")
+        yield {"event": "result", "data": {
+            "rule": f"Error during analysis: {e}",
+            "context": {"sigma": [], "mitre": [], "sysmon": []},
+            "pipeline_metadata": None,
+        }}
+
+
+@app.post("/generate_stream")
+def generate_stream(request: GenerateRequest):
+    """Generate rules from a saved analysis and the analyst's review, streamed via SSE."""
+    if not agent:
+        raise HTTPException(status_code=500, detail="Agent not initialized")
+    messages = sessions.get(request.session_id)
+    if messages is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    try:
+        state, history = review_sessions.start_generation(messages, request.analysis_id)
+    except review_sessions.AnalysisNotFound:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+    except review_sessions.AnalysisNotAwaiting as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    try:
+        events = agent.orchestrator.generate_after_review(state, request.review, history=history)
+    except ReviewError as e:
+        review_sessions.abandon_generation(messages, request.analysis_id)
+        raise HTTPException(status_code=400, detail=str(e))
+    save_sessions()
+
+    def event_generator():
+        finished = False
+        try:
+            for event in events:
+                event_type = event.get("event", "stage")
+                data = event.get("data", {})
+                if event_type == "result":
+                    review_sessions.finish_generation(messages, request.analysis_id, data)
+                    save_sessions()
+                    finished = True
+                    data["session_id"] = request.session_id
+                yield f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
+        except Exception as e:
+            print(f"Generation stream error: {e}")
+            error_data = {
+                "rule": f"Error during generation: {e}. The analysis is kept - generate again to retry.",
+                "context": {"sigma": [], "mitre": [], "sysmon": []},
+                "pipeline_metadata": None,
+                "session_id": request.session_id,
+                "retry_analysis_id": request.analysis_id,
+            }
+            yield f"event: result\ndata: {json.dumps(error_data)}\n\n"
+        finally:
+            if not finished:
+                review_sessions.abandon_generation(messages, request.analysis_id)
+                save_sessions()
 
     return StreamingResponse(
         event_generator(),

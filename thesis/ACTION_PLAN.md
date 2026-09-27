@@ -6,6 +6,9 @@ current phase goes to the Inbox or the Parking lot, not into the code.
 **Current phase: 2 — Fix the logsource failure.** Phase 1 complete 2026-09-24
 (its Inbox triaged with the user 2026-09-25). Phase 0 runs in parallel (it needs the
 professor, not the code).
+**Update 2026-09-27:** Phase 2 is complete (held-out confirmation). Active: the first slice of
+Phases 3/4 — the analyst confirms or corrects the analysis before generation (Change 34, branch
+`analyst-review`), started before the professor's sign-off by the user's decision.
 
 ---
 
@@ -295,6 +298,13 @@ Design: `thesis/ASSISTANT_DESIGN.md` — **reviewed with the user 2026-09-26**; 
 later; SIEM/EDR conversion pending Phase 0).
 
 - [x] 3.0 Defect 13 fixed (`663f005`) — design step 1
+- [x] **First slice of 3.2 + 3.4 + 4.1 — Change 34 (2026-09-27, branch `analyst-review`, user):**
+      the web app's run stops after the analysis (`analyse_for_review`), the analysis waits in the
+      session, the analyst confirms/rejects patterns, techniques and indicators, restores excluded
+      strings, chooses the log source (validated against SigmaHQ's table) and adds a note; generation
+      starts from the saved analysis (`generate_after_review`). `run_sync` untouched (P5). Tested live
+      twice (sudo). Not yet: P4's check on the analyst's log source (next), editing values, the report
+      builder (3.1), evidence quotes (3.3), rule validation (3.5).
 - [ ] **3.1** Report builder: a pure function from pipeline context to the report *(offline)*
       Include (user, 2026-09-25): suggestions marked `service_to_confirm` (Change 25) are
       shown for the analyst to confirm, with `service_dropped` explained.
@@ -392,6 +402,14 @@ From the retrieval check (2026-09-26, user: a and b to the Inbox) — awaiting t
 - a record what each retrieval returned (document ids per collection) in every row — measurement only
 - b the analysis stage searches ATT&CK with `combined_text[:500]` — URLs plus, often, the site menu
   (Securelist case: the Kaspersky menu); the attack-vector summary exists by then. Mainly S4.
+
+From Change 34's live test (2026-09-27) — awaiting triage:
+- **Defect 20**: the web app's coverage retry never runs (a side effect in `_should_regenerate_for_coverage`
+  is triggered by the progress text first). Harness (`run_sync`) unaffected. Small fix in `_generation_events`
+- the review stage merged 3 generated rules into 1 ("Merged duplicate rules") — measure how often review drops rules (needs M1)
+- P4 check: a rule that violates the analyst's chosen log source → one rewrite with the reason, then shown
+- remove the unused `feedback_data` / `_apply_user_feedback` path (superseded by Change 34)
+- the Analysis panel (and so the review) is hidden under 900 px wide
 
 ## Security — do first (the user's action)
 
@@ -501,6 +519,7 @@ so removing one is reversible; untracked and ignored files have no such safety n
 | 2026-09-26 | Prompt review item 1 (the rule writer's example: hyphen tactic tags, no fixed id) joins the shared run as Change 33 | user |
 | 2026-09-27 | Interface: a visual-only polish before the live demo (no emojis, own sober look), one revertable commit; the real GUI work stays Phase 4 | user |
 | 2026-09-27 | Direction after Phase 2: improve **detection quality**, and in the assistant keep the analyst in the loop to **verify what the LLM understood about the attack** — the tool must not depend on generated rules being right ("it is almost impossible to always produce Sigma rules that are true"). Pending the professor (Phase 0) | user |
+| 2026-09-27 | Start the confirm/correct step now (Phases 3/4 before the professor's sign-off); first slice = log source + reject items (confirm/reject patterns, techniques, indicators; restore excluded; choose any SigmaHQ log source; a note). Built on a branch; `main` stays the demo's code | user |
 | 2026-09-26 | Phase 2 frozen at `a6e9157` before the held-out confirmation; open items (quota, defect 5, prompt review, retrieval) go to the next phase | user |
 | 2026-09-26 | 2.9 held-out confirmation added: final pipeline and baseline v2 on 60 cases never run before; the chance test moves to the final pipeline's held-out run | user |
 | 2026-09-25 | Inbox triage: 2.5 (invented categories) and 2.6 (complete reference table) added after (d); order (d) → 2.5 → 2.6 → ATT&CK ID check → 10 most relevant techniques; Foundation-Sec out of the thesis; paraphrased evidence is fine; delete the unused suggestion prompt | user |

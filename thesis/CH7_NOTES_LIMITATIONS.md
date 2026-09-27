@@ -197,6 +197,16 @@ limitation in the log belongs here too.
     attempt after three stops and was excluded as the rule says (decided before any score was read;
     including it gives the same p). Both were S3-correct in the final pipeline: the exclusion works
     against the result, not for it. (log 2026-09-27)
+47. **The web app never ran its coverage retry (defect 20)** `[DISCLOSE]`. A side effect in the
+    retry check is triggered by the progress message first, so the streaming path always skipped
+    the retry while saying "regenerating". The harness's path (`run_sync`) calls the check once and
+    retries as designed, so **no reported number is affected** — but a description of the web app
+    must not claim the retry until it is fixed. (log 2026-09-27, Change 34)
+48. **The analyst's review is built but not measured** `[UNMEASURED]` (Change 34). Two live runs on
+    one case showed the rules following the analyst's log source and technique choices — anecdotes,
+    not evidence. Confirming an item is recorded but changes nothing the rule writer receives; a rule
+    that departs from the analyst's log source is not yet caught (P4's check not built). What it is
+    worth is for the simulated-analyst experiment (plan 5.3); there is no user study. (log 2026-09-27)
 
 ---
 

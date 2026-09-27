@@ -222,6 +222,11 @@ def first_rule_logsource_block(logsource_info: dict, table: Optional[dict] = Non
     is a recommendation: the prompt lets the model choose otherwise and explain why.
     With the table (Change 29), a line says what SigmaHQ's rules leave out of it.
     """
+    confirmed = logsource_info.get("confirmed_logsource")
+    if logsource_info.get("user_confirmed") and isinstance(confirmed, dict):
+        lines = ["logsource:"] + [f"    {f}: {confirmed[f]}" for f in ("category", "product", "service")
+                                  if _clean(confirmed.get(f)) is not None]
+        return "\n".join(lines) + "\nConfirmed by the analyst: use it for the first rule."
     if logsource_info.get("user_confirmed") and logsource_info.get("primary_source"):
         return (f"Log source confirmed by the analyst: {logsource_info['primary_source']}. "
                 "Use it for the first rule.")

@@ -24,10 +24,28 @@ from backend.pipeline.stage_analysis import AnalysisStage
 from backend.pipeline.stage_generate import GenerateStage
 from backend.pipeline.stage_review import ReviewStage
 from backend.pipeline import prompts
+from backend.pipeline.analyst_review import apply_review
+from backend.pipeline.sigma_logsource import load_logsource_table
 from backend.telemetry import stage_scope
 
 
 _URL_RE = re.compile(r"https?://\S+")
+
+# SigmaHQ's log sources: the analyst's choice is validated against them.
+LOGSOURCE_TABLE = load_logsource_table()
+
+# Left out of the saved analysis: the conversation is already in the session, and the
+# media file is not needed once the input is preprocessed.
+_NOT_SAVED = ("history", "media_file")
+
+
+def analysis_state(context: dict) -> dict:
+    """The analysis as saved for the analyst's review, as JSON.
+
+    Raises TypeError for anything JSON cannot store, rather than save a state that
+    could not be read back.
+    """
+    return json.loads(json.dumps({k: v for k, v in context.items() if k not in _NOT_SAVED}))
 
 # Characters of non-URL prose tolerated before we stop treating the input as a
 # bare URL drop. Allows trailing filler ("please", "thanks") but any real
@@ -240,6 +258,65 @@ class PipelineOrchestrator:
             feedback_data: Optional user corrections from the feedback loop.
                 Keys: confirmed_logsource, removed_indicators, added_indicators, notes
         """
+        context = yield from self._analysis_events(description, history, media_file)
+        if context is None:
+            return
+
+        ext = context["extraction"]
+        ttps = context["ttp_mapping"]
+        ls = context.get("logsource_suggestion", {})
+
+        # Stage 4b: User Feedback (send preview for confirmation)
+        yield {"event": "feedback_request", "data": {
+            "stage": "feedback",
+            "indicators": ext.get("indicators", []),
+            "ttp_mappings": ttps.get("mappings", []),
+            "logsource_suggestions": ls.get("suggestions", []),
+            "primary_logsource": ls.get("primary_source", ""),
+            "attack_summary": ext.get("attack_summary", ""),
+        }}
+
+        # Check for user feedback from the feedback_data parameter
+        if feedback_data:
+            context = self._apply_user_feedback(context, feedback_data)
+            yield {"event": "stage", "data": {"stage": "feedback", "status": "complete", "detail": "User feedback applied"}}
+        else:
+            yield {"event": "stage", "data": {"stage": "feedback", "status": "complete", "detail": "No corrections needed"}}
+
+        yield from self._generation_events(context)
+
+    def analyse_for_review(self, description: str, history: list[dict] = None, media_file: dict = None) -> Generator[dict, None, None]:
+        """The analysis only, ending at a checkpoint for the analyst's review (plan Phase 3/4).
+
+        The checkpoint carries the analysis to save (`state`), what the Analysis panel
+        shows, and the references retrieved so far. Generation starts later from the
+        saved state (`generate_after_review`), so the analyst reviews exactly what the
+        rules will be written from.
+        """
+        context = yield from self._analysis_events(description, history, media_file)
+        if context is None:
+            return
+        yield {"event": "checkpoint", "data": {
+            "state": analysis_state(context),
+            "pipeline_metadata": self._pipeline_metadata(context),
+            "context": self._references(context),
+        }}
+
+    def generate_after_review(self, state: dict, review: dict, history: list[dict] = None) -> Generator[dict, None, None]:
+        """Generation from a saved analysis and the analyst's review; no analysis runs again.
+
+        Raises ReviewError when called - before any stage runs - if the review does not
+        fit the saved analysis or SigmaHQ's log source table.
+        """
+        context = apply_review(state, review, LOGSOURCE_TABLE)
+        context["history"] = history or []
+        return self._generation_events(context)
+
+    def _analysis_events(self, description: str, history: list[dict] = None, media_file: dict = None) -> Generator[dict, None, dict]:
+        """Classification and the analysis stages, as progress events.
+
+        Returns the context, or None after answering a chat or question message.
+        """
         # Step 0: Intent classification (FAST)
         yield {"event": "stage", "data": {"stage": "classification", "status": "running", "detail": "Classifying intent..."}}
         intent_result = self.classify_intent(description, history)
@@ -256,7 +333,7 @@ class PipelineOrchestrator:
                     "pipeline_metadata": None,
                 },
             }
-            return
+            return None
 
         context = {
             "original_query": description,
@@ -319,24 +396,11 @@ class PipelineOrchestrator:
             "stage": "analysis", "status": "complete",
             "detail": f"{len(ext['indicators'])} indicators, {len(ttps['mappings'])} TTPs, logsource: {ls.get('primary_source', 'unknown')}"
         }}
+        return context
 
-        # Stage 4b: User Feedback (send preview for confirmation)
-        yield {"event": "feedback_request", "data": {
-            "stage": "feedback",
-            "indicators": ext.get("indicators", []),
-            "ttp_mappings": ttps.get("mappings", []),
-            "logsource_suggestions": ls.get("suggestions", []),
-            "primary_logsource": ls.get("primary_source", ""),
-            "attack_summary": ext.get("attack_summary", ""),
-        }}
-
-        # Check for user feedback from the feedback_data parameter
-        if feedback_data:
-            context = self._apply_user_feedback(context, feedback_data)
-            yield {"event": "stage", "data": {"stage": "feedback", "status": "complete", "detail": "User feedback applied"}}
-        else:
-            yield {"event": "stage", "data": {"stage": "feedback", "status": "complete", "detail": "No corrections needed"}}
-
+    def _generation_events(self, context: dict) -> Generator[dict, None, None]:
+        """Generation, review (one retry on errors), the coverage check (one retry on
+        gaps, if no retry ran yet), then the result - as progress events."""
         # Stage 5: Rule Generation (PRIMARY model)
         yield {"event": "stage", "data": {"stage": "generation", "status": "running", "detail": "Generating Sigma rules..."}}
         context = self.generate.run(context)
@@ -565,7 +629,26 @@ class PipelineOrchestrator:
 
         response_text = "\n\n".join(parts) if parts else "I was unable to generate a rule. Please provide more details about the attack technique."
 
-        # Build pipeline metadata for enhanced context panel
+        return {
+            "rule": response_text,
+            "context": self._references(context),
+            "pipeline_metadata": self._pipeline_metadata(context),
+        }
+
+    @staticmethod
+    def _references(context: dict) -> dict:
+        """The retrieved references, for the panel (backward compatible)."""
+        return {
+            "sigma": context.get("rag_sigma", []),
+            "mitre": context.get("rag_mitre", []),
+            "sysmon": context.get("rag_sysmon", []),
+        }
+
+    @staticmethod
+    def _pipeline_metadata(context: dict) -> dict:
+        """What the Analysis panel shows, after the analysis or after generation."""
+        optimization = context.get("optimization", {})
+        coverage = context.get("coverage_check", {})
         extraction = context.get("extraction", {})
         ttp_mapping = context.get("ttp_mapping", {})
         validation = context.get("validation", {})
@@ -594,14 +677,6 @@ class PipelineOrchestrator:
             "generations": context.get("generation_log", []),
             "generation_retried": bool(context.get("generation_retried")),
         }
-
-        # Build context for sidebar (backward compatible)
-        return {
-            "rule": response_text,
-            "context": {
-                "sigma": context.get("rag_sigma", []),
-                "mitre": context.get("rag_mitre", []),
-                "sysmon": context.get("rag_sysmon", []),
-            },
-            "pipeline_metadata": pipeline_metadata,
-        }
+        if "analyst_review" in context:
+            pipeline_metadata["analyst_review"] = context["analyst_review"]
+        return pipeline_metadata

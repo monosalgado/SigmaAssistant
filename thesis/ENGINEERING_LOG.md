@@ -3760,3 +3760,72 @@ analysis clears the panel, a **live run** (sudo CVE-2019-14287) fills it on comp
 tests 432 passed. That live run again recommended `process_creation / windows` for the Linux sudo bug
 (2 of 3 live runs today) — now visible at a glance in the panel; the demo runbook uses it as the
 verification example.
+
+---
+
+## 2026-09-27 — Change 34: the analyst confirms or corrects what the model understood, before any rule is written (user)
+
+User: "lets work on the confirm/correct buttons". First slice chosen by the user: **the log source +
+rejecting items** (confirm or change the log source; confirm/reject techniques, indicators and attack
+patterns; restore an excluded string; a note). Built on branch `analyst-review` so `main` stays what
+the demo runbook describes. Starts plan Phase 3/4 before the professor's sign-off (Phase 0) — the
+user's decision, logged in the plan.
+**Why it could not simply be wired up** (design §2): the old `feedback_data` was applied at the start
+of a *new* run, which re-analyses — the analyst would correct facts the rules are then not written
+from. The run now **stops after the analysis and keeps its state**.
+**What was built** (tests first, each seen to fail):
+- `backend/pipeline/analyst_review.py` — `apply_review(saved analysis, review, SigmaHQ table)`, pure:
+  rejected techniques/indicators/patterns are removed before generation; a restored excluded string
+  becomes a pattern; a chosen log source is validated against SigmaHQ's table (`on_table`, Change 28),
+  put first and marked `user_confirmed` with `confirmed_logsource`; the note goes to the existing
+  "User Instructions" slot; the review is recorded (`analyst_review`). Invalid reviews (unknown
+  position, status or field; a log source not in SigmaHQ's rules) raise before anything changes.
+  Confirming a technique, indicator or pattern is **recorded only** — it changes nothing the rule
+  writer receives (said so in the panel). `logsource_choices(table)`: the 125 log sources.
+- `sigma_logsource.first_rule_logsource_block`: an analyst-chosen log source is given as YAML +
+  "Confirmed by the analyst: use it for the first rule" (the old string form kept).
+- `orchestrator.py`: `run_stream` split into `_analysis_events` + `_generation_events` (code moved,
+  not changed; two tests pin its exact event sequence, written against the old code and passing
+  before and after); `analyse_for_review` (analysis, then a `checkpoint` event with the JSON state to
+  save, the panel's data and references); `generate_after_review` (applies the review, raises before
+  any stage runs if it is invalid, then generation from the saved state — **no second analysis**);
+  `analysis_state` (JSON, without the conversation); `_pipeline_metadata` / `_references` factored
+  out of `_format_output` (same keys; `analyst_review` added only when present). **`run_sync`, which
+  the harness calls, is not touched** (design P5): no measured number can move.
+- `backend/review_sessions.py` — the analysis waits in the session record (design decision 2):
+  `awaiting_review → generating → generated` (back to awaiting on failure or restart); generated from
+  once; the browser never receives the saved state.
+- `main.py`: `/analyze_stream` with `review: true` stops at the checkpoint; `POST /generate_stream`
+  (400 invalid review, 404 unknown, 409 already generated); `GET /logsource_choices`; the page is
+  served `no-cache` (the browser pane showed a stale pre-redesign page twice). Greeting and the input
+  button ("Analyse") say the run stops for the analyst.
+- Frontend: Confirm/Reject on each pattern, technique and indicator (by its position in the saved
+  list — the panel groups indicators by type); Restore on excluded strings; "Use this" on each
+  suggested log source (disabled, with the reason, if it is not in SigmaHQ's rules) and a list of all
+  125; a note; a bar with the running summary and **Generate rules**. After generation a **"Your
+  review"** section heads the panel. A pending review survives a page reload. The SSE reader now
+  handles events split across network chunks. The informational preview is removed.
+Tests: 482 passed (+50).
+**Live test (sudo CVE-2019-14287, two runs, anecdotal — not a measurement):** both analyses again
+recommended Windows (`process_creation / windows` 95%, `file_event / windows` 85%) — 4 of 5 live runs
+today. Run 1: the analyst chose `process_creation / linux` (not among the model's suggestions),
+rejected T1548.004 (a macOS technique), T1059.001 (PowerShell), T1562.001 and the bare pattern
+`sudo`; the rule came out `process_creation / linux`, tagged only the confirmed T1068 and T1059.004.
+Run 2 (after a mid-review reload, which restored the analysis): Linux chosen, the pattern `root`
+rejected → 3 rules, all `process_creation / linux`, no coverage warnings. 400/404/409 checked; the
+saved demo chats still open read-only.
+**A design mistake found live and fixed:** a rejected pattern first joined the excluded strings. The
+coverage check then flagged every sudo rule as using a "researcher artifact" (`sudo` is a substring of
+every real pattern). Rejecting means "not given to the rule writer", as for techniques and indicators;
+the test was changed first.
+**Found, not fixed (Inbox):**
+- **Defect 20 — the web app's coverage retry never runs.** `_should_regenerate_for_coverage` marks
+  `coverage_retried` as a side effect; the stream calls it once to word the progress line, so the real
+  check always sees "already retried" — while the line says "regenerating with feedback…". Present in
+  `run_stream` since the retry was added; `run_sync` (the harness) calls it once, so **no evaluation
+  number is affected**. The demo runbook's "one retry if not" is wrong for the web app.
+- The review stage returned 1 rule for 3 generated in run 1 ("Merged duplicate rules into a single
+  comprehensive rule") — the known "review rewrites the rules" behaviour, now seen dropping rules.
+- The old `feedback_data` path (`_apply_user_feedback`) is unused by any client; the panel is hidden
+  under 900 px wide, so no review there; P4's check (a rule that violates the analyst's log source →
+  one rewrite) is not built yet.

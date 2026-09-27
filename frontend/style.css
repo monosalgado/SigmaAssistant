@@ -564,6 +564,127 @@ select:focus-visible {
     overflow-wrap: break-word;
 }
 
+/* --- The analyst's review ------------------------------------------------------ */
+.an-review-intro {
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: var(--text-2);
+    background: var(--accent-soft);
+    border-bottom: 1px solid var(--border);
+    padding: 0.8rem 1.2rem;
+    margin-top: -0.4rem;
+}
+
+.an-actions {
+    display: flex;
+    gap: 0.3rem;
+    margin-top: 0.45rem;
+}
+
+.an-act {
+    padding: 0.16rem 0.55rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    color: var(--text-2);
+}
+
+.an-act:hover {
+    background: var(--surface-3);
+    color: var(--text);
+}
+
+.an-act:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.an-act.on[data-status="confirmed"],
+.an-act.on[data-status="chosen"] {
+    background: rgba(76, 175, 122, 0.14);
+    border-color: var(--success);
+    color: var(--success);
+}
+
+.an-act.on[data-status="rejected"] {
+    background: rgba(224, 87, 79, 0.12);
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.an-act.on[data-status="restored"] {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.an-item.is-confirmed,
+.an-item.is-chosen {
+    border-left: 2px solid var(--success);
+}
+
+.an-item.is-restored {
+    border-left: 2px solid var(--accent);
+}
+
+.an-item.is-rejected {
+    opacity: 0.55;
+    border-left: 2px solid var(--danger);
+}
+
+.an-item.is-rejected .an-code {
+    text-decoration: line-through;
+}
+
+.an-select,
+.an-textarea {
+    width: 100%;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+    padding: 0.4rem 0.5rem;
+}
+
+.an-textarea {
+    min-height: 4.5rem;
+    resize: vertical;
+    line-height: 1.45;
+}
+
+.review-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.8rem 1.2rem;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.review-bar[hidden] {
+    display: none;
+}
+
+.review-summary {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.76rem;
+    line-height: 1.4;
+    color: var(--text-2);
+}
+
+.review-bar button {
+    white-space: nowrap;
+}
+
+.review-bar button:disabled {
+    opacity: 0.5;
+    cursor: progress;
+}
+
 @media (max-width: 1180px) {
     .sidebar { width: 240px; }
     .analysis-panel { width: 330px; }

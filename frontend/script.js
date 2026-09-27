@@ -49,14 +49,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentRuleId = null;
 
     // --- Pipeline Stage Definitions ---
-    const PIPELINE_STAGES = [
+    // The analysis stops for the analyst's review; generation starts from it.
+    const ANALYSIS_STAGES = [
         { id: 'classification', label: 'Intent Classification' },
         { id: 'preprocessing', label: 'Preprocessing' },
         { id: 'web_enrichment', label: 'Web Enrichment' },
         { id: 'poc_analysis', label: 'PoC Analysis' },
         { id: 'attack_vector', label: 'Attack Vector Extraction' },
         { id: 'analysis', label: 'Threat Analysis' },
-        { id: 'feedback', label: 'Review & Confirm' },
+    ];
+    const GENERATION_STAGES = [
         { id: 'generation', label: 'Rule Generation' },
         { id: 'review', label: 'Validation & Optimization' },
         { id: 'coverage_check', label: 'Coverage Gap Check' },
@@ -187,16 +189,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const contextDiv = document.getElementById('context-content');
         if (contextDiv) contextDiv.innerHTML = '';
 
-        let lastContext = null;
-        let lastPipelineMeta = null;
+        let last = null;
         msgs.forEach(m => {
             appendMessage(m.role, m.content);
-            if (m.role === 'assistant' && m.context && Object.keys(m.context).length > 0) {
-                lastContext = m.context;
-                lastPipelineMeta = m.pipeline_metadata || null;
-            }
+            if (m.role === 'assistant' && m.context && Object.keys(m.context).length > 0) last = m;
         });
-        if (lastContext) renderContext(lastContext, lastPipelineMeta);
+        review = null;
+        if (last && last.status === 'awaiting_review') {
+            await startReview(last.analysis_id, last.context, last.pipeline_metadata);
+        } else {
+            if (last) renderContext(last.context, last.pipeline_metadata || null);
+            updateReviewBar();
+        }
         loadSessions();
     }
 
@@ -532,7 +536,7 @@ level: medium`;
     }
 
     // --- Pipeline Progress UI ---
-    function createPipelineProgress() {
+    function createPipelineProgress(stages) {
         const wrapper = document.createElement('div');
         wrapper.className = 'message assistant';
 
@@ -547,7 +551,7 @@ level: medium`;
         progressDiv.className = 'pipeline-progress';
         progressDiv.id = 'pipeline-progress';
 
-        PIPELINE_STAGES.forEach(stage => {
+        stages.forEach(stage => {
             const stageDiv = document.createElement('div');
             stageDiv.className = 'pipeline-stage pending';
             stageDiv.id = `stage-${stage.id}`;
@@ -586,63 +590,6 @@ level: medium`;
         }
 
         // Auto-scroll
-        chatHistory.scrollTop = chatHistory.scrollHeight;
-    }
-
-    // --- Feedback Preview Panel ---
-    function showFeedbackPreview(data, pipelineDiv) {
-        const feedbackDiv = document.createElement('div');
-        feedbackDiv.className = 'feedback-preview';
-        feedbackDiv.id = 'feedback-preview';
-
-        let html = '<h4>Pipeline Preview — Review Before Generation</h4>';
-
-        // Attack Summary
-        if (data.attack_summary) {
-            html += `<div class="feedback-section"><strong>Attack Summary:</strong> ${data.attack_summary}</div>`;
-        }
-
-        // Indicators
-        const indicators = data.indicators || [];
-        if (indicators.length > 0) {
-            html += '<div class="feedback-section"><strong>Extracted Indicators:</strong><div class="indicator-chips">';
-            indicators.forEach(ind => {
-                html += `<span class="indicator-chip ${ind.type}" title="${ind.context || ''}">${ind.value}</span>`;
-            });
-            html += '</div></div>';
-        }
-
-        // TTP Mappings
-        const ttps = data.ttp_mappings || [];
-        if (ttps.length > 0) {
-            html += '<div class="feedback-section"><strong>MITRE ATT&CK:</strong>';
-            ttps.forEach(ttp => {
-                html += `<div class="ttp-card-mini"><span class="ttp-id">${ttp.technique_id}</span> ${ttp.technique_name} <span class="severity-badge ${ttp.severity}">${ttp.severity}</span></div>`;
-            });
-            html += '</div>';
-        }
-
-        // Log Source Suggestions
-        const logsources = data.logsource_suggestions || [];
-        if (logsources.length > 0) {
-            html += '<div class="feedback-section"><strong>Suggested Log Sources:</strong>';
-            html += `<div class="logsource-primary">Primary: ${data.primary_logsource || 'N/A'}</div>`;
-            logsources.forEach(ls => {
-                const pct = Math.round((ls.confidence || 0) * 100);
-                html += `<div class="logsource-item"><span class="logsource-cat">${ls.category}/${ls.product}</span> <span class="logsource-conf">${pct}%</span> — ${ls.reasoning || ''}</div>`;
-            });
-            html += '</div>';
-        }
-
-        html += '<div class="feedback-note">This preview is informational. The pipeline will continue automatically.</div>';
-
-        feedbackDiv.innerHTML = safeHTML(html);
-
-        // Insert after the pipeline progress inside the same wrapper
-        const contentDiv = pipelineDiv.querySelector('.content');
-        if (contentDiv) {
-            contentDiv.appendChild(feedbackDiv);
-        }
         chatHistory.scrollTop = chatHistory.scrollHeight;
     }
 
@@ -691,8 +638,8 @@ level: medium`;
             return;
         }
 
-        // Use SSE streaming for text-only requests
-        const pipelineDiv = createPipelineProgress();
+        // Use SSE streaming for text-only requests; the analysis stops for the analyst's review
+        const pipelineDiv = createPipelineProgress(ANALYSIS_STAGES);
         chatHistory.appendChild(pipelineDiv);
         chatHistory.scrollTop = chatHistory.scrollHeight;
 
@@ -700,76 +647,229 @@ level: medium`;
             const response = await fetch('/analyze_stream', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ description: text, session_id: currentSessionId })
+                body: JSON.stringify({ description: text, session_id: currentSessionId, review: true })
             });
 
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = '';
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-
-                // Parse SSE events from buffer
-                const lines = buffer.split('\n');
-                buffer = '';
-
-                let currentEvent = null;
-                let currentData = '';
-
-                for (const line of lines) {
-                    if (line.startsWith('event: ')) {
-                        currentEvent = line.substring(7).trim();
-                    } else if (line.startsWith('data: ')) {
-                        currentData = line.substring(6);
-                    } else if (line === '' && currentEvent && currentData) {
-                        // Complete SSE event
-                        try {
-                            const data = JSON.parse(currentData);
-
-                            if (currentEvent === 'stage') {
-                                updatePipelineStage(data.stage, data.status, data.detail);
-                            } else if (currentEvent === 'feedback_request') {
-                                // Show feedback preview in the pipeline progress
-                                updatePipelineStage('feedback', 'running', 'Review extracted data...');
-                                showFeedbackPreview(data, pipelineDiv);
-                            } else if (currentEvent === 'result') {
-                                // Remove pipeline progress, show final message
-                                chatHistory.removeChild(pipelineDiv);
-
-                                if (data.rule) {
-                                    appendMessage('assistant', data.rule);
-                                    if (data.context) renderContext(data.context, data.pipeline_metadata);
-                                    if (data.session_id) currentSessionId = data.session_id;
-                                    loadSessions();
-                                } else {
-                                    appendMessage('assistant', "I encountered an error analyzing that.");
-                                }
-                            }
-                        } catch (parseErr) {
-                            console.error('SSE parse error:', parseErr);
-                        }
-                        currentEvent = null;
-                        currentData = '';
-                    } else if (line !== '') {
-                        // Partial data, keep in buffer
-                        buffer = line + '\n';
+            await readSSE(response, async (event, data) => {
+                if (event === 'stage') {
+                    updatePipelineStage(data.stage, data.status, data.detail);
+                } else if (event === 'review') {
+                    pipelineDiv.remove();
+                    appendMessage('assistant', data.content);
+                    if (data.session_id) currentSessionId = data.session_id;
+                    await startReview(data.analysis_id, data.context, data.pipeline_metadata);
+                    loadSessions();
+                } else if (event === 'result') {
+                    pipelineDiv.remove();
+                    if (data.rule) {
+                        appendMessage('assistant', data.rule);
+                        if (data.context) renderContext(data.context, data.pipeline_metadata);
+                        if (data.session_id) currentSessionId = data.session_id;
+                        loadSessions();
+                    } else {
+                        appendMessage('assistant', "I encountered an error analyzing that.");
                     }
                 }
-            }
+            });
         } catch (error) {
             // Remove pipeline progress on error
-            if (pipelineDiv.parentNode) {
-                chatHistory.removeChild(pipelineDiv);
-            }
+            if (pipelineDiv.parentNode) pipelineDiv.remove();
             appendMessage('assistant', `Error: ${error.message}`);
         }
     }
 
-    // --- Analysis panel: what the model understood, evidence first (read-only) ---
+    // Read a Server-Sent Events response; events are separated by a blank line and may
+    // arrive split across chunks.
+    async function readSSE(response, onEvent) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const parts = buffer.split('\n\n');
+            buffer = parts.pop();
+            for (const part of parts) {
+                let event = 'message';
+                let data = '';
+                part.split('\n').forEach(line => {
+                    if (line.startsWith('event: ')) event = line.substring(7).trim();
+                    else if (line.startsWith('data: ')) data += line.substring(6);
+                });
+                if (!data) continue;
+                let parsed;
+                try {
+                    parsed = JSON.parse(data);
+                } catch (parseErr) {
+                    console.error('SSE parse error:', parseErr);
+                    continue;
+                }
+                await onEvent(event, parsed);
+            }
+        }
+    }
+
+    // --- The analyst's review: confirm or correct what the model understood ---
+    // Decisions refer to the saved analysis by position. Rejected items are not given to
+    // the rule writer; a chosen log source is given as the analyst's decision; confirmations
+    // are recorded. Untouched items stay the model's suggestions.
+    let review = null;
+    let logsourceChoices = null;
+    const DECIDE = [['confirmed', 'Confirm'], ['rejected', 'Reject']];
+    const RESTORE = [['restored', 'Restore']];
+    const KIND_LABELS = { patterns: 'Patterns', excluded: 'Excluded strings', techniques: 'Techniques', indicators: 'Indicators' };
+
+    async function loadLogsourceChoices() {
+        if (logsourceChoices) return logsourceChoices;
+        try {
+            const res = await fetch('/logsource_choices');
+            logsourceChoices = await res.json();
+        } catch (e) {
+            console.error('Failed to load log sources', e);
+            return [];
+        }
+        return logsourceChoices;
+    }
+
+    async function startReview(analysisId, context, meta) {
+        await loadLogsourceChoices();
+        review = { analysisId, techniques: {}, indicators: {}, patterns: {}, excluded: {}, logsource: null, note: '' };
+        renderContext(context, meta);
+        updateReviewBar();
+    }
+
+    // Same rule as the backend: trimmed, lower case, placeholders absent.
+    function clean(v) {
+        const t = v === undefined || v === null ? '' : String(v).trim().toLowerCase();
+        return ['', '-', 'none', 'n/a', 'null'].includes(t) ? null : t;
+    }
+
+    function asSource(ls) {
+        return { category: clean(ls.category), product: clean(ls.product), service: clean(ls.service) };
+    }
+
+    function sameSource(a, b) {
+        return !!a && !!b && ['category', 'product', 'service'].every(f => clean(a[f]) === clean(b[f]));
+    }
+
+    function onTable(ls) {
+        return (logsourceChoices || []).some(c => sameSource(c, ls));
+    }
+
+    function decisionButtons(item, kind, index, statuses) {
+        const bar = el('div', 'an-actions');
+        statuses.forEach(([status, label]) => {
+            const b = el('button', 'an-act', label);
+            b.type = 'button';
+            b.dataset.status = status;
+            b.onclick = () => {
+                if (review[kind][index] === status) delete review[kind][index];
+                else review[kind][index] = status;
+                paintDecision(item, bar, review[kind][index]);
+                updateReviewBar();
+            };
+            bar.appendChild(b);
+        });
+        paintDecision(item, bar, review[kind][index]);
+        return bar;
+    }
+
+    function paintDecision(item, bar, status) {
+        item.classList.remove('is-confirmed', 'is-rejected', 'is-restored');
+        if (status) item.classList.add(`is-${status}`);
+        bar.querySelectorAll('.an-act').forEach(b => {
+            const on = b.dataset.status === status;
+            b.classList.toggle('on', on);
+            b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+    }
+
+    function paintLogsource(section) {
+        section.querySelectorAll('[data-ls-index]').forEach(item => {
+            const chosen = sameSource(review.logsource, item.logsource);
+            item.classList.toggle('is-chosen', chosen);
+            const b = item.querySelector('.an-act');
+            if (b) {
+                b.classList.toggle('on', chosen);
+                b.setAttribute('aria-pressed', chosen ? 'true' : 'false');
+                b.textContent = chosen ? 'Chosen' : 'Use this';
+            }
+        });
+        const select = section.querySelector('.an-select');
+        if (select) {
+            const i = (logsourceChoices || []).findIndex(c => sameSource(c, review.logsource));
+            select.value = i >= 0 ? String(i) : '';
+        }
+        updateReviewBar();
+    }
+
+    function buildReview() {
+        const out = {};
+        ['techniques', 'indicators', 'patterns', 'excluded'].forEach(kind => {
+            if (Object.keys(review[kind]).length) out[kind] = review[kind];
+        });
+        if (review.logsource) out.logsource = review.logsource;
+        if (review.note.trim()) out.note = review.note.trim();
+        return out;
+    }
+
+    function updateReviewBar() {
+        const bar = document.getElementById('review-bar');
+        if (!bar) return;
+        bar.hidden = !review;
+        if (!review) return;
+        const counts = { confirmed: 0, rejected: 0, restored: 0 };
+        ['techniques', 'indicators', 'patterns', 'excluded'].forEach(kind =>
+            Object.values(review[kind]).forEach(status => { counts[status] += 1; }));
+        const parts = Object.entries(counts).filter(([, n]) => n).map(([status, n]) => `${n} ${status}`);
+        parts.push(review.logsource ? `log source: ${logsourceName(review.logsource)}` : "log source: the model's suggestion");
+        document.getElementById('review-summary').textContent = parts.join(' · ');
+        document.getElementById('generate-btn').disabled = false;
+    }
+
+    async function generateFromReview() {
+        if (!review) return;
+        const btn = document.getElementById('generate-btn');
+        btn.disabled = true;
+        const progress = createPipelineProgress(GENERATION_STAGES);
+        chatHistory.appendChild(progress);
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+        try {
+            const response = await fetch('/generate_stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: currentSessionId, analysis_id: review.analysisId, review: buildReview() })
+            });
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                progress.remove();
+                appendMessage('assistant', `The rules were not generated: ${err.detail || response.status}`);
+                btn.disabled = false;
+                return;
+            }
+            await readSSE(response, (event, data) => {
+                if (event === 'stage') {
+                    updatePipelineStage(data.stage, data.status, data.detail);
+                } else if (event === 'result') {
+                    progress.remove();
+                    appendMessage('assistant', data.rule || 'No rules were generated.');
+                    if (data.retry_analysis_id) return;   // the analysis is kept; the review stays open
+                    review = null;
+                    renderContext(data.context, data.pipeline_metadata);
+                    updateReviewBar();
+                    loadSessions();
+                }
+            });
+        } catch (error) {
+            if (progress.parentNode) progress.remove();
+            appendMessage('assistant', `Error: ${error.message}`);
+        }
+        if (review) btn.disabled = false;
+    }
+
+    // --- Analysis panel: what the model understood, evidence first ---
+    // With a review open, each item carries the analyst's controls.
     // Built with text nodes only, so nothing the model writes is interpreted as HTML.
     function el(tag, className, text) {
         const node = document.createElement(tag);
@@ -823,6 +923,31 @@ level: medium`;
         meta = meta || {};
         const av = meta.attack_vector || {};
 
+        if (review) {
+            root.appendChild(el('p', 'an-review-intro',
+                'Confirm what is right, reject what is wrong, and change the log source if needed - then ' +
+                'generate. Rejected items are not given to the rule writer; a log source you choose is given as ' +
+                'your decision. Confirmations are recorded. Untouched items stay the model\'s suggestions.'));
+        }
+
+        // 0. The analyst's review, as applied before these rules were written
+        const rec = meta.analyst_review;
+        if (rec) {
+            const s = panelSection('Your review', 'applied before the rules were written', true);
+            if (rec.logsource) {
+                const rank = rec.logsource.suggested_rank;
+                add(s.body, kv('Log source', `${logsourceName(rec.logsource)} - ${rank ? `the model's suggestion #${rank}` : 'your choice'}`));
+            }
+            Object.entries(KIND_LABELS).forEach(([kind, label]) => {
+                Object.entries(rec[kind] || {}).forEach(([status, items]) => {
+                    if (items.length) add(s.body, kv(`${label} ${status}`, items.join(', '), true));
+                });
+            });
+            if (rec.note) add(s.body, kv('Your note', rec.note));
+            if (s.body.children.length === 0) add(s.body, el('div', 'an-note', 'Generated without changes: every item stayed the model\'s suggestion.'));
+            root.appendChild(s.details);
+        }
+
         // 1. Attack vector — how the attack starts and where it would be seen
         const sigs = av.payload_signatures || [];
         if (av.initial_access_vector || av.entry_point || sigs.length) {
@@ -836,13 +961,14 @@ level: medium`;
                 kv('Kill chain', (av.kill_chain_stages || []).join(' → ').replace(/_/g, ' ')));
             if (sigs.length) {
                 add(s.body, el('div', 'an-subhead', `Patterns to match (${sigs.length})`));
-                sigs.forEach(sig => {
+                sigs.forEach((sig, i) => {
                     const item = el('div', 'an-item');
                     const head = el('div', 'an-item-head');
                     add(head, el('code', 'an-code', sig.pattern), el('span', 'an-where', (sig.where || '').replace(/_/g, ' ')));
                     add(item, head, basis(sig.derived_from === 'inferred_from_class'
                         ? 'Inferred from the vulnerability class, not from the text'
                         : sig.derived_from));
+                    if (review) add(item, decisionButtons(item, 'patterns', i, DECIDE));
                     s.body.appendChild(item);
                 });
             }
@@ -853,12 +979,14 @@ level: medium`;
         // 2. Strings kept out of the rules (researcher / patch workflow)
         const inc = av.incidental_artifacts || [];
         if (inc.length) {
-            const s = panelSection('Excluded from rules', `${inc.length} researcher-only`, false);
-            inc.forEach(it => {
+            const s = panelSection('Excluded from rules', `${inc.length} researcher-only`, !!review);
+            inc.forEach((it, i) => {
                 const item = el('div', 'an-item');
                 add(item, el('code', 'an-code', typeof it === 'string' ? it : it.value), basis(it.reason));
+                if (review) add(item, decisionButtons(item, 'excluded', i, RESTORE));
                 s.body.appendChild(item);
             });
+            if (review) add(s.body, el('div', 'an-note', 'A restored string becomes a pattern the rules may match.'));
             root.appendChild(s.details);
         }
 
@@ -872,9 +1000,53 @@ level: medium`;
                 add(head, el('code', 'an-code', logsourceName(ls)), el('span', 'an-conf', pct(ls.confidence)));
                 add(item, head, basis(ls.reasoning));
                 if ((ls.relevant_fields || []).length) add(item, el('div', 'an-fields', ls.relevant_fields.join(', ')));
+                if (review) {
+                    item.dataset.lsIndex = String(i);
+                    item.logsource = asSource(ls);
+                    const bar = el('div', 'an-actions');
+                    const b = el('button', 'an-act', 'Use this');
+                    b.type = 'button';
+                    b.dataset.status = 'chosen';
+                    if (onTable(ls)) {
+                        b.onclick = () => {
+                            review.logsource = sameSource(review.logsource, item.logsource) ? null : item.logsource;
+                            paintLogsource(s.details);
+                        };
+                    } else {
+                        b.disabled = true;
+                        b.title = "Not a log source in SigmaHQ's rules - choose one from the list below";
+                    }
+                    add(bar, b);
+                    add(item, bar);
+                }
                 s.body.appendChild(item);
             });
+            if (review) {
+                add(s.body, el('div', 'an-subhead', 'Or choose another'));
+                const select = el('select', 'an-select');
+                select.setAttribute('aria-label', "Log source from SigmaHQ's rules");
+                add(select, el('option', null, "- the model's suggestion -"));
+                select.firstChild.value = '';
+                const withCategory = el('optgroup');
+                withCategory.label = 'By category';
+                const withoutCategory = el('optgroup');
+                withoutCategory.label = 'Product / service (no category)';
+                (logsourceChoices || []).forEach((c, i) => {
+                    const option = el('option', null, logsourceName(c));
+                    option.value = String(i);
+                    (c.category ? withCategory : withoutCategory).appendChild(option);
+                });
+                add(select, withCategory, withoutCategory);
+                select.onchange = () => {
+                    review.logsource = select.value === '' ? null : logsourceChoices[Number(select.value)];
+                    paintLogsource(s.details);
+                };
+                add(s.body, select, el('div', 'an-note',
+                    "Every log source in SigmaHQ's rules. Untouched, the first suggestion stays a recommendation " +
+                    'the rule writer may depart from; a log source you choose is given to it as your decision.'));
+            }
             root.appendChild(s.details);
+            if (review) paintLogsource(s.details);
         }
 
         // 4. ATT&CK techniques
@@ -882,12 +1054,13 @@ level: medium`;
         const dropped = (meta.ttp_dropped_ids || []).filter(Boolean);
         if (ttps.length || dropped.length) {
             const s = panelSection('MITRE ATT&CK', `${ttps.length} technique${ttps.length === 1 ? '' : 's'}`, true);
-            ttps.forEach(t => {
+            ttps.forEach((t, i) => {
                 const item = el('div', 'an-item');
                 const head = el('div', 'an-item-head');
                 add(head, el('code', 'an-code', t.technique_id), el('span', 'an-name', t.technique_name),
                     t.severity ? el('span', `severity-badge ${t.severity}`, t.severity) : null);
                 add(item, head, t.tactic ? el('div', 'an-fields', t.tactic) : null, basis(t.relevance));
+                if (review) add(item, decisionButtons(item, 'techniques', i, DECIDE));
                 s.body.appendChild(item);
             });
             if (dropped.length) add(s.body, el('div', 'an-note', `Removed, not in ATT&CK: ${dropped.join(', ')}`));
@@ -897,17 +1070,18 @@ level: medium`;
         // 5. Indicators, grouped by type
         const inds = meta.indicators || [];
         if (inds.length) {
-            const s = panelSection('Indicators', `${inds.length} extracted`, false);
+            const s = panelSection('Indicators', `${inds.length} extracted`, !!review);
             const groups = {};
-            inds.forEach(ind => {
+            inds.forEach((ind, i) => {
                 const type = ind.type || 'other';
-                (groups[type] = groups[type] || []).push(ind);
+                (groups[type] = groups[type] || []).push([ind, i]);
             });
             Object.entries(groups).sort((a, b) => b[1].length - a[1].length).forEach(([type, list]) => {
                 add(s.body, el('div', 'an-subhead', `${type.replace(/_/g, ' ')} (${list.length})`));
-                list.forEach(ind => {
+                list.forEach(([ind, i]) => {
                     const item = el('div', 'an-item compact');
                     add(item, el('code', 'an-code', ind.value), basis(ind.context));
+                    if (review) add(item, decisionButtons(item, 'indicators', i, DECIDE));
                     s.body.appendChild(item);
                 });
             });
@@ -969,10 +1143,23 @@ level: medium`;
             root.appendChild(s.details);
         }
 
+        if (review) {
+            const s = panelSection('Note to the rule writer', 'optional', true);
+            const note = el('textarea', 'an-textarea');
+            note.maxLength = 2000;
+            note.placeholder = 'Anything the model got wrong that the buttons do not cover, e.g. "The target runs Linux only."';
+            note.value = review.note;
+            note.oninput = () => { review.note = note.value; };
+            add(s.body, note);
+            root.appendChild(s.details);
+        }
+
         if (!root.children.length) root.appendChild(el('p', 'empty-state', 'No analysis was recorded for this answer.'));
     }
 
     if (sendBtn) sendBtn.addEventListener('click', handleSend);
+    const generateBtn = document.getElementById('generate-btn');
+    if (generateBtn) generateBtn.addEventListener('click', generateFromReview);
     if (newChatBtn) newChatBtn.addEventListener('click', createSession);
     if (userInput) {
         userInput.addEventListener('keypress', (e) => {

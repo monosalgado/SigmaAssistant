@@ -63,6 +63,18 @@ def test_the_analysts_confirmation_takes_precedence():
     assert "webserver" not in block
 
 
+def test_a_log_source_the_analyst_chose_is_given_as_yaml():
+    # Set by the analyst's review (backend/pipeline/analyst_review.py).
+    block = first_rule_logsource_block({"user_confirmed": True,
+        "primary_source": "process_creation/linux",
+        "confirmed_logsource": {"category": "process_creation", "product": "linux", "service": None},
+        "suggestions": [{"category": "process_creation", "product": "windows", "confidence": 0.95}]})
+    assert block.startswith("logsource:\n    category: process_creation\n    product: linux\n")
+    assert "service" not in block
+    assert "windows" not in block
+    assert "confirmed by the analyst" in block.lower()
+
+
 def test_no_recommendation_says_so():
     block = first_rule_logsource_block({"suggestions": []})
     assert "no log source was recommended" in block.lower()

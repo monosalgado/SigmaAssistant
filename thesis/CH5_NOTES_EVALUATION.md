@@ -590,6 +590,12 @@ Write them as defects identified by code audit, not as improvements.
       A5 (single prompt vs pipeline).
 - [ ] R1/R2 detonation — depends on the contributions agreed with the professor.
 - [ ] S6 backend compilability — cheap, not built.
+- [ ] **Simulated analyst (plan 5.3)** `[DESIGN]` (added 2026-09-27) — Change 34 made it
+      implementable without new pipeline code: `generate_after_review(saved analysis, review)`
+      generates from a saved analysis and a review, so the "analyst" can choose the **gold** log
+      source (and reject techniques absent from the gold) and the rules are rescored. It shows what
+      confirmation is worth *when the analyst is right* (no user study). Not run; the harness
+      still calls `run_sync`, which Change 34 did not touch.
 
 ---
 
