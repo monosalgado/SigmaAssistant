@@ -3602,3 +3602,13 @@ unbounded answer runs to the call's timeout and its harness stops at that case. 
 the same case three times, that case is removed from run 2 by a documented manual step, reported as
 a baseline failure, and left out of the paired comparison (both arms).** The primary test on run 1
 is unaffected.
+
+### Baseline v2's checkout, prepared (no run yet)
+`git worktree add --detach ../SigmaAssistant-baseline-v2 5627e91` (outside the repository;
+`git worktree remove` undoes it). Linked in, read-only use: `.env`, `data/chroma_db`, `data/sigma`,
+`eval/snapshots`. Its harness gets the inputs by absolute path from this repository —
+`eval/manifest_heldout.jsonl`, `eval/github_manifest.jsonl`, `eval/contamination.jsonl`; the latter
+two (and `eval/manifest.jsonl`) are unchanged since `5627e91`, so **both arms get identical inputs;
+only the code differs**. Checks: its own suite, **203 passed** — the count baseline v2's preflight
+reported, an independent confirmation that this is baseline v2's code; both harnesses' dry runs
+load the same 60 cases (2 flagged as contaminated, reported apart as usual).
