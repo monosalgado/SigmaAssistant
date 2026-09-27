@@ -554,7 +554,7 @@ class PipelineOrchestrator:
         coverage = context.get("coverage_check", {})
         warnings = coverage.get("warnings", []) if coverage else []
         if warnings:
-            warning_block = ["\n---", "**⚠️ Coverage gaps detected:**"]
+            warning_block = ["\n---", "**Coverage gaps detected:**"]
             for w in warnings:
                 warning_block.append(f"- {w}")
             warning_block.append(

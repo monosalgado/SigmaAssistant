@@ -162,7 +162,7 @@ def create_session():
     # Send initial greeting
     sessions[session_id].append({
         "role": "assistant", 
-        "content": "Hello! I am your Sigma Rule Assistant. Describe an attack technique, and I will help you create a detection rule."
+        "content": "Paste the URL of a threat report, or describe an attack. The pipeline reads the source, identifies the attack vector and the log source where it would be visible, and drafts Sigma rules mapped to MITRE ATT&CK — for you to review before use."
     })
     save_sessions()
     return {"id": session_id}

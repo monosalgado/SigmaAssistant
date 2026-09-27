@@ -146,7 +146,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const delBtn = document.createElement('button');
             delBtn.className = 'delete-session-btn';
-            delBtn.innerHTML = '🗑️';
+            delBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>';
+            delBtn.title = 'Delete';
             delBtn.onclick = (e) => {
                 e.stopPropagation();
                 deleteSession(s.id);
@@ -942,12 +943,12 @@ level: medium`;
         }
 
         // RAG Context (original behavior)
-        const addSection = (title, items, icon) => {
+        const addSection = (title, items) => {
             if (!items || items.length === 0) return;
             const section = document.createElement('div');
             section.className = 'context-section';
             const header = document.createElement('h4');
-            header.innerHTML = `${icon} ${title}`;
+            header.textContent = title;
             section.appendChild(header);
             items.forEach(item => {
                 const card = document.createElement('div');
@@ -981,9 +982,9 @@ level: medium`;
             });
             contextDiv.appendChild(section);
         };
-        addSection('Sigma Rules', context.sigma, '📜');
-        addSection('MITRE ATT&CK', context.mitre, '🛡️');
-        addSection('Sysmon Events', context.sysmon, '📝');
+        addSection('Similar SigmaHQ rules', context.sigma);
+        addSection('MITRE ATT&CK', context.mitre);
+        addSection('Sysmon events', context.sysmon);
         if (contextDiv.innerHTML === '') contextDiv.innerHTML = '<p class="empty-state">No specific context found.</p>';
     }
 

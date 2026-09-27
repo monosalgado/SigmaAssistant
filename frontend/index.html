@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sigma Rule Assistant</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2026-09-27b">
     <link
-        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
@@ -18,26 +18,26 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <h2>🛡️ Sigma Assistant</h2>
+                <h2><span class="brand-mark" aria-hidden="true">&Sigma;</span>Sigma Assistant</h2>
             </div>
 
             <!-- Navigation -->
             <nav class="main-nav">
-                <button id="nav-chat" class="nav-btn active">💬 Chat</button>
-                <button id="nav-library" class="nav-btn">📚 Library</button>
+                <button id="nav-chat" class="nav-btn active">Workspace</button>
+                <button id="nav-library" class="nav-btn">Library</button>
             </nav>
 
             <!-- Chat Session List (Visible only in Chat View) -->
             <div id="chat-sidebar-content">
                 <div class="sidebar-actions">
-                    <button id="new-chat-btn" title="New Chat">+ New Chat</button>
+                    <button id="new-chat-btn" title="New analysis">+ New analysis</button>
                 </div>
                 <div id="session-list" class="session-list">
                     <!-- Sessions go here -->
                 </div>
                 <div class="context-panel">
-                    <h3>Knowledge Context</h3>
-                    <p class="empty-state">Context from MITRE & Sysmon will appear here...</p>
+                    <h3>Context</h3>
+                    <p class="empty-state">Indicators, ATT&amp;CK mappings and retrieved references appear here after a run.</p>
                     <div id="context-content"></div>
                 </div>
             </div>
@@ -45,7 +45,7 @@
             <!-- Library List (Visible only in Library View) -->
             <div id="library-sidebar-content" style="display: none;">
                 <div class="sidebar-actions">
-                    <button id="new-rule-btn" title="Create Rule">+ New Rule</button>
+                    <button id="new-rule-btn" title="Create rule">+ New rule</button>
                 </div>
                 <div id="rule-list" class="session-list">
                     <!-- Rules go here -->
@@ -59,16 +59,16 @@
             <!-- Chat View -->
             <div id="view-chat" class="view-panel active">
                 <div class="chat-header">
-                    <h1>Detection Engineering Workspace</h1>
+                    <h1>Detection engineering workspace</h1>
                 </div>
 
                 <div id="chat-history" class="chat-history">
                     <div class="message assistant">
                         <div class="avatar">AI</div>
                         <div class="content">
-                            Hello! I am your Sigma Rule Assistant. Describe an attack technique, and I will help you
-                            create
-                            a detection rule for it correctly mapped to MITRE ATT&CK and Sysmon.
+                            Paste the URL of a threat report, or describe an attack. The pipeline reads the source,
+                            identifies the attack vector and the log source where it would be visible, and drafts Sigma
+                            rules mapped to MITRE ATT&amp;CK — for you to review before use.
                         </div>
                     </div>
                 </div>
@@ -79,11 +79,11 @@
                         <button id="remove-file">×</button>
                     </div>
                     <input type="file" id="file-input" style="display: none;">
-                    <button id="attach-btn" title="Attach Image/Log">📎</button>
+                    <button id="attach-btn" title="Attach an image or log" aria-label="Attach an image or log"><svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5l-8.6 8.6a5 5 0 0 1-7.1-7.1l8.6-8.6a3.5 3.5 0 0 1 5 5l-8.6 8.6a2 2 0 0 1-2.8-2.8l7.9-7.9"/></svg></button>
                     <textarea id="user-input"
-                        placeholder="Describe the attack (e.g., 'Attackers are dumping lsass.exe using procdump')..."
+                        placeholder="Paste a threat report URL, or describe the attack (e.g. attackers dump lsass.exe with procdump)"
                         rows="3"></textarea>
-                    <button id="send-btn">Generate Rule 🚀</button>
+                    <button id="send-btn">Generate rules</button>
                 </div>
             </div>
 
@@ -92,15 +92,15 @@
                 <div class="library-header">
                     <h1 id="editor-title">Select a Rule</h1>
                     <div class="library-actions">
-                        <button id="save-rule-btn" class="primary-btn">💾 Save Changes</button>
-                        <button id="download-rule-btn" class="primary-btn">⬇️ Download .yml</button>
-                        <button id="delete-rule-btn" class="danger-btn">🗑️ Delete</button>
+                        <button id="save-rule-btn" class="primary-btn">Save changes</button>
+                        <button id="download-rule-btn" class="secondary-btn">Download .yml</button>
+                        <button id="delete-rule-btn" class="danger-btn">Delete</button>
                     </div>
                 </div>
 
                 <div class="library-workspace">
                     <div class="editor-pane">
-                        <label>Sigma Rule (YAML)</label>
+                        <label>Sigma rule (YAML)</label>
                         <textarea id="rule-editor" placeholder="Select or create a rule..."></textarea>
                     </div>
 
@@ -112,7 +112,7 @@
                                 <option value="splunk" disabled>Splunk (Coming Soon)</option>
                                 <option value="elastic" disabled>Elastic (Coming Soon)</option>
                             </select>
-                            <button id="translate-btn">Translate ➡️</button>
+                            <button id="translate-btn">Translate</button>
                         </div>
                         <textarea id="translation-output" readonly
                             placeholder="Translated query will appear here..."></textarea>
@@ -122,7 +122,7 @@
 
         </main>
     </div>
-    <script src="script.js"></script>
+    <script src="script.js?v=2026-09-27b"></script>
 </body>
 
 </html>

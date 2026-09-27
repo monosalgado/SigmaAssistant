@@ -14,7 +14,8 @@ app on 2026-09-27 (pipeline frozen at `a6e9157`), fetching the pages from the in
    ```
    Wait for `Sigma Agent Initialized`. If it says the port is busy, an earlier server is still
    running — stop it first. If the tunnel fails, run `ssh-add --apple-load-keychain` and restart.
-3. Open **http://127.0.0.1:8000**.
+3. Open **http://127.0.0.1:8000**. (If the old look with emojis appears, reload once — the new files are
+   versioned, so a normal reload is enough.)
 4. **Warm-up run:** run the backup URL once before the audience arrives — the first call loads the
    model on the Spark and is slower.
 
@@ -22,7 +23,7 @@ app on 2026-09-27 (pipeline frozen at `a6e9157`), fetching the pages from the in
 
 ## The demo (~10 minutes)
 
-**New Chat → paste the URL → Generate Rule.** While it runs, explain each stage as it lights up.
+**+ New analysis → paste the URL → Generate rules.** While it runs, explain each step as it is ticked off.
 
 | Stage on screen | What to say |
 |---|---|
@@ -48,11 +49,16 @@ up on the victim's server. This is why an analyst has to verify what the model u
 `https://www.openwall.com/lists/oss-security/2019/10/14/1` — **89 s live**. Local privilege
 escalation; log source `process_creation / linux`; 3 valid rules on the `sudo -u#-1` trick
 (negative / very large user id); no coverage gaps.
+**Caution — live output varies between runs.** A second live run of this URL the same day (through the
+new interface) suggested `process_creation / windows` and PowerShell for this *Linux* bug, and its final
+rule matched `\sudo.exe`. If that happens on stage, use it: it is exactly why the analyst verifies what
+the model understood. Otherwise open the saved chat of the correct run (below).
 
 ### If the live run fails
-Both runs above are saved as chats at the end of the chat list (previews
-"https://research.eye.security/…" and "https://www.openwall.com/lists…") — open one and show the
-result. Say plainly that it was run earlier. (An "Empty Chat" from the test can be deleted.)
+The runs are saved as chats in the list: "https://research.eye.security/…" (SharePoint, correct), and
+two "https://www.openwall.com/lists…" — the **lower** one is the correct run (Linux rules), the **upper**
+one is the Windows-flavoured run (a verification example). Open one and say plainly it was run earlier.
+(The "Empty Chat" entries from testing can be deleted.)
 
 ---
 

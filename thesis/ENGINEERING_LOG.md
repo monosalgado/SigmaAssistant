@@ -3702,3 +3702,28 @@ suggestion matches the gold log source in 23 of 58 rows — web gold **12 of 15*
   not what it looks for — the next phase's question.
 - What limits S3 now is the analysis stage's suggestion — right for web attacks (12/15) far more
   often than for host categories (11/37), and never for service-based sources (0/6).
+
+---
+
+## 2026-09-27 — Interface: a visual polish before the live demo (user); no pipeline behaviour changed
+
+User: the interface "looks way too basic with the emojis … too much that it was made by AI"; chose a
+visual-only pass before the demo (2026-09-28), in one commit that can be reverted at once.
+- **Look** (`frontend/style.css`, rewritten; every selector the script uses kept): own sober palette
+  instead of GitHub's dark theme verbatim, one teal accent for the main action and focus, flat
+  surfaces (no radial gradients), IBM Plex Sans/Mono instead of Inter/JetBrains Mono, smaller radii,
+  quiet secondary buttons (the green Save/Download on every rule), a segmented Workspace/Library
+  switch, spinner/tick progress steps, thin scrollbars; the context hint hides once a run fills it.
+- **Emojis removed** — 13 in the interface (title, tabs, Generate, Save/Download/Delete, Translate,
+  paperclip, side-section headers, session delete) → text labels, a Σ mark, two line icons.
+- **Wording** — welcome and new-analysis greeting (`backend/main.py`, web layer), input placeholder,
+  button labels ("Generate rules", "+ New analysis").
+- **Backend display string** — `orchestrator.py`: the "Coverage gaps detected" heading loses its ⚠️.
+  Response text only; the rules and every scored field are untouched. **The evaluated pipeline
+  remains `a6e9157`.**
+- Asset links versioned (`style.css?v=…`) so browsers load the new files.
+Script changes are text only (the delete icon, section headers). Tests 432 passed. Verified in the
+browser: no console errors; chat, library, and a **live run** through the new interface. That live
+run of the sudo case (CVE-2019-14287) suggested `process_creation / windows` and PowerShell and ended
+with a rule on `\sudo.exe`, where an API run of the same URL earlier the same day gave correct Linux
+rules — run-to-run variation of the model (generation samples at 0.3), noted in the demo runbook.
