@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sigma Rule Assistant</title>
-    <link rel="stylesheet" href="style.css?v=2026-09-27b">
+    <link rel="stylesheet" href="style.css?v=2026-09-27d">
     <link
         href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
         rel="stylesheet">
@@ -35,11 +35,6 @@
                 <div id="session-list" class="session-list">
                     <!-- Sessions go here -->
                 </div>
-                <div class="context-panel">
-                    <h3>Context</h3>
-                    <p class="empty-state">Indicators, ATT&amp;CK mappings and retrieved references appear here after a run.</p>
-                    <div id="context-content"></div>
-                </div>
             </div>
 
             <!-- Library List (Visible only in Library View) -->
@@ -58,6 +53,7 @@
 
             <!-- Chat View -->
             <div id="view-chat" class="view-panel active">
+                <div class="chat-column">
                 <div class="chat-header">
                     <h1>Detection engineering workspace</h1>
                 </div>
@@ -85,6 +81,21 @@
                         rows="3"></textarea>
                     <button id="send-btn">Generate rules</button>
                 </div>
+                </div>
+
+                <!-- Analysis panel: what the model understood, read-only -->
+                <aside class="analysis-panel" aria-label="Analysis">
+                    <div class="analysis-header">
+                        <h2>Analysis</h2>
+                        <p>What the model understood about the attack. Check each item against the report before
+                            trusting the rules.</p>
+                    </div>
+                    <div class="context-panel">
+                        <p class="empty-state">The attack vector, log source, ATT&amp;CK techniques, indicators and
+                            checks of the latest answer appear here.</p>
+                        <div id="context-content"></div>
+                    </div>
+                </aside>
             </div>
 
             <!-- Library View -->
@@ -122,7 +133,7 @@
 
         </main>
     </div>
-    <script src="script.js?v=2026-09-27b"></script>
+    <script src="script.js?v=2026-09-27c"></script>
 </body>
 
 </html>

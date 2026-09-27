@@ -185,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chatHistory.innerHTML = '';
 
         const contextDiv = document.getElementById('context-content');
-        if (contextDiv) contextDiv.innerHTML = '<p class="empty-state">No specific context found.</p>';
+        if (contextDiv) contextDiv.innerHTML = '';
 
         let lastContext = null;
         let lastPipelineMeta = null;
@@ -769,223 +769,207 @@ level: medium`;
         }
     }
 
-    // --- Context Panel Rendering (Enhanced with Pipeline Metadata) ---
-    function renderContext(context, pipelineMetadata) {
-        const contextDiv = document.getElementById('context-content');
-        if (!contextDiv) return;
-        contextDiv.innerHTML = '';
+    // --- Analysis panel: what the model understood, evidence first (read-only) ---
+    // Built with text nodes only, so nothing the model writes is interpreted as HTML.
+    function el(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined && text !== null && text !== '') node.textContent = String(text);
+        return node;
+    }
 
-        // Render pipeline metadata first (if available)
-        if (pipelineMetadata) {
-            // Extracted Indicators
-            const indicators = pipelineMetadata.indicators || [];
-            if (indicators.length > 0) {
-                const section = document.createElement('div');
-                section.className = 'context-section';
-                const header = document.createElement('h4');
-                header.textContent = 'Extracted Indicators';
-                section.appendChild(header);
+    function add(parent, ...nodes) {
+        nodes.forEach(n => { if (n) parent.appendChild(n); });
+    }
 
-                const chipsDiv = document.createElement('div');
-                chipsDiv.className = 'indicator-chips';
-                indicators.forEach(ind => {
-                    const chip = document.createElement('span');
-                    chip.className = `indicator-chip ${ind.type}`;
-                    chip.textContent = ind.value;
-                    chip.title = `${ind.type} (${ind.confidence})`;
-                    chipsDiv.appendChild(chip);
+    function panelSection(title, meta, open) {
+        const details = el('details', 'an-section');
+        details.open = !!open;
+        const summary = el('summary', 'an-summary');
+        add(summary, el('span', 'an-title', title), meta ? el('span', 'an-meta', meta) : null);
+        const body = el('div', 'an-body');
+        add(details, summary, body);
+        return { details, body };
+    }
+
+    function kv(label, value, mono) {
+        if (!value) return null;
+        const row = el('div', 'an-kv');
+        add(row, el('span', 'an-k', label), el('span', mono ? 'an-v mono' : 'an-v', value));
+        return row;
+    }
+
+    function basis(text) {
+        return text ? el('div', 'an-basis', text) : null;
+    }
+
+    function pct(x) {
+        return typeof x === 'number' ? `${Math.round(x * 100)}%` : '';
+    }
+
+    function logsourceName(ls) {
+        const absent = ['', '-', 'none', 'null', 'n/a'];
+        return ['category', 'product', 'service']
+            .map(f => ls[f])
+            .filter(v => v && !absent.includes(String(v).trim().toLowerCase()))
+            .join(' / ') || '?';
+    }
+
+    function renderContext(context, meta) {
+        const root = document.getElementById('context-content');
+        if (!root) return;
+        root.innerHTML = '';
+        context = context || {};
+        meta = meta || {};
+        const av = meta.attack_vector || {};
+
+        // 1. Attack vector — how the attack starts and where it would be seen
+        const sigs = av.payload_signatures || [];
+        if (av.initial_access_vector || av.entry_point || sigs.length) {
+            const s = panelSection('Attack vector', av.confidence !== undefined ? `confidence ${pct(av.confidence)}` : '', true);
+            add(s.body,
+                el('p', 'an-lead', av.initial_access_vector),
+                kv('Entry point', av.entry_point, true),
+                kv('Attacker controls', av.attacker_controlled_input),
+                kv('Type', [av.vuln_class, av.protocol, av.preconditions].filter(Boolean).join(' · ').replace(/_/g, ' ')),
+                kv('Seen in', [av.primary_telemetry, ...(av.secondary_telemetry || [])].filter(Boolean).join(', '), true),
+                kv('Kill chain', (av.kill_chain_stages || []).join(' → ').replace(/_/g, ' ')));
+            if (sigs.length) {
+                add(s.body, el('div', 'an-subhead', `Patterns to match (${sigs.length})`));
+                sigs.forEach(sig => {
+                    const item = el('div', 'an-item');
+                    const head = el('div', 'an-item-head');
+                    add(head, el('code', 'an-code', sig.pattern), el('span', 'an-where', (sig.where || '').replace(/_/g, ' ')));
+                    add(item, head, basis(sig.derived_from === 'inferred_from_class'
+                        ? 'Inferred from the vulnerability class, not from the text'
+                        : sig.derived_from));
+                    s.body.appendChild(item);
                 });
-                section.appendChild(chipsDiv);
-                contextDiv.appendChild(section);
             }
-
-            // TTP Mappings
-            const ttps = pipelineMetadata.ttp_mappings || [];
-            if (ttps.length > 0) {
-                const section = document.createElement('div');
-                section.className = 'context-section';
-                const header = document.createElement('h4');
-                header.textContent = 'MITRE ATT&CK Mappings';
-                section.appendChild(header);
-
-                ttps.forEach(ttp => {
-                    const card = document.createElement('div');
-                    card.className = 'ttp-card';
-                    card.innerHTML = safeHTML(`
-                        <span class="ttp-id">${ttp.technique_id}</span>
-                        <span class="ttp-name">${ttp.technique_name}</span>
-                        <span class="severity-badge ${ttp.severity || 'medium'}">${ttp.severity || 'medium'}</span>
-                        <br><span class="ttp-tactic">${ttp.tactic}</span>
-                    `);
-                    section.appendChild(card);
-                });
-                contextDiv.appendChild(section);
-            }
-
-            // Validation Issues
-            const issues = pipelineMetadata.validation_issues || [];
-            if (issues.length > 0) {
-                const section = document.createElement('div');
-                section.className = 'context-section';
-                const header = document.createElement('h4');
-                header.textContent = 'Validation';
-                section.appendChild(header);
-
-                issues.forEach(issue => {
-                    const card = document.createElement('div');
-                    card.className = 'context-card';
-                    const color = issue.severity === 'error' ? '#f85149' : issue.severity === 'warning' ? '#d29922' : '#8b949e';
-                    card.innerHTML = safeHTML(`<span style="color:${color};font-weight:600">${issue.severity.toUpperCase()}</span> [${issue.field}]: ${issue.message}`);
-                    section.appendChild(card);
-                });
-                contextDiv.appendChild(section);
-            }
-
-            // Enrichment Sources
-            const enrichSources = pipelineMetadata.enrichment_sources || [];
-            if (enrichSources.length > 0) {
-                const section = document.createElement('div');
-                section.className = 'context-section';
-                const header = document.createElement('h4');
-                header.textContent = 'Web Enrichment Sources';
-                section.appendChild(header);
-
-                enrichSources.forEach(src => {
-                    const card = document.createElement('div');
-                    card.className = 'context-card enrichment-source';
-                    card.innerHTML = safeHTML(`<a href="${src.url}" target="_blank" rel="noopener noreferrer" class="enrich-link">${src.title || src.url}</a><p class="enrich-snippet">${src.snippet || ''}</p>`);
-                    section.appendChild(card);
-                });
-                contextDiv.appendChild(section);
-            }
-
-            // PoC Analysis
-            const pocFlow = pipelineMetadata.poc_attack_flow || '';
-            const pocIndicators = pipelineMetadata.poc_behavioral_indicators || [];
-            if (pocFlow || pocIndicators.length > 0) {
-                const section = document.createElement('div');
-                section.className = 'context-section';
-                const header = document.createElement('h4');
-                header.textContent = `PoC Analysis (${pipelineMetadata.poc_snippets_found || 0} snippets)`;
-                section.appendChild(header);
-
-                if (pocFlow) {
-                    const flowCard = document.createElement('div');
-                    flowCard.className = 'context-card';
-                    flowCard.textContent = pocFlow;
-                    section.appendChild(flowCard);
-                }
-                if (pocIndicators.length > 0) {
-                    const chipsDiv = document.createElement('div');
-                    chipsDiv.className = 'indicator-chips';
-                    pocIndicators.forEach(ind => {
-                        const chip = document.createElement('span');
-                        chip.className = `indicator-chip ${ind.type || 'other'}`;
-                        chip.textContent = ind.value;
-                        chip.title = ind.context || '';
-                        chipsDiv.appendChild(chip);
-                    });
-                    section.appendChild(chipsDiv);
-                }
-                contextDiv.appendChild(section);
-            }
-
-            // Log Source Suggestions
-            const logsourceSugs = pipelineMetadata.logsource_suggestions || [];
-            if (logsourceSugs.length > 0) {
-                const section = document.createElement('div');
-                section.className = 'context-section';
-                const header = document.createElement('h4');
-                header.textContent = 'Log Source Analysis';
-                section.appendChild(header);
-
-                if (pipelineMetadata.logsource_primary) {
-                    const primaryDiv = document.createElement('div');
-                    primaryDiv.className = 'logsource-primary-badge';
-                    primaryDiv.textContent = `Primary: ${pipelineMetadata.logsource_primary}`;
-                    section.appendChild(primaryDiv);
-                }
-
-                logsourceSugs.forEach(ls => {
-                    const card = document.createElement('div');
-                    card.className = 'context-card logsource-card';
-                    const pct = Math.round((ls.confidence || 0) * 100);
-                    card.innerHTML = safeHTML(`
-                        <div class="logsource-header">
-                            <strong>${ls.category || '?'}/${ls.product || '?'}</strong>
-                            <span class="logsource-conf">${pct}%</span>
-                        </div>
-                        <div class="logsource-reason">${ls.reasoning || ''}</div>
-                        <div class="logsource-fields">${(ls.relevant_fields || []).join(', ')}</div>
-                    `);
-                    section.appendChild(card);
-                });
-                contextDiv.appendChild(section);
-            }
-
-            // Optimization Changes
-            const changes = pipelineMetadata.optimization_changes || [];
-            if (changes.length > 0) {
-                const section = document.createElement('div');
-                section.className = 'context-section';
-                const header = document.createElement('h4');
-                header.textContent = 'Optimizations Applied';
-                section.appendChild(header);
-
-                changes.forEach(change => {
-                    const card = document.createElement('div');
-                    card.className = 'context-card';
-                    card.textContent = change;
-                    section.appendChild(card);
-                });
-                contextDiv.appendChild(section);
-            }
+            if (av.reasoning) add(s.body, el('div', 'an-note', `Model's note: ${av.reasoning}`));
+            root.appendChild(s.details);
         }
 
-        // RAG Context (original behavior)
-        const addSection = (title, items) => {
-            if (!items || items.length === 0) return;
-            const section = document.createElement('div');
-            section.className = 'context-section';
-            const header = document.createElement('h4');
-            header.textContent = title;
-            section.appendChild(header);
-            items.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'context-card';
-                if (item.length > 200) {
-                    const shortText = item.substring(0, 200) + '...';
-                    card.innerText = shortText;
-                    const toggle = document.createElement('span');
-                    toggle.innerText = ' [Expand]';
-                    toggle.style.color = 'var(--accent)';
-                    toggle.style.cursor = 'pointer';
-                    toggle.onclick = (e) => {
-                        e.stopPropagation();
-                        if (card.getAttribute('data-expanded') === 'true') {
-                            card.innerText = shortText;
-                            toggle.innerText = ' [Expand]';
-                            card.appendChild(toggle);
-                            card.setAttribute('data-expanded', 'false');
-                        } else {
-                            card.innerText = item;
-                            toggle.innerText = ' [Collapse]';
-                            card.appendChild(toggle);
-                            card.setAttribute('data-expanded', 'true');
-                        }
-                    };
-                    card.appendChild(toggle);
-                } else {
-                    card.innerText = item;
-                }
-                section.appendChild(card);
+        // 2. Strings kept out of the rules (researcher / patch workflow)
+        const inc = av.incidental_artifacts || [];
+        if (inc.length) {
+            const s = panelSection('Excluded from rules', `${inc.length} researcher-only`, false);
+            inc.forEach(it => {
+                const item = el('div', 'an-item');
+                add(item, el('code', 'an-code', typeof it === 'string' ? it : it.value), basis(it.reason));
+                s.body.appendChild(item);
             });
-            contextDiv.appendChild(section);
-        };
-        addSection('Similar SigmaHQ rules', context.sigma);
-        addSection('MITRE ATT&CK', context.mitre);
-        addSection('Sysmon events', context.sysmon);
-        if (contextDiv.innerHTML === '') contextDiv.innerHTML = '<p class="empty-state">No specific context found.</p>';
+            root.appendChild(s.details);
+        }
+
+        // 3. Recommended log source (the first is the one recommended for the first rule)
+        const sugs = meta.logsource_suggestions || [];
+        if (sugs.length) {
+            const s = panelSection('Log source', 'first = recommended for the first rule', true);
+            sugs.forEach((ls, i) => {
+                const item = el('div', i === 0 ? 'an-item an-primary' : 'an-item');
+                const head = el('div', 'an-item-head');
+                add(head, el('code', 'an-code', logsourceName(ls)), el('span', 'an-conf', pct(ls.confidence)));
+                add(item, head, basis(ls.reasoning));
+                if ((ls.relevant_fields || []).length) add(item, el('div', 'an-fields', ls.relevant_fields.join(', ')));
+                s.body.appendChild(item);
+            });
+            root.appendChild(s.details);
+        }
+
+        // 4. ATT&CK techniques
+        const ttps = meta.ttp_mappings || [];
+        const dropped = (meta.ttp_dropped_ids || []).filter(Boolean);
+        if (ttps.length || dropped.length) {
+            const s = panelSection('MITRE ATT&CK', `${ttps.length} technique${ttps.length === 1 ? '' : 's'}`, true);
+            ttps.forEach(t => {
+                const item = el('div', 'an-item');
+                const head = el('div', 'an-item-head');
+                add(head, el('code', 'an-code', t.technique_id), el('span', 'an-name', t.technique_name),
+                    t.severity ? el('span', `severity-badge ${t.severity}`, t.severity) : null);
+                add(item, head, t.tactic ? el('div', 'an-fields', t.tactic) : null, basis(t.relevance));
+                s.body.appendChild(item);
+            });
+            if (dropped.length) add(s.body, el('div', 'an-note', `Removed, not in ATT&CK: ${dropped.join(', ')}`));
+            root.appendChild(s.details);
+        }
+
+        // 5. Indicators, grouped by type
+        const inds = meta.indicators || [];
+        if (inds.length) {
+            const s = panelSection('Indicators', `${inds.length} extracted`, false);
+            const groups = {};
+            inds.forEach(ind => {
+                const type = ind.type || 'other';
+                (groups[type] = groups[type] || []).push(ind);
+            });
+            Object.entries(groups).sort((a, b) => b[1].length - a[1].length).forEach(([type, list]) => {
+                add(s.body, el('div', 'an-subhead', `${type.replace(/_/g, ' ')} (${list.length})`));
+                list.forEach(ind => {
+                    const item = el('div', 'an-item compact');
+                    add(item, el('code', 'an-code', ind.value), basis(ind.context));
+                    s.body.appendChild(item);
+                });
+            });
+            root.appendChild(s.details);
+        }
+
+        // 6. Exploit code the report linked to
+        const pocFlow = meta.poc_attack_flow || '';
+        const pocInd = meta.poc_behavioral_indicators || [];
+        if (pocFlow || pocInd.length) {
+            const n = meta.poc_snippets_found || 0;
+            const s = panelSection('Exploit code (PoC)', `${n} snippet${n === 1 ? '' : 's'}`, false);
+            add(s.body, el('p', 'an-lead', pocFlow));
+            pocInd.forEach(ind => {
+                const item = el('div', 'an-item compact');
+                add(item, el('code', 'an-code', ind.value), basis(ind.context));
+                s.body.appendChild(item);
+            });
+            root.appendChild(s.details);
+        }
+
+        // 7. Checks run on the rules
+        const cov = meta.coverage_check || {};
+        const warnings = cov.warnings || [];
+        const issues = meta.validation_issues || [];
+        if (warnings.length || issues.length || Object.keys(cov).length) {
+            const s = panelSection('Checks', `${warnings.length} coverage · ${issues.length} pySigma`, warnings.length > 0);
+            if (!warnings.length) add(s.body, el('div', 'an-ok', 'Coverage: no gaps detected'));
+            warnings.forEach(w => add(s.body, el('div', 'an-warn', w)));
+            issues.forEach(i => {
+                const item = el('div', 'an-item compact an-issue');
+                add(item, el('span', `an-sev ${i.severity || ''}`, i.severity), el('span', 'an-v', i.message));
+                s.body.appendChild(item);
+            });
+            root.appendChild(s.details);
+        }
+
+        // 8. What the review step changed
+        const changes = meta.optimization_changes || [];
+        if (changes.length) {
+            const s = panelSection('Changes made in review', String(changes.length), false);
+            changes.forEach(c => add(s.body, el('div', 'an-item compact', c)));
+            root.appendChild(s.details);
+        }
+
+        // 9. Documents retrieved for the model
+        const refs = [['Similar SigmaHQ rules', context.sigma], ['ATT&CK', context.mitre], ['Sysmon', context.sysmon]];
+        const total = refs.reduce((n, [, items]) => n + ((items || []).length), 0);
+        if (total) {
+            const s = panelSection('Retrieved references', String(total), false);
+            refs.forEach(([title, items]) => {
+                if (!items || !items.length) return;
+                add(s.body, el('div', 'an-subhead', `${title} (${items.length})`));
+                items.forEach(doc => {
+                    const text = String(doc);
+                    s.body.appendChild(el('pre', 'an-doc', text.length > 1200 ? `${text.slice(0, 1200)}\n…` : text));
+                });
+            });
+            root.appendChild(s.details);
+        }
+
+        if (!root.children.length) root.appendChild(el('p', 'empty-state', 'No analysis was recorded for this answer.'));
     }
 
     if (sendBtn) sendBtn.addEventListener('click', handleSend);

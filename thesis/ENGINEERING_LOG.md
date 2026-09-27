@@ -3727,3 +3727,36 @@ browser: no console errors; chat, library, and a **live run** through the new in
 run of the sudo case (CVE-2019-14287) suggested `process_creation / windows` and PowerShell and ended
 with a rule on `\sudo.exe`, where an API run of the same URL earlier the same day gave correct Linux
 rules — run-to-run variation of the model (generation samples at 0.3), noted in the demo runbook.
+
+---
+
+## 2026-09-27 — Interface: a read-only Analysis panel — what the model understood, evidence first (user)
+
+User: the context box "is way too small … difficult for the analyst to understand how the LLM thought".
+Chosen: a read-only panel today (before the demo), confirm/correct controls later (Phase 3).
+**What was wrong:** a small box under the chat list; long lists first (38 indicator chips in the
+SharePoint run) and raw retrieved documents; **the attack vector — the core of the model's
+understanding — was not shown at all**, although the page already received it; and no basis for any
+claim, although the pipeline records one (`derived_from` for each pattern, `context` for each
+indicator, `reasoning`/`relevance` for log sources and techniques).
+**What changed** (frontend; one function rewritten, `renderContext`, same name and callers):
+- The Workspace is two columns: the conversation and a 400 px **Analysis** panel on the right (330 px
+  under 1,180 px wide, hidden under 900 px); the old sidebar box is gone.
+- Sections in the pipeline's order: **attack vector** (how it starts, entry point, attacker input,
+  type, where it would be seen, kill chain, each pattern with where it appears and the model's basis,
+  the model's note); **excluded from rules** (researcher-only strings and why); **log source** (the
+  recommended one highlighted, with reasoning and fields); **ATT&CK** (tactic, relevance, IDs removed
+  by Change 31); **indicators** by type with their basis; **exploit code**; **checks** (coverage gaps,
+  pySigma — opened when there is a gap); **changes made in review**; **retrieved references**. Long
+  sections start collapsed.
+- **The basis lines are labelled as the model's words, not quotes**: many are paraphrases (e.g. the
+  basis for `/_layouts/15/ToolPane.aspx` is "SharePoint URL path accessed during exploitation
+  attempt"), and model self-explanations are not a faithful record (CH6 §6.4.4: 0 of 12 departures
+  explained). The panel header asks the analyst to check each item against the report.
+- Built from text nodes only (no model output is interpreted as HTML). A rule-row overflow bug
+  (Save/Download pushed out on narrow widths) fixed.
+Verified in the browser at 800 px and 1,440×900: a saved chat (SharePoint) fills every section, a new
+analysis clears the panel, a **live run** (sudo CVE-2019-14287) fills it on completion; no console errors;
+tests 432 passed. That live run again recommended `process_creation / windows` for the Linux sudo bug
+(2 of 3 live runs today) — now visible at a glance in the panel; the demo runbook uses it as the
+verification example.

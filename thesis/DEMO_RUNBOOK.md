@@ -35,6 +35,13 @@ app on 2026-09-27 (pipeline frozen at `a6e9157`), fetching the pages from the in
 | Generation → Review | Rules written, then checked by pySigma; errors go back for a rewrite. |
 | Coverage check | Do the rules cover the attack vector? One retry if not. |
 
+**Then walk through the Analysis panel on the right** — *what the model understood; check it against
+the report*: the attack vector (how it starts, entry point, what the attacker controls, where it would be
+seen) and each pattern with the model's basis for it; strings excluded as researcher-only; the
+recommended log source (highlighted) with its reasoning; ATT&CK techniques and why; indicators by type;
+the checks (coverage gaps, pySigma). Say that the basis lines are the model's own words — the analyst
+confirms them against the report; confirm/correct buttons are the next step.
+
 ### Main URL — SharePoint "ToolShell" (CVE-2025-53770), recent and real
 `https://research.eye.security/sharepoint-under-siege/` — **177 s live**. Attack vector:
 deserialization over HTTP (confidence 90%); log source `webserver`; 5 valid rules (initial access
@@ -49,15 +56,16 @@ up on the victim's server. This is why an analyst has to verify what the model u
 `https://www.openwall.com/lists/oss-security/2019/10/14/1` — **89 s live**. Local privilege
 escalation; log source `process_creation / linux`; 3 valid rules on the `sudo -u#-1` trick
 (negative / very large user id); no coverage gaps.
-**Caution — live output varies between runs.** A second live run of this URL the same day (through the
-new interface) suggested `process_creation / windows` and PowerShell for this *Linux* bug, and its final
-rule matched `\sudo.exe`. If that happens on stage, use it: it is exactly why the analyst verifies what
-the model understood. Otherwise open the saved chat of the correct run (below).
+**Caution — live output varies between runs.** In 2 of 3 live runs on 2026-09-27 the analysis recommended
+`process_creation / windows` for this *Linux* bug (once with a final rule on `\sudo.exe`). Use it on
+purpose as the **verification example**: the Analysis panel shows "Log source: process_creation /
+windows 95%" right under an attack vector about `sudo` — the analyst catches it at a glance.
 
 ### If the live run fails
 The runs are saved as chats in the list: "https://research.eye.security/…" (SharePoint, correct), and
-two "https://www.openwall.com/lists…" — the **lower** one is the correct run (Linux rules), the **upper**
-one is the Windows-flavoured run (a verification example). Open one and say plainly it was run earlier.
+three "https://www.openwall.com/lists…" — the **lowest** is the correct run (Linux rules); the two above
+it recommended Windows (verification examples). Opening a saved chat also fills the Analysis panel. Say
+plainly it was run earlier.
 (The "Empty Chat" entries from testing can be deleted.)
 
 ---
