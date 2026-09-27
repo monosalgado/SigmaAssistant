@@ -11,22 +11,21 @@ placeholder that is not a UUID: a copy is replaced by Change 9 like any invalid 
 
 from __future__ import annotations
 
-import json
 import re
 
 import yaml
 
 from backend.pipeline import prompts
-from backend.pipeline.stage_generate import _is_valid_uuid, normalize_rule_id
+from backend.pipeline.stage_generate import _is_valid_uuid, normalize_rule_id, parse_rule_blocks
 
 GEN = prompts.RULE_GENERATION
 
 
 def _example_rule() -> dict:
-    block = GEN.split("### Few-shot Example", 1)[1].split("**Output**:", 1)[1]
-    block = block.split("Respond with JSON only.")[0].strip()
-    data = json.loads(block.replace("{{", "{").replace("}}", "}"))
-    return yaml.safe_load(data["rules"][0]["yaml_content"].replace("{current_date}", "2026-01-01"))
+    # Since Change 36 the example is a ```yaml block, as the answer now is.
+    block = GEN.split("### Few-shot Example", 1)[1]
+    block = block.replace("{{", "{").replace("}}", "}").replace("{current_date}", "2026-01-01")
+    return yaml.safe_load(parse_rule_blocks(block)["rules"][0]["yaml_content"])
 
 
 def test_no_underscore_tactic_tag_is_left_in_the_prompt():

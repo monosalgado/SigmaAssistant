@@ -3963,3 +3963,36 @@ unreviewed arm's S5 on that case was 0.0 in the first smoke and 0.667 in the sec
 generation's 0.3, the reason for the paired design and the noise floor. A closing-message crash for
 output outside the repo fixed. Tests: 535 passed. **The 60-case run has not started** — the plan
 awaits the user.
+
+---
+
+## 2026-09-27 — Change 36 (defect 5): the rule writer answers in YAML blocks, not JSON strings — built, not measured (user)
+
+The next change in the user's order. Branch **`defect5-yaml-rules`** (off `analyst-review` at
+`c3f3e76`), so the simulated-analyst run (5.3) stays on the frozen pipeline. Measurement plan in
+`ACTION_PLAN.md` ("Next pipeline change"), written before building, awaiting the user's approval.
+**Why:** each rule travelled inside a JSON string, so every backslash was escaped twice, and one bad
+escape (`Invalid \escape`, a Windows path) lost every rule of the answer. **Generation only** — one
+change at a time; a failed review already falls back to the rules as they were.
+**What changed** (tests first, each seen to fail):
+- `prompts.RULE_GENERATION`: an "Output Format" section — each rule under "### Rule N: <what it
+  detects and why>" as a ```yaml block written as in a Sigma file (a backslash once), optional
+  "### Notes", no JSON; the worked example in that format with **the same content** (hyphenated
+  tags and the `<new UUID>` placeholder kept — Changes 30/33, their tests unchanged but for reading
+  the new format); the unused `target_ttp` dropped. The source writes `\\` so the prompt text has
+  one backslash (compiles with warnings as errors).
+- `stage_generate.parse_rule_blocks(text)`: rules = the ```yaml/```yml blocks, each explained by the
+  last "### Rule N" heading before it; notes after "### Notes"; `parse_error` when no block has a
+  rule. The stage calls the model with `json_mode=False`, and records every call's `parse_error` in
+  `generation_log` (so failures a retry hides become countable); an unreadable answer still gives
+  "Generation error: …" in the notes, as before.
+- `eval/count_generation_failures.py` (the plan's primary measure): cases with no rule whose kept
+  response carries "Generation error" — computable for old and new runs — and, from Change 36 on,
+  unreadable generation calls. On the reference `p2g_shared60`: **3 cases** (`c5a178bf`,
+  `b014ea07`, `ec3a3c2f` — the three the 2026-09-26 entry named by hand), 99 generation calls
+  (unreadable calls not recorded then). `p2f_product60`: 0 cases, 94 calls.
+Tests: 550 passed. **Smoke, the preflight's 2 cases (scratch output, not cited):** the model used the
+new format in all 4 generation calls (0 unreadable); both first rules valid. Those rules had no
+backslashes, so the smoke shows format compliance, not the escape fix — that is the 60-case run's.
+**Seen:** the PoC stage's own JSON failed once in the smoke (`Expecting ',' delimiter`) — the same
+family, another stage (Inbox).

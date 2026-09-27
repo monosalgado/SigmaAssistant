@@ -291,6 +291,35 @@ spent and the result is written up as a finding.
 
 ---
 
+## Next pipeline change (user order, 2026-09-27)
+
+- [>] **Change 36 — defect 5: the rule writer answers in YAML blocks, not JSON strings**
+      (prompt review item 6, P5). Built on branch `defect5-yaml-rules` (off `analyst-review` at
+      `c3f3e76`), so the simulated-analyst run (5.3) stays on the frozen pipeline.
+      *Why:* generation returns every rule as a JSON string, so each backslash is escaped twice; a
+      single bad escape (`Invalid \escape`, Windows paths) loses **every rule** of that answer. In
+      the shared run 3 of the 7 lost first rules were this (log 2026-09-26); live, it emptied a
+      review rewrite (2026-09-27). **Generation only** — one change at a time; a failed review
+      already falls back to the rules as they were (review stays JSON; a later change).
+      **Measurement plan — PROPOSED 2026-09-27, awaiting the user's approval; fixed before any run:**
+      - *Cases and reference:* the 60 tuning cases (seed 0), paired against `p2g_shared60`
+        (code `a6e9157`); `eval/compare_runs.py`.
+      - *Primary:* **cases with no rule because generation's answer could not be read** — rows
+        with zero rules whose response carries "Generation error" (both runs have it) — and **S1**
+        (first rule parses), exact McNemar. Expected: fewer lost rules; S1 up if those cases come back.
+      - *Recorded from this run on:* every generation call's parse failure in `generation_log`
+        (`parse_error`), so first-attempt failures that a retry hid become countable.
+      - *Watched for harm (paired, reported):* S3, S4, S5, rules per case, tokens, seconds — the
+        worked example changes format, and examples are copied (Change 27); the example's content
+        stays the same, only its encoding changes.
+      - *Rules:* the harness's stop rule; a case that stops 3 times is excluded.
+      - *Built 2026-09-27* (log); smoke on 2 cases: the new format was followed in 4 of 4 calls.
+        **Run only on the user's approval**, after 5.3 or in its own worktree (never two runs from
+        one checkout): `eval/run_resilient.py -- --sample 60 --seed 0 --no-web-enrich --arm c36_yaml
+        --out eval/results/c36_yaml60.jsonl`; then `compare_runs.py` against `p2g_shared60` and
+        `count_generation_failures.py` on both.
+      - Seen: the PoC stage's JSON failed once in the smoke — the same defect in another stage (Inbox).
+
 ## Phase 3 — Assistant backend (after Phase 0 approves it)
 
 Design: `thesis/ASSISTANT_DESIGN.md` — **reviewed with the user 2026-09-26**; decisions in its §9

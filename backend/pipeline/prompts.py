@@ -253,22 +253,52 @@ RULE_GENERATION = """You are an expert Sigma rule author. Generate detection rul
 11. Tags MUST use `attack.tXXXX` for MITRE techniques (lowercase technique id) and, for tactics, SigmaHQ's hyphenated tactic names (e.g. `attack.credential-access`: words joined with hyphens) — pick only techniques you can justify from the MITRE context above.
 12. Include specific detection criteria based on the extracted indicators; small details improve specificity.
 
+### Output Format
+Write each rule under its own heading, as a Sigma file inside a ```yaml block:
+
+### Rule 1: <one sentence: what this rule detects and why>
+```yaml
+<the rule>
+```
+
+Repeat for every rule (### Rule 2: ..., ### Rule 3: ...). Write the YAML exactly as in a Sigma file: a backslash in a path is written once (`'\\lsass.exe'`). After the last rule you may add a `### Notes` heading with anything the analyst should know. Nothing else, and no JSON.
+
 ### Few-shot Example
 
 **Input**: Attack using mimikatz targeting LSASS, indicators: mimikatz.exe, lsass.exe, sekurlsa::logonpasswords
 **Output**:
-{{
-  "rules": [
-    {{
-      "yaml_content": "title: Mimikatz Credential Dumping via LSASS Access\\nid: <new UUID>\\nstatus: experimental\\ndescription: Detects potential credential dumping using Mimikatz by monitoring for suspicious access to the LSASS process.\\nreferences:\\n    - https://attack.mitre.org/techniques/T1003/001/\\n    - https://www.rapid7.com/blog/post/2022/mimikatz-analysis/\\nauthor: Sigma Assistant\\ndate: {current_date}\\ntags:\\n    - attack.credential-access\\n    - attack.t1003.001\\nlogsource:\\n    category: process_access\\n    product: windows\\ndetection:\\n    selection:\\n        TargetImage|endswith: '\\\\lsass.exe'\\n        SourceImage|endswith:\\n            - '\\\\mimikatz.exe'\\n            - '\\\\mimi.exe'\\n        GrantedAccess|contains:\\n            - '0x1010'\\n            - '0x1410'\\n    condition: selection\\nfalsepositives:\\n    - Legitimate security scanning tools\\n    - Antivirus software accessing LSASS\\nlevel: high",
-      "explanation": "This rule detects Mimikatz credential dumping by monitoring process access events targeting LSASS with suspicious access rights.",
-      "target_ttp": "T1003.001"
-    }}
-  ],
-  "notes": ""
-}}
-
-Respond with JSON only."""
+### Rule 1: Detects Mimikatz credential dumping by monitoring process access events targeting LSASS with suspicious access rights.
+```yaml
+title: Mimikatz Credential Dumping via LSASS Access
+id: <new UUID>
+status: experimental
+description: Detects potential credential dumping using Mimikatz by monitoring for suspicious access to the LSASS process.
+references:
+    - https://attack.mitre.org/techniques/T1003/001/
+    - https://www.rapid7.com/blog/post/2022/mimikatz-analysis/
+author: Sigma Assistant
+date: {current_date}
+tags:
+    - attack.credential-access
+    - attack.t1003.001
+logsource:
+    category: process_access
+    product: windows
+detection:
+    selection:
+        TargetImage|endswith: '\\lsass.exe'
+        SourceImage|endswith:
+            - '\\mimikatz.exe'
+            - '\\mimi.exe'
+        GrantedAccess|contains:
+            - '0x1010'
+            - '0x1410'
+    condition: selection
+falsepositives:
+    - Legitimate security scanning tools
+    - Antivirus software accessing LSASS
+level: high
+```"""
 
 
 # --- Stage 5: Validation (LLM semantic review) ---
