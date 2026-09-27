@@ -3631,3 +3631,18 @@ paired comparison (both arms). Applied: `eval/manifest_heldout_without_54e57ce3.
 held-out list minus that line (59 cases; written by a one-off script with assertions, committed
 before the resume). Run 2 resumes on it — same output file, so its 14 rows are kept. No row or score
 of either run has been read. The primary test on run 1 (all 60) is unaffected.
+
+### Run 2 resumed; a second case stopped three times — the rule applied as written (decided before any score was read)
+The resume (preflight passed 06:14; resumed 06:19) ran 44 of its 45 cases normally. The last,
+**`af688c76`**, stopped on the analysis call (timeout) at its first attempt and at relaunches 1 and 2
+— **three stops** (the watcher that was to trigger the manual step fired at 10:11) — then **finished
+at relaunch 3**, before the manual step was taken (wrapper exit 0; run 2 = 59 rows).
+**Decision, made before reading any row or score of either run:** the pre-registered rule says a
+case that stops three times is removed and left out of the paired comparison; `af688c76` stopped
+three times, so **it is excluded, like `54e57ce3`**. Keeping it because a row happened to appear on
+the fourth attempt would be deciding after the fact. For transparency the paired comparison is also
+reported **with** it, labelled as a sensitivity check.
+Files: `eval/results/heldout_v2_60.jsonl` — all 59 rows as written (kept unchanged);
+`eval/results/heldout_v2_rule.jsonl` — the same minus `af688c76` (58 rows; written by a one-off
+script with assertions: 59 unique held-out ids, `54e57ce3` absent). The paired comparison uses the
+latter; the primary test on run 1 uses all 60 rows.
