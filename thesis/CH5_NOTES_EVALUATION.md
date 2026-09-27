@@ -541,6 +541,11 @@ committed script (stratified, seed 0) from the 242 corpus cases absent from ever
 The list is committed before any run; nobody reads held-out outputs and no pipeline file
 changes until both runs are done. Two runs on it — the final pipeline and baseline v2's code —
 give a paired before/after on unseen cases, and the chance test (above) is applied there.
+**Drawn 2026-09-26** (`eval/draw_heldout.py`, once; `eval/manifest_heldout.jsonl`): 60 cases —
+24 `process_creation`, 12 `webserver`, 7 `file_event`, 6 service-based, 3 `proxy`, 8 others. The
+pipeline was frozen first (`a6e9157`). Baseline v2's code (`5627e91`) and the final pipeline are
+scored by the same, unchanged scorer. `[DISCLOSE]` baseline v2's code has no output limit: a case it
+cannot finish is removed from both arms of the paired comparison and reported (rule fixed in advance).
 
 ### Attribution: one run per change, with one planned exception `[DESIGN]` (added 2026-09-26)
 Phase 2 ran one 60-case run per change so each effect could be attributed (user, 2026-09-24).

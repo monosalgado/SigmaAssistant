@@ -3553,3 +3553,52 @@ S4 −0.024, CI [−0.067, 0.000]; rules per case −0.50, CI [−1.03, −0.03]
   JSON); web gold suggestions 9 → 6 (watch in the held-out run).
 - **This is the last planned run on the tuning cases.** Next: plan 2.9, the held-out
   confirmation, where the pre-registered chance test is applied.
+
+---
+
+## 2026-09-26 — Phase 2 frozen; the held-out cases drawn; the confirmation's plan fixed before any run (plan 2.9)
+
+### Freeze (user, 2026-09-26)
+The Phase 2 pipeline is **frozen at `a6e9157`** (Changes 22 + 24–33); no pipeline or harness file
+changes until both held-out runs are done. Open items — the "at most 10" quota, the defect-5
+cluster, the prompt review's candidates, the retrieval findings — go to the next phase: they
+concern rule quality rather than the log source, and a later confirmation can use the 182
+corpus cases still unused after this draw.
+
+### The draw — `eval/draw_heldout.py`, once
+6 tests written first (`tests/test_draw_heldout.py`; seen failing): used ids from every result
+file (backups included), no used case drawn, reproducible, manifest lines kept verbatim, the list
+written once (the script refuses to overwrite it), and the committed list (60 distinct manifest
+cases, none in the tuning results). Run once: corpus 303 cases (the harness's own filter); 61
+ever run, in any result file; **242 never run; 60 drawn** with the harness's stratified sampler,
+seed 0 → **`eval/manifest_heldout.jsonl`**, committed before any run on it. Composition:
+`process_creation` 24, `webserver` 12, `file_event` 7, no category (service-based) 6, `proxy` 3,
+`registry_set` 2, `image_load` 2, one each of `registry_event`, `dns_query`, `ps_script`,
+`registry_add`. Inputs checked offline: all 60 load; page snapshots on disk; all 4 GitHub code
+links have recorded snapshots. Only the categories above were looked at — no output exists.
+
+### Measurement plan (fixed before any held-out run)
+**Runs** (same flags as every Phase 2 run, `--no-web-enrich`; no `--sample` — the file holds the 60):
+1. **Final pipeline** — code `a6e9157` (the working tree at the commit of this entry; no pipeline
+   file differs), arm `heldout_final`, `eval/results/heldout_final60.jsonl`,
+   `--manifest eval/manifest_heldout.jsonl`.
+2. **Baseline v2's code** — commit `5627e91`. Confirmed as baseline v2's code: no pipeline,
+   harness or scorer file differs between it and the commit that recorded baseline v2's result
+   (`8327c9b`), and `eval/scorers.py` is unchanged since, so both arms are scored by identical
+   code. Run from a separate checkout of `5627e91` with the local, uncommitted data linked in;
+   arm `heldout_v2`, `eval/results/heldout_v2_60.jsonl`.
+Run 1 first, then run 2. **Nobody reads either run's rows or scores until both are finished**
+(progress lines only). Both must be CITABLE.
+**Primary — Phase 2's exit test (pre-registered 2026-09-26 as "S3 against chance", revised the same
+day to apply here):** S3 of run 1 against the null 0.173 — exact binomial, one-sided, alpha 0.05,
+with the 95% Wilson interval (`summarise.py`). Applied once.
+**Secondary — did Phase 2 improve unseen cases?** Run 2 → run 1, paired (`compare_runs.py`): S3
+(exact McNemar), S1, S4, S5, cost; `compare_suggestions.py`; the diagnosis. Reported next to the
+tuning-set result (baseline v2 → shared run: S3 6 → 22 of 50) — descriptive, no test of the
+difference.
+**Failures, decided now:** in run 1 a cut answer is a scored model failure (Change 24); an
+infrastructure failure stops and resumes the run. Baseline v2's code predates Change 24: an
+unbounded answer runs to the call's timeout and its harness stops at that case. **If run 2 stops on
+the same case three times, that case is removed from run 2 by a documented manual step, reported as
+a baseline failure, and left out of the paired comparison (both arms).** The primary test on run 1
+is unaffected.
