@@ -404,12 +404,13 @@ From the retrieval check (2026-09-26, user: a and b to the Inbox) — awaiting t
   (Securelist case: the Kaspersky menu); the attack-vector summary exists by then. Mainly S4.
 
 From Change 34's live test (2026-09-27) — awaiting triage:
-- **Defect 20**: the web app's coverage retry never runs (a side effect in `_should_regenerate_for_coverage`
-  is triggered by the progress text first). Harness (`run_sync`) unaffected. Small fix in `_generation_events`
+- ~~**Defect 20**: the web app's coverage retry never runs~~ — **fixed 2026-09-27 on `analyst-review`**
+  (user): decided once, as `run_sync` does; a test holds the stream to the harness path's calls
 - the review stage merged 3 generated rules into 1 ("Merged duplicate rules") — measure how often review drops rules (needs M1)
 - P4 check: a rule that violates the analyst's chosen log source → one rewrite with the reason, then shown
 - remove the unused `feedback_data` / `_apply_user_feedback` path (superseded by Change 34)
 - the Analysis panel (and so the review) is hidden under 900 px wide
+- rejecting a pattern does not reject the same string as an indicator or PoC behaviour (SharePoint: `ysoserial.exe` in all three); link them, or say so in the panel
 
 ## Security — do first (the user's action)
 

@@ -3829,3 +3829,33 @@ the test was changed first.
 - The old `feedback_data` path (`_apply_user_feedback`) is unused by any client; the panel is hidden
   under 900 px wide, so no review there; P4's check (a rule that violates the analyst's log source →
   one rewrite) is not built yet.
+
+---
+
+## 2026-09-27 — Defect 20 fixed: the web app's coverage retry runs again (user)
+
+User: "fix defect 20". Branch `analyst-review`.
+**Cause** (entry above): `_should_regenerate_for_coverage` sets `coverage_retried` when it answers yes;
+the stream asked it once to word the progress line, so the real check always answered no.
+**Fix** (`orchestrator._generation_events`): the decision is taken once — `not generation_retried and
+_should_regenerate_for_coverage(...)`, exactly `run_sync`'s expression — and both the progress line and
+the retry use it. So the line also stops saying "regenerating" after a validation retry has already used
+the request's one regeneration (it said so before, too).
+**Tests first** (5 failed before the fix, as defect 20 predicts): the stream regenerates once when the
+first rules miss the attack vector; `generate_after_review` does too; the line says "regenerating" only
+when it does; and **the stream makes exactly the stage calls `run_sync` makes** in five scenarios
+(valid/invalid first review × rules covering from the first, second or no generation). The fake review
+stage now passes generation's rules through (before, it always returned a covering rule, so no test could
+see a gap). Tests: 490 passed. `run_sync` untouched: **the evaluated pipeline always retried; the web app
+now matches it.**
+**Live (SharePoint ToolShell, through the analyst review):** analysis 113 s; review — `webserver` confirmed
+(the model's first suggestion), the pattern `ysoserial.exe` rejected, T1566.002 and T1204.002 rejected,
+T1190 confirmed. First generation: 5 rules, **4/7 patterns missed** → the progress line said
+"regenerating", and the server log shows a **second generation** → **1/7 missed**. 134 s from Generate to
+the rules. Four rules `webserver`, one `process_creation / windows` (the ASPX file creation); tags carry
+T1190 and none of the rejected techniques.
+**Seen, for the Inbox:** `ysoserial.exe` still appears in one rule — in its `description` only ("use of
+ysoserial.exe to generate ViewState payloads"), which is correct context; the detection matches
+`__VIEWSTATEGENERATOR` on the server. The same value was also an indicator and a PoC behaviour, which the
+analyst did not reject: rejecting a pattern does not reject the same string elsewhere. A check of the
+analyst's rejections (design P4) should look at detection values, not the whole rule text.

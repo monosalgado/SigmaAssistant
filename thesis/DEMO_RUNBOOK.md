@@ -40,7 +40,7 @@ every item. Review it (below), then **Generate rules** at the bottom of the pane
 | Analysis | Indicators, ATT&CK techniques, and the **recommended log source**, chosen from a table generated from SigmaHQ's own rules. |
 | *(stops)* Your review | **What the LLM understood** — the analyst confirms, rejects, or changes the log source, *before* any rule is written. |
 | Generation → Review | Rules written from the analysis as reviewed (no second analysis), then checked by pySigma; errors go back for one rewrite. |
-| Coverage check | Do the rules cover the attack vector? Gaps are listed in the panel. (The web app does not retry on a gap — a known bug, defect 20 — even if the line says "regenerating".) |
+| Coverage check | Do the rules cover the attack vector? If they miss it, **one** regeneration with the gaps as feedback (fixed 2026-09-27 — before, the web app said "regenerating" but never did: defect 20). Remaining gaps are listed in the panel. |
 
 **The review, in the Analysis panel** — *what the model understood; check it against the report*: the
 attack vector and each pattern with the model's basis (**Confirm / Reject**); strings excluded as
@@ -57,9 +57,19 @@ deserialization over HTTP (confidence 90%); log source `webserver`; 5 valid rule
 via the authentication bypass, execution via the deserialization RCE, credential dumping,
 malicious ASPX file, …). Point out: the first rule is `category: webserver` with **no invented
 product** — exactly how SigmaHQ writes web rules (Phase 2's work).
-**Talking point for human verification:** one rule looks for `ysoserial.exe` running — but
+**Talking point for human verification:** the model proposes `ysoserial.exe` as a pattern — but
 ysoserial is usually run on the *attacker's* machine to build the payload, so it would rarely show
 up on the victim's server. This is why an analyst has to verify what the model understood.
+**With the review (tested live 2026-09-27: analysis 113 s, generation 134 s):**
+1. Log source: `webserver` is the model's first suggestion and right — **Use this**.
+2. Attack patterns: **Reject** `ysoserial.exe` (say why, as above). The same value is also an
+   indicator — reject it there too; rejecting a pattern does not reject it elsewhere (known gap).
+3. ATT&CK: **Reject** T1566.002 (spearphishing) and T1204.002 (user execution) — neither fits a
+   server exploit; **Confirm** T1190.
+4. **Generate rules.** In the live test the first attempt missed 4 of 7 patterns; the app said
+   "regenerating" and did (defect 20 fixed) → 1 of 7 missed. The rules came out `webserver` (one
+   `process_creation / windows` for the ASPX file), tagged T1190, none of the rejected techniques;
+   ysoserial appeared only in a description ("used to generate ViewState payloads"), not in a detection.
 
 ### Backup URL — sudo CVE-2019-14287, fast and easy to follow
 `https://www.openwall.com/lists/oss-security/2019/10/14/1` — **89 s live**. Local privilege

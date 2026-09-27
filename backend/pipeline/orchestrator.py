@@ -433,23 +433,27 @@ class PipelineOrchestrator:
         self._run_coverage_check(context)
         coverage = context.get("coverage_check", {})
         n_warnings = len(coverage.get("warnings", []))
+
+        # Coverage-directed regeneration pass.
+        # Skipped if a validation-driven regeneration already ran — at most
+        # 1 regeneration per request total (quota-safe). Decided once, as in
+        # run_sync: the check marks the request as retried when it says yes, so
+        # asking it again would always say no (defect 20).
+        regenerate = (
+            not context.get("generation_retried")
+            and self._should_regenerate_for_coverage(context)
+        )
         yield {"event": "stage", "data": {
             "stage": "coverage_check", "status": "complete",
             "detail": (
                 "No gaps detected" if n_warnings == 0
                 else f"{n_warnings} coverage gap(s) — regenerating with feedback..."
-                if self._should_regenerate_for_coverage(context)
+                if regenerate
                 else f"{n_warnings} coverage gap(s) — see notes below"
             ),
         }}
 
-        # Coverage-directed regeneration pass.
-        # Skipped if a validation-driven regeneration already ran — at most
-        # 1 regeneration per request total (quota-safe).
-        if (
-            not context.get("generation_retried")
-            and self._should_regenerate_for_coverage(context)
-        ):
+        if regenerate:
             yield {"event": "stage", "data": {
                 "stage": "generation", "status": "running",
                 "detail": "Regenerating to close coverage gaps...",

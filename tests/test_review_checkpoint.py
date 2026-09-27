@@ -28,6 +28,16 @@ detection:
         CommandLine|contains: 'sudo -u#-1'
     condition: selection
 """
+# A rule that misses the attack vector: no payload signature, entry point or attacker input.
+MISSES_VECTOR = """title: Whoami after a privilege change
+logsource:
+    category: process_creation
+    product: linux
+detection:
+    selection:
+        Image|endswith: '/whoami'
+    condition: selection
+"""
 
 
 class FakeStage:
@@ -40,7 +50,8 @@ class FakeStage:
         return context
 
 
-def _orchestrator(first_review_valid=True):
+def _orchestrator(first_review_valid=True, rules_cover_from=1):
+    """rules_cover_from: the first generation whose rule covers the attack vector."""
     orch = PipelineOrchestrator.__new__(PipelineOrchestrator)
     orch.calls = []
     orch.seen_by_generation = []
@@ -65,7 +76,9 @@ def _orchestrator(first_review_valid=True):
             "history": list(c.get("history") or []),
             "retry": bool(c.get("validation_feedback")),
         })
-        c["generation"] = {"rules": [{"yaml_content": RULE, "explanation": "why"}], "notes": ""}
+        covers = len(orch.seen_by_generation) >= rules_cover_from
+        c["generation"] = {"rules": [{"yaml_content": RULE if covers else MISSES_VECTOR, "explanation": "why"}],
+                           "notes": ""}
         c["rag_sigma"], c["rag_sysmon"] = ["sigma doc"], ["sysmon doc"]
 
     def review(c):
@@ -73,7 +86,8 @@ def _orchestrator(first_review_valid=True):
         valid = first_review_valid or len(reviews) > 1
         c["validation"] = {"is_valid": valid,
                            "issues": [] if valid else [{"severity": "error", "message": "bad field"}]}
-        c["optimization"] = {"rules": [{"yaml_content": RULE, "changes_made": []}], "all_changes": []}
+        c["optimization"] = {"rules": [{"yaml_content": r["yaml_content"], "changes_made": []}
+                                       for r in c["generation"]["rules"]], "all_changes": []}
 
     stage = lambda name, effect: FakeStage(name, orch.calls, effect)  # noqa: E731
     orch.preprocess = stage("preprocess", lambda c: c.update(preprocessed={
@@ -241,3 +255,44 @@ def test_an_invalid_review_is_refused_before_any_event():
     with pytest.raises(ReviewError):
         orch.generate_after_review(state, {"techniques": {"9": "rejected"}})
     assert orch.calls == []
+
+
+# --- defect 20: the stream's coverage retry ---------------------------------------
+# `_should_regenerate_for_coverage` marks the request as retried when it says yes. The stream
+# asked it once to word the progress line, so the real check always found "already retried":
+# the web app never regenerated for a coverage gap while saying "regenerating". `run_sync`
+# (the harness) asks once and retries, so the evaluated pipeline did retry.
+
+def test_the_stream_regenerates_once_when_the_rules_miss_the_attack_vector():
+    orch = _orchestrator(rules_cover_from=2)
+    steps = _steps(list(orch.run_stream(URL)))
+    assert orch.calls == ANALYSIS_CALLS + ["generate", "review", "generate", "review"]
+    assert ("stage", "generation", "running", "Regenerating to close coverage gaps...") in steps
+    assert steps[-1] == ("stage", "coverage_check", "complete", "Gaps resolved")
+
+
+def test_generation_after_review_regenerates_on_a_coverage_gap_too():
+    orch = _orchestrator(rules_cover_from=2)
+    state = _saved(orch)
+    orch.calls.clear()
+    list(orch.generate_after_review(state, {}))
+    assert orch.calls == ["generate", "review", "generate", "review"]
+
+
+def test_the_progress_line_says_regenerating_only_when_it_regenerates():
+    # A validation retry already used the one regeneration a request gets.
+    orch = _orchestrator(first_review_valid=False, rules_cover_from=99)
+    steps = _steps(list(orch.run_stream(URL)))
+    assert orch.calls == ANALYSIS_CALLS + ["generate", "review", "generate", "review"]
+    coverage = [d for (_, stage, _, d) in steps if stage == "coverage_check"]
+    assert len(coverage) == 1 and coverage[0].endswith("see notes below")
+
+
+@pytest.mark.parametrize("first_review_valid, rules_cover_from", [
+    (True, 1), (True, 2), (True, 99), (False, 1), (False, 99)])
+def test_the_stream_regenerates_exactly_when_the_harness_path_does(first_review_valid, rules_cover_from):
+    harness = _orchestrator(first_review_valid, rules_cover_from)
+    harness.run_sync(URL)
+    web = _orchestrator(first_review_valid, rules_cover_from)
+    list(web.run_stream(URL))
+    assert web.calls == harness.calls
