@@ -33,7 +33,7 @@ app on 2026-09-27 (pipeline frozen at `a6e9157`), fetching the pages from the in
 | Analysis | Indicators, ATT&CK techniques, and the **recommended log source**, chosen from a table generated from SigmaHQ's own rules. |
 | Review & Confirm | **What the LLM understood** about the attack — this is where the analyst checks it (see "Be honest about"). |
 | Generation → Review | Rules written, then checked by pySigma; errors go back for a rewrite. |
-| Coverage check | Do the rules cover the attack vector? One retry if not. |
+| Coverage check | Do the rules cover the attack vector? Gaps are listed in the panel. (The web app does not retry on a gap — a known bug, defect 20, found 2026-09-27 — even though the line says "regenerating".) |
 
 **Then walk through the Analysis panel on the right** — *what the model understood; check it against
 the report*: the attack vector (how it starts, entry point, what the attacker controls, where it would be
@@ -63,9 +63,11 @@ windows 95%" right under an attack vector about `sudo` — the analyst catches i
 
 ### If the live run fails
 The runs are saved as chats in the list: "https://research.eye.security/…" (SharePoint, correct), and
-three "https://www.openwall.com/lists…" — the **lowest** is the correct run (Linux rules); the two above
-it recommended Windows (verification examples). Opening a saved chat also fills the Analysis panel. Say
-plainly it was run earlier.
+several "https://www.openwall.com/lists…" — the **lowest** is the correct run (Linux rules); the two
+above it recommended Windows (verification examples). The two **newest** (top) come from testing the
+analyst review on the `analyst-review` branch — Linux rules chosen by the analyst; on `main` they show an
+extra "The analysis is ready…" line, so prefer the lowest. Opening a saved chat also fills the Analysis
+panel. Say plainly it was run earlier.
 (The "Empty Chat" entries from testing can be deleted.)
 
 ---
