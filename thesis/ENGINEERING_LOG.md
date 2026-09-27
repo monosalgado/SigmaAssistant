@@ -3491,3 +3491,65 @@ suggestion measure, web labels on non-web gold 15/46, S3); (2) the stage may cop
 literally (counted); (3) the 10-technique cap could cut gold techniques (S4; in the Change 25
 data 21 of the 24 gold techniques found were in the first 10); (4) none expected on S4 from the
 hyphen tags (S4 compares techniques only).
+
+---
+
+## 2026-09-26 — The shared run measured (Changes 30–33): each change did its job; the joint scores held
+
+`eval/results/p2g_shared60.jsonl`, arm `p2g_shared`, code `a6e9157` (Changes 22 + 24–33), same
+60 cases, 154 s per case, no relaunch, no manual step; no pipeline or harness file changed during
+the run. **CITABLE.** No answer cut at the limit.
+
+### Pre-registered measures, against `p2f_product60.jsonl`
+| Change | Measure (tool) | Before | After |
+|---|---|---|---|
+| **30** | example text in the vector / in the rules / anywhere (`count_example_copies.py`) | 1 / 1 / 6 | **0 / 0 / 0** (no placeholder copied) |
+| 30 | payload patterns absent from the input — upper bound (same) | 62 in 34 cases | 62 in 35 cases |
+| **31** | technique IDs written that ATT&CK does not have (`count_techniques.py`) | 0 | 1 in 1 case (`0033cf83`: `T1086`, not in the current ATT&CK data) — **dropped and recorded** |
+| 31 | rules tagged with such an ID (same) | 0 | 0 |
+| **32** | techniques written per case: median / max / cases over 10 (same) | 5 / 18 / 12 | **10 / 10 / 0** |
+| 32 | cases with an answer cut at the limit (same) | 1 | 0 |
+| **33** | tactic tags underscore / hyphen (`count_rule_conventions.py`) | 141 / 8 | **0 / 144** |
+| 33 | pySigma "Invalid MITRE ATT&CK tagging" issues (same) | 145 | **2** |
+| 33 | rules with the old example id / cases with a duplicate id / placeholder ids left (same) | 1 / 0 / 0 | 0 / 0 / 0 |
+| joint | **S3 exact, paired (n = 49)** (`compare_runs.py`) | 18 | 20 — 3 gained, 1 lost; p = 0.625 |
+| joint | S1 valid first rule (n = 60) | 56 | 52 — 7 lost, 3 gained; p = 0.344 |
+| joint | S4 ATT&CK F1 (n = 33) | 0.146 | 0.138 — −0.008, 95% CI [−0.071, +0.049] |
+| joint | S5 detection F1 (n = 48) | 0.300 | 0.286 — −0.014, 95% CI [−0.092, +0.067] |
+| joint | top suggestion = gold, all rows (`compare_suggestions.py`) | 23 | 23 — 4 gained, 4 lost; p = 1.0 (web gold 9 → 6, other 14 → 17) |
+| joint | first rule = top suggestion; added fields (`diagnose_logsource.py`) | 53/56; 0 | 50/52; 0 |
+Also: rules per case 4.00 → 3.65 (95% CI [−0.78, +0.03]); tokens and seconds no difference; S2
+(mean pySigma issues per rule, `summarise.py`) **0.77 → 0.00** — see the reading. Attack-vector
+web telemetry on non-web gold 15/46 → 12/43.
+**Stated risks:** (1) placeholders teaching less — the suggestion measure is unchanged overall
+(23 = 23), but web gold suggestions fell 9 → 6 (3 cases; within the analysis stage's run-to-run
+swaps seen before, not established either way); (2) placeholder copies — none; (3) the cap
+cutting gold techniques — S4 no detectable change; (4) S4 from the tags — none.
+
+### Read case by case (post-hoc)
+- **S1: 3 of the 7 lost first rules are defect 5** — the generation answer failed to parse
+  ("Invalid \escape", a backslash in a Windows path inside the JSON string), on both attempts,
+  so those cases have no rules (`c5a178bf`, `b014ea07`, `ec3a3c2f`). The log has 6 such escape
+  failures (the Change 29 run: 1). None of Changes 30–33 touched backslashes or the output
+  format; the cluster is recorded, not attributed. The other 4 are ordinary YAML errors, of the
+  kind that swap between runs (3 were gained the same way).
+- **Change 32's cap became a quota:** asked for "at most the 10 most relevant", the analysis
+  now lists exactly 10 in most cases (median 5 → 10). The rules did not follow: technique tags
+  on the first rule, median 1 before and after, mean 1.47 → 1.62 (one-off count).
+- **S2 was mostly the tag style.** With the hyphenated tags, pySigma's issues per rule fall from
+  0.77 to 0.00: S2 in every earlier run mostly measured the example's outdated tag convention.
+
+### Cumulative, against baseline v2 (not pre-registered as a test)
+S3 paired **6 → 22 of 50 (18 gained, 2 lost), p < 0.001**; S5 +0.087, 95% CI [−0.017, +0.193];
+S4 −0.024, CI [−0.067, 0.000]; rules per case −0.50, CI [−1.03, −0.03]. S3 against chance
+(descriptive; the test is for the held-out run): 22/52 = 0.423, 95% Wilson [0.299, 0.558].
+
+### Reading
+- Each change did what it was built for, on its own measure: copies of the examples 0 (defect
+  15 at its cause), tags in SigmaHQ's style (pySigma issues 145 → 2), technique lists bounded
+  (over 10: 12 → 0), invented IDs checked. None moved S3, S4 or S5 detectably — as expected for
+  31–33, and for 30 its purpose was rule quality (no invented names in rules), not S3.
+- Open: the quota effect of "at most 10"; the defect-5 cluster (prompt review P5, YAML in
+  JSON); web gold suggestions 9 → 6 (watch in the held-out run).
+- **This is the last planned run on the tuning cases.** Next: plan 2.9, the held-out
+  confirmation, where the pre-registered chance test is applied.

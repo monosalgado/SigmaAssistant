@@ -268,15 +268,17 @@ Order agreed with the user (2026-09-24/25, revised 2026-09-26): (c) 2.2 → (d) 
 run — the last run on the 60 tuning cases; then 2.9, the held-out confirmation (two runs).
 **Shared run contents (2026-09-26):** Change 30 (defect 15, a+b), 31 (2.7 ID check), 32 (2.8, ≤ 10
 techniques), 33 (prompt review item 1: the rule writer's example — hyphen tactic tags, no fixed id).
-**Code done 2026-09-26; run `p2g_shared60.jsonl` (arm `p2g_shared`) vs `p2f_product60.jsonl`** —
-measurement plan in the log ("The shared run: Changes 30–33").
+**Done 2026-09-26** (`p2g_shared60.jsonl`, CITABLE): example copies 1/1/6 → 0/0/0; tactic tags
+141/8 → 0/144 (pySigma tag issues 145 → 2); technique lists over 10: 12 → 0 (but the cap became a
+quota, median 5 → 10); 1 invented ID dropped; joint S3 18 → 20 of 49 (p = 0.63), S1 56 → 52 (3 are
+defect 5), S4/S5 no change. Cumulative vs v2: S3 6 → 22 of 50. **Last run on the tuning cases.**
 
 **Exit test (built 2026-09-26, `eval/summarise.py`):** exact binomial, one-sided, alpha 0.05,
 against 0.173 — applied **once, to the final pipeline's held-out run (2.9, step 3)**
 (pre-registered for "the final Phase 2 run"; revised 2026-09-26 before any held-out result, so
 the test is not run on the cases the changes were tuned on). Descriptive so far:
 after step (c) S3 = 14/57, p = 0.104; p < 0.05 needs ≥ 16/57. After step (d) 13/56, p = 0.160;
-needs ≥ 16/56. After 2.6: 14/55, p = 0.082; needs ≥ 15/55. After 2.6b: 21/56, p < 0.001 (descriptive; tuning cases).
+needs ≥ 16/56. After 2.6: 14/55, p = 0.082; needs ≥ 15/55. After 2.6b: 21/56, p < 0.001 (descriptive; tuning cases). After the shared run: 22/52.
 **Exit criteria:** S3 significantly above the null baseline, or the time-box is
 spent and the result is written up as a finding.
 
@@ -377,6 +379,8 @@ From the prompt review (2026-09-26, `thesis/PROMPT_REVIEW.md` §5) — awaiting 
 - 4 fewer, ordered imperatives in generation · 5 review told the log-source decision (after M1)
 - 6 rules as YAML blocks, not JSON strings · 7 shorter analysis answer (after Change 32)
 - H8 delete the five unused prompts
+- (shared run) "at most the 10 most relevant techniques" became a quota: median 5 → 10 — reword?
+- (shared run) defect 5 cluster: 6 generation JSON escape failures (1 in the run before), 3 cases with no rules
 
 From the retrieval check (2026-09-26, user: a and b to the Inbox) — awaiting triage:
 - a record what each retrieval returned (document ids per collection) in every row — measurement only

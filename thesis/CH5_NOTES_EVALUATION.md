@@ -234,6 +234,11 @@ the evaluation non-reproducible and put a model in the position of grading itsel
 | S4 | ATT&CK technique precision/recall/F1, exact + parent-level | gold rule |
 | S5 | `detection` field-name precision/recall/F1 | gold rule |
 
+`[DISCLOSE]` (added 2026-09-26) **Until Change 33, S2 was dominated by one warning**: underscore
+tactic tags copied from the rule writer's example ("Invalid MITRE ATT&CK tagging", 145 issues in
+the Change 29 run). With SigmaHQ's hyphenated tags S2 fell 0.77 → 0.00 issues per rule. S2 values
+from earlier runs mostly measure that convention, not rule defects.
+
 ### Two rules that shaped the implementation `[DESIGN]`
 
 **1. Undefined ≠ zero.** `_prf()` returns `None`, never `0.0`, when a metric has no

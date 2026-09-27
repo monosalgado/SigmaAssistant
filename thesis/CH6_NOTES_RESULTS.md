@@ -175,7 +175,12 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
 - For the thesis: with this model, a concrete worked example is copied into reports that
   resemble it. Which example is copied depends on which reports look like it; changing the
   example does not remove the behaviour. Defect 15 stays open (options in the plan).
-- Log: defect-15 measurement entry and Change 12 (`ac725e1`, `f9b64f1`); "Change 27 measured".
+- `[MEASURED] 2026-09-26` **At its cause (Change 30, shared run): copies 0.** The examples keep
+  their structure but every invented value is a placeholder, and the prompt says nothing in them
+  may be reused: example text in the vector / rules / anywhere 1 / 1 / 6 → **0 / 0 / 0**, and no
+  placeholder was copied. `[DISCLOSE]` Shared run with Changes 31–33 (joint S3–S5: no detectable
+  change); payload patterns absent from the input (an upper bound on invention) unchanged, 62.
+- Log: defect-15 measurement entry and Change 12 (`ac725e1`, `f9b64f1`); "Change 27 measured".; "The shared run measured".
 
 ### 6.4.3 A bias the window did not fix — web telemetry for host rules `[MEASURED] 2026-09-23`, reduced 2026-09-26 (Change 27)
 - After Change 12, the attack-vector stage still names `webserver_access_log` as primary
@@ -382,6 +387,18 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
 - Defect 6: the `fast` tier is dead code.
 
 ---
+
+### 6.4.10 The example taught an outdated convention — tactic tags `[MEASURED] 2026-09-26`
+- The rule writer's one worked example tagged `attack.credential_access`; SigmaHQ writes
+  `attack.credential-access` (3,021 of 3,021 in the main set, 389 of 389 gold tags). Although
+  every prompt also carried three real SigmaHQ rules, the rules followed the example: 137 of
+  143 tactic tags used the underscore (Change 28 run), and pySigma flagged each.
+- Fix (Change 33, shared run, prompt only): the example and instruction 11 use the hyphenated
+  form → **tactic tags 141 / 8 → 0 / 144; pySigma tag issues 145 → 2**; S2 (issues per rule)
+  0.77 → 0.00.
+- For the thesis: evidence of how strongly one hand-written example steers this model — more
+  than retrieved real rules. And `[DISCLOSE]` **S2 in every earlier run mostly measured this tag
+  style**, not rule defects.
 
 ## 6.5 A negative result — the security-pretrained model (contribution 3, dropped) `[MEASURED] 2026-09-23`
 
