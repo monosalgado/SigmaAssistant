@@ -408,9 +408,10 @@ From Change 34's live test (2026-09-27) — awaiting triage:
 - ~~**Defect 20**: the web app's coverage retry never runs~~ — **fixed 2026-09-27 on `analyst-review`**
   (user): decided once, as `run_sync` does; a test holds the stream to the harness path's calls
 - the review stage merged 3 generated rules into 1 ("Merged duplicate rules") — measure how often review drops rules (needs M1)
-- ~~P4 check~~ — **built 2026-09-27 (Change 35)**: log source + rejected techniques → one rewrite; rejected strings in detection shown, not rewritten; a rewrite with no rules keeps the rules before it. Live retest pending
+- ~~P4 check~~ — **built 2026-09-27 (Change 35)**: log source + rejected techniques → one rewrite; rejected strings in detection shown, not rewritten; a rewrite with no rules keeps the rules before it. Retested live 2026-09-27 (sudo, SharePoint)
 - remove the unused `feedback_data` / `_apply_user_feedback` path (superseded by Change 34)
 - the Analysis panel (and so the review) is hidden under 900 px wide
+- the review can reject but not add: SharePoint's analysis once omitted T1190 (Exploit Public-Facing Application) — adding a technique/indicator = "editing values"
 - ~~rejecting a pattern does not reject the same string as an indicator~~ — **linked 2026-09-27 (Change 35)**, exact match; PoC behaviours are display-only and do not reach generation
 
 ## Security — do first (the user's action)

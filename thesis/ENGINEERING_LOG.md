@@ -3902,3 +3902,29 @@ The first departure of that run was real: the first rule was `process_creation /
 where the analyst chose `linux / auditd` (Sigma's service form has no category).
 Tests: 521 passed (+31). **Live retest of the fixed code: pending** — the VPN dropped (Spark
 unreachable) after the fixes.
+
+---
+
+## 2026-09-27 — Change 35 live retest, after the VPN came back (user: "run the retest")
+
+Both cases through the web app on `5294a99` (anecdotes, not measurements).
+**Sudo (CVE-2019-14287)** — the analysis was identical to the failing run (Windows again, 7 of 8 live
+runs today); the same review: `linux / auditd` chosen, the bare pattern `sudo` rejected (its indicator
+copy crossed out with it — "1 copy rejected with them"), T1548.004, T1059.001, T1562.001 rejected.
+Generation 3 rules → coverage regeneration (3 gaps → 1) → the check found **1 enforced departure**
+(first rule `process_creation / linux / auditd` against the analyst's `linux / auditd`) → **one
+rewrite, which produced 3 rules this time** → the model **kept the extra `category: process_creation`**
+on all three. Shown plainly: "Still departing after one rewrite. The rules were not edited — check
+them before use", and listed under the rules. The rules detect on the `-u#-1` / `-u#4294967295`
+arguments; no rule detected on the bare `sudo`, so nothing was flagged; no rejected technique in any
+tag. 146 s. The first fix (no rules → keep the earlier rules) was not exercised: the rewrite parsed.
+**SharePoint (ToolShell)** — analysis 111 s; `ysoserial.exe` was pattern 3 and indicator 35: rejecting
+the pattern crossed out the indicator (buttons disabled). Weak techniques this run (T1036.012
+"Browser Fingerprint", T1216, T1185, T1189 drive-by, T1566.002) rejected; `webserver` confirmed; **T1190
+was not proposed at all** (the review can reject but not add). Generation 5 rules → coverage
+regeneration (2 gaps → 1/7) → check: **"the log source and techniques follow your review"** — no
+rewrite. First rule `webserver`; no rejected technique tagged; **`ysoserial` appears nowhere in the
+rules**, description included. 164 s.
+**Observed:** a model that keeps a non-standard log-source form after one explicit rewrite (sudo) — the
+check's value is that the analyst sees it; code does not force it. Adding a technique the model missed
+(T1190) is outside this slice ("editing values", not built).
