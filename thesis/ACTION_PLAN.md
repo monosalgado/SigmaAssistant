@@ -452,6 +452,20 @@ From Change 34's live test (2026-09-27) — awaiting triage:
 - the review can reject but not add: SharePoint's analysis once omitted T1190 (Exploit Public-Facing Application) — adding a technique/indicator = "editing values"
 - ~~rejecting a pattern does not reject the same string as an indicator~~ — **linked 2026-09-27 (Change 35)**, exact match; PoC behaviours are display-only and do not reach generation
 
+Assistant roadmap (proposed 2026-09-28, user: "add them to the plan") — awaiting triage:
+- R1 the analyst can **add and edit** techniques, indicators, patterns — not only reject (T1190 was missing once)
+- R2 **evidence "found in the report"**: code checks each quoted basis against the page; verified-quote rate (= plan 3.3)
+- R3 **rule editor with live pySigma validation**, incl. log-source categories that do not exist in Sigma (= plan 3.5)
+- R4 **"ask the assistant to revise this rule"** from a plain-words instruction, then validated (design decision 3)
+- R5 **a stronger rewrite**: 3 of 12 departures fixed (5.3) — the analyst's decisions earlier in the prompt; service form; rule order
+- R6 **an exportable report**: what the model understood, evidence, the analyst's decisions, the rules (= plan 3.1)
+- R7 **better log-source suggestions** (analysis stage): the log source gates S5 (5.3); 45% held-out, weakest on host and service sources
+- R8 **a value-level detection score**: S5 compares field names only (sudo: S5 = 1.0, the human's match broader)
+- R9 **do the rules fire?** replay with Zircolite over SigmaHQ's 138 regression EVTX files; detonation in the lab (= 5.6, Phase 0)
+- R10 **false positives**: the rules over benign logs
+- R11 **"a rule already exists"**: search SigmaHQ for the same CVE/behaviour before generating (prior art: SIGMERGE)
+- R12 **a realistic simulated analyst**: wrong 10–30% of the time — what a wrong confirmation costs (extends 5.3)
+
 ## Security — do first (the user's action)
 
 - [x] **S1** Delete the Gemini API key in Google AI Studio / Cloud Console. The
@@ -500,6 +514,15 @@ so removing one is reversible; untracked and ignored files have no such safety n
       drifted (8 declared fields vs 15 real, no attack-vector model).
 
 ## Parking lot — good ideas, deliberately not scheduled
+
+- **From the assistant roadmap (2026-09-28), beyond the thesis:** R13 conversion to SIEM/EDR
+  queries (Splunk SPL, Sentinel KQL, Elastic) through pySigma backends with field mappings — Phase 0
+  option D; new packages need the user's approval · R14 **prompt-injection hardening** — fetched
+  pages are untrusted input; test with poisoned pages · R15 learn from the analyst's decisions (which
+  stage errs most; later an evaluation or training set — examples are copied, so carefully) · R16
+  detection-as-code: an approved rule becomes a pull request with its test data · R17 watch CTI feeds
+  and queue new reports for review · R18 several analysts: logins and an audit trail of who confirmed
+  what.
 
 - **A run without retrieval (RAG ablation)** — user, 2026-09-26: later, with the proper testing
   (Phase 5). Answers "does the RAG help?"; never measured (`--arm` is a label, no ablation is wired).
