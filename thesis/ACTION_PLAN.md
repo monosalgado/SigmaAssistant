@@ -323,7 +323,7 @@ spent and the result is written up as a finding.
         calls 0 of 91; S1 52 → 57 (p = 0.125, the noise-floor pattern — not attributable); no harm
         detected on S3–S5, tokens, seconds; rules per case +0.52 (CI [0.12, 0.97]). The old format
         loses 0–3 cases per run, so the gain is the failure mode gone, not a significant S1 rise.
-        **Keep it?** — the user's call (recommended: yes; merge with `analyst-review` after the demo).
+        **Kept (user, 2026-09-28).** Merged with the review work into `main` after the demo.
 
 ## Phase 3 — Assistant backend (after Phase 0 approves it)
 
@@ -594,6 +594,7 @@ so removing one is reversible; untracked and ignored files have no such safety n
 | 2026-09-26 | Prompt review item 1 (the rule writer's example: hyphen tactic tags, no fixed id) joins the shared run as Change 33 | user |
 | 2026-09-27 | Interface: a visual-only polish before the live demo (no emojis, own sober look), one revertable commit; the real GUI work stays Phase 4 | user |
 | 2026-09-27 | Direction after Phase 2: improve **detection quality**, and in the assistant keep the analyst in the loop to **verify what the LLM understood about the attack** — the tool must not depend on generated rules being right ("it is almost impossible to always produce Sigma rules that are true"). Pending the professor (Phase 0) | user |
+| 2026-09-28 | Keep Change 36 (rules as YAML blocks): the failure mode is gone at no measured cost; merge with the review work after the demo. The two run worktrees removed | user |
 | 2026-09-27 | Order after Changes 34–35: the simulated-analyst experiment (5.3) first, then defect 5 (rules as YAML blocks, prompt-review item 6); 3.6 only if `run_sync` is ever routed through the review path; merge `analyst-review` into `main` after the demo. No A/A run on its own (it comes as 5.3's by-product) | user |
 | 2026-09-27 | Start the confirm/correct step now (Phases 3/4 before the professor's sign-off); first slice = log source + reject items (confirm/reject patterns, techniques, indicators; restore excluded; choose any SigmaHQ log source; a note). Built on a branch; `main` stays the demo's code | user |
 | 2026-09-26 | Phase 2 frozen at `a6e9157` before the held-out confirmation; open items (quota, defect 5, prompt review, retrieval) go to the next phase | user |

@@ -4084,3 +4084,14 @@ cases, because the old format's losses are rare and irregular (0–3 per run). R
 (Inbox).
 **Branches:** `analyst-review` merged into `defect5-yaml-rules` first (`13bc77e`; the log's two
 appended ends were the only conflict, kept both in date order; 556 tests passed after the merge).
+
+---
+
+## 2026-09-28 — Change 36 kept; the run worktrees removed (user)
+
+User: "keep change 36, remove the worktrees and push it". Change 36 stays in the pipeline (branch
+`defect5-yaml-rules`, which carries all of `analyst-review` too); it goes into `main` with the
+review work after the demo. The worktrees `../SigmaAssistant-run-oracle` and `../SigmaAssistant-run-c36`
+were removed — their data links unlinked first, then `git worktree remove`; they held only those links
+and each preflight's 2-case smoke output. `.env`, `data/chroma_db`, `data/sigma` and the 379 snapshots
+were checked intact afterwards; `../SigmaAssistant-baseline-v2` is kept (user, 2026-09-27).
