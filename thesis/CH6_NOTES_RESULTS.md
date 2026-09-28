@@ -461,6 +461,16 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
   than retrieved real rules. And `[DISCLOSE]` **S2 in every earlier run mostly measured this tag
   style**, not rule defects.
 
+### 6.4.11 One bad escape lost every rule — rules inside JSON strings (defect 5) `[MEASURED] 2026-09-28`, fixed (Change 36)
+Generation returned each rule inside a JSON string, so every backslash was escaped twice; one bad
+escape (`Invalid \escape`, a Windows path) made the whole answer unreadable and the case lost every
+rule — 3 cases in the shared run, 1 in the frozen pipeline's rerun, 0 in another run: rare and
+irregular. Change 36 has the rule writer answer with each rule as a ```yaml block, as in a Sigma file.
+On the 60 tuning cases, paired against the reference: **cases lost this way 3 → 0, unreadable
+generation answers 0 of 91 calls**; S1 52 → 57 (p = 0.125) is the pattern the noise floor also shows,
+so it is not claimed; no detectable effect on S3–S5, tokens or time; **+0.52 rules per case**
+(CI [0.12, 0.97]). What is claimed: the failure mode is gone at no measured cost. (log 2026-09-28)
+
 ## 6.5 A negative result — the security-pretrained model (contribution 3, dropped) `[MEASURED] 2026-09-23`
 
 > **Not used in the thesis** (user, 2026-09-25: "We are not going to use Foundation-Sec at all"). Kept as history only; do not write it up.

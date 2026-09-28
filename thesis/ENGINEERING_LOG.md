@@ -4054,3 +4054,33 @@ Chapter notes: CH6 §6.0b; CH7 49 (upper bound), 50 (noise); CH5 5.8.
 (the first-rule block already carries "no `category`"); stage order — the first rule is the
 initial-access rule even when the analyst's log source is a later stage.
 Run 2 (Change 36) started 20:57 after its preflight passed.
+
+---
+
+## 2026-09-28 — Change 36 (defect 5) measured: no answer lost to the format; no harm detected
+
+Run 2 of the chain, worktree `../SigmaAssistant-run-c36` at `c605223`: **60 / 60, 0 failed, 171.1
+min** (20:57–23:48), wrapper exit 0; `eval/results/c36_yaml60.jsonl`, **CITABLE**. Read as
+pre-registered against `p2g_shared60` (code `a6e9157`, the same 60 cases).
+**Primary** (`eval/count_generation_failures.py`, committed before the run):
+- **Cases with no rule because generation's answer could not be read: 3 → 0.** Context — the old
+  JSON format loses 0 to 3 such cases per run on these cases: `p2f_product60` 0, tonight's unreviewed
+  arm (same frozen code) 1 (`71c432c4`), `p2g_shared60` 3. So 3 → 0 is not by itself a significant
+  difference; the reference run was an unlucky one.
+- **Unreadable generation answers: 0 of 91 calls** (recorded from this change on). `[READ]` The run
+  logs (local) have 8 "Generation failed" lines in tonight's old-format run (both arms) and **0** in
+  this one.
+- **S1 52 → 57 of 60** (1 only A, 6 only B; exact McNemar p = 0.125) — the same pattern as the noise
+  floor measured tonight (U against the same reference: 52 vs 57, 1/6), so **not attributable**.
+**Watched for harm, paired:** S3 22 → 24 of 51 (2/4, p = 0.688); S4 +0.013 (95% CI [−0.040, 0.071]);
+S5 +0.059 (CI [−0.039, 0.155]); tokens −201 (CI [−3,636, 3,336]); seconds +17.0 (CI [−6.9, 54.3]) —
+**none detectable**. **Rules per case +0.517, CI [0.117, 0.967]** — the model writes more rules in the
+new format; part of it is the 3 recovered cases (`c5a178bf` 0 → 8 rules, `ec3a3c2f` 0 → 3, `b014ea07`
+0 → 2 — its first rule does not parse), the rest not examined.
+**Reading:** the change removes the failure mode it targeted (no unreadable answer in 91 calls, against
+several per run before) without a detectable cost on any score. It cannot be shown to raise S1 on 60
+cases, because the old format's losses are rare and irregular (0–3 per run). Review still returns JSON
+(a failed review falls back to the rules as they were); the PoC stage's JSON failed once in the smoke
+(Inbox).
+**Branches:** `analyst-review` merged into `defect5-yaml-rules` first (`13bc77e`; the log's two
+appended ends were the only conflict, kept both in date order; 556 tests passed after the merge).

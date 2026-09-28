@@ -293,7 +293,7 @@ spent and the result is written up as a finding.
 
 ## Next pipeline change (user order, 2026-09-27)
 
-- [>] **Change 36 — defect 5: the rule writer answers in YAML blocks, not JSON strings**
+- [x] **Change 36 — defect 5: the rule writer answers in YAML blocks, not JSON strings**
       (prompt review item 6, P5). Built on branch `defect5-yaml-rules` (off `analyst-review` at
       `c3f3e76`), so the simulated-analyst run (5.3) stays on the frozen pipeline.
       *Why:* generation returns every rule as a JSON string, so each backslash is escaped twice; a
@@ -319,6 +319,11 @@ spent and the result is written up as a finding.
         --out eval/results/c36_yaml60.jsonl`; then `compare_runs.py` against `p2g_shared60` and
         `count_generation_failures.py` on both.
       - Seen: the PoC stage's JSON failed once in the smoke — the same defect in another stage (Inbox).
+      - **MEASURED 2026-09-28 (log):** cases lost to an unreadable answer 3 → 0; unreadable generation
+        calls 0 of 91; S1 52 → 57 (p = 0.125, the noise-floor pattern — not attributable); no harm
+        detected on S3–S5, tokens, seconds; rules per case +0.52 (CI [0.12, 0.97]). The old format
+        loses 0–3 cases per run, so the gain is the failure mode gone, not a significant S1 rise.
+        **Keep it?** — the user's call (recommended: yes; merge with `analyst-review` after the demo).
 
 ## Phase 3 — Assistant backend (after Phase 0 approves it)
 
