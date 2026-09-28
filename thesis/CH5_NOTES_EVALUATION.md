@@ -601,7 +601,8 @@ Write them as defects identified by code audit, not as improvements.
       within case, so only the decision differs; nothing else from the gold rule reaches the
       pipeline. Primary measure S5; S3 in O reported as *adherence*, not a gain (the review check
       enforces it). U against `p2g_shared60` doubles as the A/A noise floor. Measurement plan in
-      `ACTION_PLAN.md` 5.3, fixed before the run. Not run yet.
+      `ACTION_PLAN.md` 5.3, fixed before the run. **Run 2026-09-27 (265 min, 60/60, CITABLE):
+      results CH6 §6.0b.**
 
 ---
 

@@ -344,8 +344,12 @@ Which of these run depends on the contributions agreed in Phase 0.
 - [ ] **5.1** Final reference run on the finished system
 - [ ] **5.2** Chosen ablations. Not all of A1–A7: the likely core is A1 (no RAG) and
       A5 (single prompt vs pipeline), and the naive-baseline arm
-- [>] **5.3** Simulated-analyst experiment: confirm the gold logsource/techniques,
+- [x] **5.3** Simulated-analyst experiment: confirm the gold logsource/techniques,
       regenerate, rescore. **Moved up 2026-09-27 (user accepted the order).**
+      **DONE 2026-09-27 (log; CH6 §6.0b):** S5 0.388 → 0.531, +0.144, 95% CI [0.056, 0.241], n = 53 —
+      all of it in the 19 cases whose log source became right (post-hoc). Adherence 49/58; the one
+      rewrite fixed 3 of 12. By-product noise floor: S3 flips 6/51, S5 +0.086 (CI crosses 0).
+      A techniques oracle remains possible (not run).
       **Measurement plan — PROPOSED 2026-09-27, awaiting the user's approval; fixed before any run:**
       - *Question:* when the analyst gets the log source right, how much better are the rules?
         An upper bound — what confirmation is worth when the analyst is right (no user study).
@@ -441,6 +445,10 @@ From Change 34's live test (2026-09-27) — awaiting triage:
 - ~~P4 check~~ — **built 2026-09-27 (Change 35)**: log source + rejected techniques → one rewrite; rejected strings in detection shown, not rewritten; a rewrite with no rules keeps the rules before it. Retested live 2026-09-27 (sudo, SharePoint)
 - remove the unused `feedback_data` / `_apply_user_feedback` path (superseded by Change 34)
 - the Analysis panel (and so the review) is hidden under 900 px wide
+- (5.3) the one rewrite fixes 3 of 12 log-source departures — a stronger rewrite, or the analyst's choice earlier in the prompt?
+- (5.3) a service-form choice (`windows/security`, `linux/auditd`, `firewall`) gets a category added, although the block says "no `category`" (3 cases + live sudo)
+- (5.3) stage order: the first rule stays the initial-access rule when the analyst's log source is a later stage (4 of 9 departures use it in a later rule)
+- ~~M2 A/A run~~ — **done as 5.3's by-product** (CH6 §6.0b)
 - the review can reject but not add: SharePoint's analysis once omitted T1190 (Exploit Public-Facing Application) — adding a technique/indicator = "editing values"
 - ~~rejecting a pattern does not reject the same string as an indicator~~ — **linked 2026-09-27 (Change 35)**, exact match; PoC behaviours are display-only and do not reach generation
 
