@@ -3996,3 +3996,61 @@ new format in all 4 generation calls (0 unreadable); both first rules valid. Tho
 backslashes, so the smoke shows format compliance, not the escape fix — that is the 60-case run's.
 **Seen:** the PoC stage's own JSON failed once in the smoke (`Expecting ',' delimiter`) — the same
 family, another stage (Inbox).
+
+---
+
+## 2026-09-27 — The simulated-analyst run (5.3) and the Change 36 run, started (user: "run them")
+
+The user approved both measurement plans ("push it and run them"). **Never two runs from one
+checkout:** each runs from its own detached worktree at its commit — `../SigmaAssistant-run-oracle`
+at `c3f3e76` (5.3) and `../SigmaAssistant-run-c36` at `c605223` (Change 36, branch
+`defect5-yaml-rules`) — with `.env`, `data/chroma_db`, `data/sigma`, `eval/snapshots` linked from this
+repository (read-only use); results written into this repository's `eval/results/`. (A first
+attempt at the two worktrees named them wrongly — a zsh loop did not split its arguments — and put
+both at `c3f3e76`; both were removed, symlinks unlinked first, before any run; the linked data was
+checked intact: 379 snapshots.) Both harnesses' dry runs select **the same 60 cases as
+`p2g_shared60`** (checked by id; 5 flagged as contaminated, reported apart); 58 are choosable for
+the oracle arm.
+One chained background command, kept awake with `caffeinate`: preflight in the oracle worktree
+(**passed 16:26**: tunnel, model, context 262,144, smoke CITABLE) → run 1
+`run_resilient.py -- --sample 60 --seed 0 --no-web-enrich --oracle-logsource --arm oracle_ls --out
+eval/results/oracle_ls60.jsonl` → preflight in the Change 36 worktree → run 2 `… --arm c36_yaml --out
+eval/results/c36_yaml60.jsonl`. A watcher reports run 1's end or 40 min without a new row.
+
+---
+
+## 2026-09-27 — The simulated-analyst run (plan 5.3): results
+
+Run 1 of the chain: **60 / 60, 58 oracle rows, 0 failed, 265.4 min** (16:26–20:52); wrapper exit 0.
+`eval/results/oracle_ls60_unreviewed.jsonl` and `…_oracle.jsonl`, both **CITABLE** (`summarise.py`:
+every gate passed). Read as pre-registered, with committed code only (`compare_runs.py` U → O).
+**Primary — S5 detection-field F1, paired within case: 0.388 → 0.531, +0.144, 95% CI [0.056,
+0.241], n = 53** (13 higher, 6 lower, 34 the same). With the right log source as the analyst's
+choice, the rules use more of the right detection fields.
+**Reported, not tested:** S3 in O = adherence: 25 → 44 of 53 (19 gained, 0 lost; by construction
+mostly). S1 55 vs 54 of 58 (p = 1.000). S4 −0.007 (CI [−0.068, 0.052]). Tokens +4,330 (CI [−484,
+9,317]); seconds +2.8 (CI [−13.1, 16.5]); rules per case −0.07.
+**Adherence** (new committed counter `eval/count_review_checks.py`, the plan's "rewrites and
+remaining departures"; tests first): 58 checked; **followed first time 46**; 12 departed (all on the
+log source) → one rewrite each → **followed after it 3**; **still departing 9** (shown; rules not
+edited), of which **4 use the analyst's log source in a later rule** (post-hoc count added to the
+counter, test first) and **1 rewrite gave no rules** (`881834a4`; the earlier rules were kept — the
+Change 35 fix, exercised). Overall 49 / 58 follow the analyst. Read post-hoc: the 9 are form mixing
+(3 — a service-form choice, `windows/security` or `firewall`, given a category, as in the live sudo
+`linux/auditd` case) and stage order (6 — the gold is a later stage; the model keeps the
+initial-access rule first, generation instruction 2).
+**Where the S5 gain comes from** (post-hoc, `eval/s5_by_logsource.py`, `compare_runs.metric_value`
+pairing): **all from the 19 cases whose log source became right**, S5 0.132 → 0.521 (+0.389); right
+in both (25) 0.722 → 0.711; wrong in both (9) 0.000 → 0.056; became wrong 0. The log source gates
+the fields. (This script and its test were written together; the test was run with the script
+moved away first and seen to fail — weaker than test first, noted.)
+**Noise floor — the by-product** (`compare_runs.py p2g_shared60 → U`: code `a6e9157` both, same 60
+cases): S3 22 vs 24 of 51 (**6 discordant**, 2/4, p = 0.688); S1 52 vs 57 (1/6, p = 0.125 — the
+reference lost 3 cases to defect 5); **S5 +0.086, CI [−0.007, 0.187]** (11/5/34); S4 +0.046 (CI
+[−0.039, 0.141]); tokens +1,358 (CI crosses 0); **seconds +23.8 (CI [0.0, 60.2])** — the Spark is
+shared. So: ~1 case in 8 flips S3 between identical runs, and S5 swings of ~0.09 are within noise.
+Chapter notes: CH6 §6.0b; CH7 49 (upper bound), 50 (noise); CH5 5.8.
+**Inbox:** the one rewrite fixes 3 of 12 departures; service-form choices get a category added
+(the first-rule block already carries "no `category`"); stage order — the first rule is the
+initial-access rule even when the analyst's log source is a later stage.
+Run 2 (Change 36) started 20:57 after its preflight passed.

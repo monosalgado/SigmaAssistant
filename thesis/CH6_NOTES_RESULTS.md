@@ -51,6 +51,41 @@ confirmation"; log 2026-09-26/27):
   48/55 held-out); the remaining limit is the analysis stage's suggestion (web 12/15, host categories
   11/37, service-based 0/6).
 
+### 6.0b What the analyst's log source is worth — the simulated analyst `[MEASURED] 2026-09-27`
+
+Plan 5.3, measurement plan fixed before the run (CH5 5.8; log 2026-09-27). On the **60 tuning cases**
+each case was analysed **once**; rules were then generated twice from that same analysis — with no
+review (U) and with **the gold rule's log source given as the analyst's choice** (O), when SigmaHQ's
+table has it (58 of 60). Only the analyst's decision differs; nothing else from the gold rule
+reaches the pipeline. Both files CITABLE (every gate passed). An **upper bound**: what confirming
+the log source is worth when the analyst is right (no user study).
+- **Primary (pre-registered): S5 detection-field F1 0.388 → 0.531, +0.144, 95% CI [0.056, 0.241]**,
+  n = 53 paired (13 higher, 6 lower, 34 the same). The right log source leads to more of the right
+  detection fields.
+- *Where it comes from* `[MEASURED, post-hoc]` (`eval/s5_by_logsource.py`): **all of it from the 19
+  cases whose log source became right** — S5 0.132 → 0.521 (+0.389); right in both runs (25): 0.722
+  → 0.711; wrong in both (9): 0.000 → 0.056. The log source is the gate to the detection fields;
+  once it is right the model's own field choice is unchanged, and when it is *pushed* to the right
+  telemetry its fields reach 0.52, below the 0.72 of cases it got right by itself.
+  `[UNMEASURED]` To reconcile: Phase 2's S3 gain did not move S5 on held-out (+0.007, §6.0), yet here
+  a log source becoming right carries S5 with it — one possibility is that Phase 2's gains were
+  cases turned right by dropping an invented product while the fields already fit; not checked.
+- *Adherence* (reported, never as a gain — the review check enforces it): S3 in O **44 / 53**
+  (U 25 / 53). The first rule followed the analyst in **46 / 58**; the other 12 got the one
+  rewrite, which fixed **3**; **9 still depart** and are shown — in 4 a later rule uses the analyst's
+  log source (the model changed the order: the initial-access rule stays first), in 3 the analyst's
+  service-form choice (`windows/security`, `firewall`) got a category added, 1 rewrite gave no rules
+  (the earlier rules were kept). Overall **49 / 58 follow**. The rewrite is weak (3 of 12).
+  (`eval/count_review_checks.py`)
+- *Cost:* +4,330 tokens per case (95% CI [−484, 9,317]), +2.8 s (CI [−13.1, 16.5]) — none detectable.
+  S1 55 vs 54 of 58; S4 −0.007 (CI [−0.068, 0.052]).
+- **Noise floor, as a by-product** (U against `p2g_shared60`: the same code `a6e9157`, the same 60
+  cases, another run — Inbox M2): S3 22 vs 24 of 51 (**6 cases flip**, 2/4, McNemar p = 0.688); S1
+  52 vs 57 (p = 0.125; the reference lost 3 cases to defect 5); **S5 +0.086, 95% CI [−0.007, 0.187]**;
+  S4 +0.046 (CI [−0.039, 0.141]); seconds +23.8 (CI [0.0, 60.2]). Between two runs of identical code
+  S5 moves by up to ~0.09 and ~1 case in 8 flips S3 — why every comparison here is paired and
+  judged by its interval, and why 5.3 paired both arms on one analysis.
+
 ---
 
 ## 6.1 Baseline system performance — baseline v1 `[MEASURED] 2026-09-19`

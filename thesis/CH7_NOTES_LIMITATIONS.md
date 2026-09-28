@@ -212,6 +212,17 @@ limitation in the log belongs here too.
     (defect 5): once live it gave no rules, and the earlier rules are now kept. What the review is
     worth is for the simulated-analyst experiment (plan 5.3); there is no user study. (log 2026-09-27)
 
+49. **The simulated analyst is an upper bound, on the log source only** `[DISCLOSE]` (CH6 §6.0b). The
+    "analyst" is the gold rule: always right, on one decision. Real analysts err, confirm more than
+    the log source, and were not studied. The gold is one human's rule — another valid log source
+    sometimes exists, and a case where the model's own choice is also defensible counts as wrong. The
+    S5 gain is concentrated in the 19 cases whose log source became right (post-hoc). 2 of 60 gold
+    log sources are not in SigmaHQ's table and could not be chosen. (log 2026-09-27)
+50. **Run-to-run noise is now measured** `[MEASURED]` (CH6 §6.0b): two runs of identical code flip S3
+    in 6 of 51 cases and move S5 by +0.086 (CI crosses 0). Phase 2's per-change S3 results were
+    paired tests on runs of this noise; the held-out confirmation stands, but single-run S5 changes
+    below ~0.1 should not be read as effects. (log 2026-09-27)
+
 ---
 
 ## Future work (collected, not prioritised)
