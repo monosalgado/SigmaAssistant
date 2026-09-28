@@ -223,6 +223,12 @@ limitation in the log belongs here too.
     paired tests on runs of this noise; the held-out confirmation stands, but single-run S5 changes
     below ~0.1 should not be read as effects. (log 2026-09-27)
 
+51. **One run is one sample** `[MEASURED]` (CH6 §6.0c): two runs of identical code disagree on 16 of
+    60 cases, and the temperature-0 first stage concluded differently in 12. Every per-case example
+    in the thesis (a good rule, a wrong rule) can come out the other way on another run; results
+    are reported as rates with intervals for this reason. The cause of the temperature-0 variation
+    is not yet measured. (log 2026-09-28)
+
 ---
 
 ## Future work (collected, not prioritised)

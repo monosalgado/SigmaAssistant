@@ -66,6 +66,24 @@ semester).
 - [ ] **0.2** Update `OUTLINE.md` to the agreed contributions (user decides the
       wording).
 
+**Professor's feedback after the demo (2026-09-28, via the user):** (1) the thesis must *understand*
+why rules are good one time and wrong another (the May rules vs later ones) — research, with
+examples; (2) the assistant relies on the human; human input matters, but **the goal is to automate
+the process and rely more on the AI**. First evidence for (1): log 2026-09-28 (three sources;
+two runs of identical code disagree on 16/60 cases, the temperature-0 first stage on 12/60).
+Proposed next research (awaiting the user and the professor):
+- **P-A Consistency study**: the same cases run k times with frozen code (e.g. 20 cases × 5), per-stage
+  agreement and which case types are unstable; pre-registered
+- **P-B Where the non-determinism comes from**: one stage's call repeated on identical input (cheap),
+  with the Spark idle vs busy and with Ollama's seed/single-request settings — can temperature 0 be
+  made deterministic?
+- **P-C Self-consistency instead of the human**: run the analysis k times and take the majority log
+  source; runs that disagree = uncertainty → only those go to the analyst. Measures: S3/S5 vs the
+  single run, and how often a human would be needed — against the 5.3 upper bound (+0.14 S5)
+- **P-D Automated verification** of what analysts corrected most (e.g. the log source's platform
+  against the attacked product: sudo → Linux), by code or a second model
+Together: automate by default, measure confidence, escalate only uncertain cases to the human.
+
 Options to discuss, not decided:
 - **A.** Assistant + measured grounding failures + static evaluation (drop 1–3,
   or move 1 to future work)
@@ -585,6 +603,7 @@ so removing one is reversible; untracked and ignored files have no such safety n
 | 2026-09-27 | Direction after Phase 2: improve **detection quality**, and in the assistant keep the analyst in the loop to **verify what the LLM understood about the attack** — the tool must not depend on generated rules being right ("it is almost impossible to always produce Sigma rules that are true"). Pending the professor (Phase 0) | user |
 | 2026-09-27 | Order after Changes 34–35: the simulated-analyst experiment (5.3) first, then defect 5 (rules as YAML blocks, prompt-review item 6); 3.6 only if `run_sync` is ever routed through the review path; merge `analyst-review` into `main` after the demo. No A/A run on its own (it comes as 5.3's by-product) | user |
 | 2026-09-27 | Start the confirm/correct step now (Phases 3/4 before the professor's sign-off); first slice = log source + reject items (confirm/reject patterns, techniques, indicators; restore excluded; choose any SigmaHQ log source; a note). Built on a branch; `main` stays the demo's code | user |
+| 2026-09-28 | Professor's feedback: explain the good-then-wrong rules (research, with examples); automate more and rely less on the human. Proposed P-A…P-D (consistency, the non-determinism's source, self-consistency with escalation, automated verification) — awaiting decision | professor (via user) |
 | 2026-09-26 | Phase 2 frozen at `a6e9157` before the held-out confirmation; open items (quota, defect 5, prompt review, retrieval) go to the next phase | user |
 | 2026-09-26 | 2.9 held-out confirmation added: final pipeline and baseline v2 on 60 cases never run before; the chance test moves to the final pipeline's held-out run | user |
 | 2026-09-25 | Inbox triage: 2.5 (invented categories) and 2.6 (complete reference table) added after (d); order (d) → 2.5 → 2.6 → ATT&CK ID check → 10 most relevant techniques; Foundation-Sec out of the thesis; paraphrased evidence is fine; delete the unused suggestion prompt | user |
