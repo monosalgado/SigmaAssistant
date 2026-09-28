@@ -3963,3 +3963,23 @@ unreviewed arm's S5 on that case was 0.0 in the first smoke and 0.667 in the sec
 generation's 0.3, the reason for the paired design and the noise floor. A closing-message crash for
 output outside the repo fixed. Tests: 535 passed. **The 60-case run has not started** — the plan
 awaits the user.
+
+---
+
+## 2026-09-27 — The simulated-analyst run (5.3) and the Change 36 run, started (user: "run them")
+
+The user approved both measurement plans ("push it and run them"). **Never two runs from one
+checkout:** each runs from its own detached worktree at its commit — `../SigmaAssistant-run-oracle`
+at `c3f3e76` (5.3) and `../SigmaAssistant-run-c36` at `c605223` (Change 36, branch
+`defect5-yaml-rules`) — with `.env`, `data/chroma_db`, `data/sigma`, `eval/snapshots` linked from this
+repository (read-only use); results written into this repository's `eval/results/`. (A first
+attempt at the two worktrees named them wrongly — a zsh loop did not split its arguments — and put
+both at `c3f3e76`; both were removed, symlinks unlinked first, before any run; the linked data was
+checked intact: 379 snapshots.) Both harnesses' dry runs select **the same 60 cases as
+`p2g_shared60`** (checked by id; 5 flagged as contaminated, reported apart); 58 are choosable for
+the oracle arm.
+One chained background command, kept awake with `caffeinate`: preflight in the oracle worktree
+(**passed 16:26**: tunnel, model, context 262,144, smoke CITABLE) → run 1
+`run_resilient.py -- --sample 60 --seed 0 --no-web-enrich --oracle-logsource --arm oracle_ls --out
+eval/results/oracle_ls60.jsonl` → preflight in the Change 36 worktree → run 2 `… --arm c36_yaml --out
+eval/results/c36_yaml60.jsonl`. A watcher reports run 1's end or 40 min without a new row.
