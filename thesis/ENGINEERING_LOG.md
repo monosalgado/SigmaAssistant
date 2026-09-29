@@ -4308,3 +4308,31 @@ first rule to the analysis's recommendation, and with SigmaHQ's table (Changes 2
 **Post-hoc observation:** in `main` the attack-vector stage concluded differently in 3.3 of 60 per pair of
 runs; the September A/A comparison found 12 of 60 (runs a day apart, sequential; these ran concurrently). Not
 a test; P-B (the source of temperature-0 variation) would have to settle it.
+
+---
+
+## 2026-09-29 — P-B: is temperature 0 repeatable? The probe and its plan (fixed before any call)
+
+User (choosing the next step): the variance probe (plan P-B). Everything else from this session is kept
+(user: "I want to keep all of what we did") — both checkouts, all result files, both decks.
+**Why:** two runs of identical code on identical pages concluded differently at the attack-vector stage
+(temperature 0) in 12 of 60 cases (log 2026-09-28); in the May rerun, today's code did so in 3.3 of 60
+per pair of runs (concurrent runs). Is the model's answer at temperature 0 repeatable, and what breaks it?
+**Tool:** `eval/probe_determinism.py` (tests first, 5, seen to fail): for each case it captures the exact
+attack-vector prompt (saved pages; the PoC stage run once; the stage stopped at its model call), then
+sends that same prompt again and again. Every request is exactly the pipeline's (a test holds it to
+`OllamaLLMClient.generate`'s), plus a seed where a condition says so. Identical prompts are sent once.
+**Plan:**
+- *Cases:* the 6 whose two September runs first diverged at the attack-vector stage
+  (`list_disagreements.py`: 20c6ed1c, 36222790, 92389a99, ad0960eb, ad7085ac, 32b5db62; tuning cases, no
+  scoring).
+- *Conditions per prompt:* one at a time ×5 (as the pipeline sends it); one at a time with seed 42 ×5; 4 at
+  once (no seed); 4 at once with seed 42. Output: `eval/results/determinism_probe.jsonl`.
+- *Measures:* per case and condition, the number of different answers (exact text) and of different
+  `primary_telemetry` labels (what the log source follows).
+- *Reading, fixed now:* (a) one-at-a-time answers identical but at-once answers differ → the variation
+  comes from concurrent requests (server batching); (b) one-at-a-time answers differ and the seed makes
+  them identical → a seed in the client is a candidate change (one line, then measured); (c) neither →
+  not fixable from the client, and the pipeline has to live with it by design (P-C, self-consistency).
+- *Limits:* other users' load on the shared server is not observed (each call's time is recorded); ≤ 6
+  prompts × 18 calls is descriptive, not a test.
