@@ -4392,3 +4392,37 @@ observed). Separately, (iv) asked-again answers identical across all three conte
 probe's) → **a warm-up request (ask twice, keep the second) would make answers repeatable** — a candidate
 pipeline change, to be measured on its own; otherwise the pipeline lives with it (P-C). 5 questions:
 descriptive, not a test.
+
+### P-B follow-up results — stable for hours, not across days; asking twice gives false agreement
+Ran after the plan above; 95 requests, 0 errors (`eval/results/determinism_followup.jsonl`). Prompt hashes:
+3 of 5 questions byte-identical to the first probe's; **2 changed** (`ad7085ac`, `32b5db62`) because the
+PoC stage — also temperature 0 — answered differently at capture. `probe_determinism.py --report
+--follow-up` and `--labels` (the latter added after the run, `todays_labels`, 1 test seen to fail first):
+| Question | first-time asks | different | most different after one and the same question | asked again | different | same as first probe |
+|---|---|---|---|---|---|---|
+| 20c6ed1c | 12 | 2 | 1 | 4 | 1 | no |
+| 36222790 | 12 | 2 | 2 | 4 | 1 | no |
+| 92389a99 | 12 | 2 | 2 | 4 | 1 | no |
+| ad7085ac | 12 | 3 | 3 | 4 | 1 | (prompt changed) |
+| 32b5db62 | 11 | 2 | 2 | 5 | 1 | (prompt changed) |
+- **Asked again right away: one answer per question, whatever came before** (5 of 5).
+- **First-time answers differ in wording even after one and the same preceding question** (4 of 5): what
+  came just before does not explain it — reading (iii); other users' requests, queued with ours, are not
+  observed.
+- **The asked-again answer is not the one from a few hours earlier** (3 of 3 comparable): a warm-up request
+  would not make answers repeatable over time — by the plan's reading, the pipeline has to live with it (P-C).
+- **The label the log source follows: one per question over all 34 answers today** (5 of 5, both probes). But
+  the two September runs, a day apart, gave **different labels for byte-identical prompts** (the no-PoC
+  reports — the prompt depends only on the saved page): `20c6ed1c` other / webserver_access_log,
+  `36222790` file_event / process_creation, `92389a99` process_creation / file_event; today's label is one
+  of the two in each. So the wording varies from ask to ask, the label holds for hours, and **between
+  sessions a day apart the label itself changed**. `[UNMEASURED]` why: the server's state over time (model
+  reloads, other users' work on the same GPU), not tested.
+- **Upstream too:** the PoC stage changed its answer between the two probes for 2 of 5 reports, which
+  changes the attack-vector prompt itself.
+**What it means.** (1) Temperature 0 does not make this server repeatable: not by a seed (no effect seen),
+not by a warm-up (fails across hours); run-to-run variation is a property of the deployment the pipeline
+must be designed for. (2) **For self-consistency (P-C): asking the same question again in a row returns the
+same answer — agreement that means nothing.** Votes must come from independent samples (a temperature above
+0, reworded prompts, or asks far apart in time), and the design must say which. (3) Every result stays a
+rate over runs; a single example is one sample.

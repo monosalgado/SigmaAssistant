@@ -171,3 +171,16 @@ def test_the_second_asks_compared_with_the_first_probes_repeats_for_the_same_pro
               {"kind": "follow_up", "prompt": "b", "fresh": False, "output": "R"}]
     # b's prompt changed (its PoC answer differed at capture), so it cannot be compared
     assert same_as_first_probe(follow, earlier) == {"a": True, "b": None}
+
+
+# --- the label the log source follows: today's probes against two earlier runs ------------
+
+def test_todays_labels_are_counted_per_question_across_both_probes():
+    from eval.probe_determinism import todays_labels
+    probe = [{"kind": "prompt", "rule_id": "a-1"},
+             {"kind": "answer", "rule_id": "a-1", "primary_telemetry": "file_event", "output": "x"},
+             {"kind": "answer", "rule_id": "a-1", "primary_telemetry": "file_event", "output": "y"}]
+    follow = [{"kind": "follow_up", "prompt": "a-1", "primary_telemetry": "file_event", "output": "x"},
+              {"kind": "follow_up", "prompt": "unrelated", "primary_telemetry": None, "output": "OK"},
+              {"kind": "follow_up", "prompt": "a-1", "primary_telemetry": None, "output": None}]
+    assert todays_labels(probe + follow) == {"a-1": {"file_event": 3}}

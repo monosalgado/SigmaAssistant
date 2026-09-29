@@ -229,7 +229,10 @@ limitation in the log belongs here too.
     are reported as rates with intervals for this reason. The cause of the temperature-0 variation
     is not yet measured. (log 2026-09-28) *Update 2026-09-29 (P-B):* a repeated prompt gets identical
     answers; only the first request of a prompt differed (5 of 5) — the answer depends on the server's
-    state, not on chance in the model; the mechanism is not yet tested.
+    state, not on chance in the model; the mechanism is not yet tested. *Follow-up:* the label the log
+    source follows held for hours today but differed between the September runs a day apart, for
+    byte-identical prompts — a property of the deployment (a shared server), not fixable by a seed or a
+    warm-up request. Every result is a rate over runs for this reason.
 52. **The May demo cannot be rescored, and its prompt was tuned on its reports** `[DISCLOSE]`
     (`thesis/MAY_VS_NOW_NOTES.md`). Only 20 saved answers survive from before September, none
     dated in May, none with a gold rule; which model wrote each is not recorded, nor the prompt text

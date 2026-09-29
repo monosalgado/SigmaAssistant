@@ -80,6 +80,10 @@ Proposed next research (awaiting the user and the professor):
   → **probed 2026-09-29 (user chose it; log "P-B results")**: only the first request of a prompt answered
   differently (5 of 5); all 17 repeats identical, seed or not; concurrent requests are queued. Next,
   proposed: a follow-up that alternates prompts (is a fresh answer repeatable; does what came before matter?)
+  → **follow-up done 2026-09-29 (user):** repeats identical within a session; first-time wording varies
+  even after the same question; the label holds for hours but changed between the September runs a day
+  apart; neither a seed nor a warm-up fixes it. **Consequence for P-C:** back-to-back asks agree by
+  construction — votes need independent samples (temperature > 0, reworded prompts, or time apart).
 - **P-C Self-consistency instead of the human**: run the analysis k times and take the majority log
   source; runs that disagree = uncertainty → only those go to the analyst. Measures: S3/S5 vs the
   single run, and how often a human would be needed — against the 5.3 upper bound (+0.14 S5)

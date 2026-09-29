@@ -101,6 +101,13 @@ The professor's question after the demo. Two runs of **identical code on identic
   (10 of 10 batches), so batching is not the cause. `[UNMEASURED]` Mechanism: likely the server's reuse of
   an already-processed prompt; in a run every prompt is new, so its answer may depend on what the server
   processed before. The label the log source follows did not change in these 5 prompts.
+  **Follow-up (order controlled) `[MEASURED]`:** asked again right away → one answer per question whatever came
+  before (5 of 5); first-time answers differ in wording even after the same preceding question (4 of 5); the
+  asked-again answer is not the one from hours earlier (3 of 3). The label held over all 34 answers per question
+  today (5 of 5) — **but the two September runs gave different labels for byte-identical prompts** (3 reports),
+  a day apart. So: wording varies per ask, the label holds for hours, and changes between sessions. A seed
+  or a warm-up does not fix it. **For self-consistency (P-C): back-to-back asks agree by construction** —
+  votes need independent samples.
 - Example `ad7085ac` (Sourgum): `file_event` → right log source, S5 1.00; in the other run
   `registry_event` → wrong, S5 0.00. An early difference decides the log source, which gates the
   fields (§6.0b).

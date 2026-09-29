@@ -211,6 +211,35 @@ def same_as_first_probe(follow_rows: list, earlier_rows: list) -> dict:
     return out
 
 
+def todays_labels(rows: list) -> dict:
+    """{question: {primary_telemetry label: answers}} over probe rows of both kinds (the unrelated
+    question and failed requests left out)."""
+    out = {}
+    for r in rows:
+        if r.get("output") is None or r.get("kind") not in ("answer", "follow_up"):
+            continue
+        rid = r["rule_id"] if r["kind"] == "answer" else r["prompt"]
+        if rid == "unrelated":
+            continue
+        label = r.get("primary_telemetry")
+        out.setdefault(rid, {})
+        out[rid][label] = out[rid].get(label, 0) + 1
+    return out
+
+
+def labels_report(probe_files: list, run_files: list) -> None:
+    """Per probed question: its label in each earlier run (the recorded attack vector) and today's
+    labels over every probe answer."""
+    from eval.compare_runs import load
+    rows = [json.loads(line) for f in probe_files for line in open(f, encoding="utf-8") if line.strip()]
+    runs = [(Path(f).stem, load(Path(f))) for f in run_files]
+    print("\nThe label the log source follows (primary_telemetry):")
+    for rid, labels in todays_labels(rows).items():
+        earlier = "; ".join(f"{name}: {((run.get(rid) or {}).get('pipeline') or {}).get('attack_vector', {}).get('primary_telemetry')}"
+                            for name, run in runs)
+        print(f"  {rid[:8]}  {earlier} | today: {labels}")
+
+
 CONDITIONS = [("one at a time", False, None), ("one at a time, seed", False, 42),
               ("at once", True, None), ("at once, seed", True, 42)]
 
@@ -220,12 +249,18 @@ def main() -> int:
     parser.add_argument("--cases", nargs="+", default=DEFAULT_CASES, help="rule_id prefixes")
     parser.add_argument("--repeats", type=int, default=5, help="requests per one-at-a-time condition")
     parser.add_argument("--batch", type=int, default=4, help="requests sent at once")
-    parser.add_argument("--out", required=True)
+    parser.add_argument("--out")
     parser.add_argument("--report", action="store_true", help="only summarise an existing --out file")
     parser.add_argument("--follow-up", action="store_true",
                         help="the follow-up order (follow_up_schedule) instead of the four conditions")
     parser.add_argument("--earlier", help="the first probe's file, to compare repeats of identical prompts")
+    parser.add_argument("--labels", nargs="+", metavar="FILE",
+                        help="with --runs: today's labels over these probe files against earlier runs")
+    parser.add_argument("--runs", nargs="+", metavar="RUN", default=[])
     args = parser.parse_args()
+    if args.labels:
+        labels_report(args.labels, args.runs)
+        return 0
     if args.report:
         rows = [json.loads(line) for line in open(args.out, encoding="utf-8") if line.strip()]
         if any(r.get("kind") == "follow_up" for r in rows):
