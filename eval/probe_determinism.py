@@ -136,6 +136,81 @@ def served_in_turn(rows: list) -> dict:
     return out
 
 
+# --- the follow-up (user 2026-09-29): is a first-time answer repeatable, and does what came
+# before change it? One request at a time, in a fixed and recorded order.
+
+UNRELATED = "Reply with the single word OK."
+
+
+def follow_up_schedule(ids: list, forward_rounds: int = 4, reverse_rounds: int = 2,
+                       unrelated_rounds: int = 2) -> list:
+    """The order of requests: a rotation (each question always after the same other one), the
+    reversed rotation (after a different one), each after an unrelated question, and each asked
+    twice in a row after its rotation neighbour, its reversed neighbour and the unrelated question."""
+    steps = []
+    for _ in range(forward_rounds):
+        steps += [{"phase": "rotation", "prompt": i} for i in ids]
+    rev = list(reversed(ids))
+    for _ in range(reverse_rounds):
+        steps += [{"phase": "reversed", "prompt": i} for i in rev]
+    for _ in range(unrelated_rounds):
+        for i in ids:
+            steps += [{"phase": "after unrelated", "prompt": "unrelated"}, {"phase": "after unrelated", "prompt": i}]
+    for k, i in enumerate(ids):
+        before = (ids[k - 1], rev[(rev.index(i) - 1) % len(rev)], "unrelated")
+        for prev in before:
+            steps += [{"phase": "asked twice", "prompt": p} for p in (prev, i, i)]
+    return steps
+
+
+def annotate_order(rows: list, before_first: str) -> None:
+    """Mark each answer with the question sent just before it and whether it was a first-time
+    ask (the question before was a different one)."""
+    previous = before_first
+    for row in rows:
+        row["after"] = previous
+        row["fresh"] = previous != row["prompt"]
+        previous = row["prompt"]
+
+
+def follow_up_analysis(rows: list) -> dict:
+    """Per question (the unrelated one left out): first-time answers - how many, how many
+    different, and the most different after one and the same preceding question; answers when
+    asked again right away; the number of different telemetry labels."""
+    out = {}
+    for prompt in dict.fromkeys(r["prompt"] for r in rows if r["prompt"] != "unrelated"):
+        mine = [r for r in rows if r["prompt"] == prompt and r.get("output") is not None]
+        fresh = [r for r in mine if r["fresh"]]
+        again = [r for r in mine if not r["fresh"]]
+        by_before = {}
+        for r in fresh:
+            by_before.setdefault(r["after"], set()).add(r["output"])
+        out[prompt] = {"fresh": len(fresh), "fresh_different": len({r["output"] for r in fresh}),
+                       "most_different_after_one_question": max((len(v) for v in by_before.values()), default=0),
+                       "second_asks": len(again), "second_different": len({r["output"] for r in again}),
+                       "telemetry_labels": len({r.get("primary_telemetry") for r in mine})}
+    return out
+
+
+def same_as_first_probe(follow_rows: list, earlier_rows: list) -> dict:
+    """Per question: are its answers when asked again right away the same as the first probe's
+    repeats of the byte-identical prompt? None when the prompt changed between the probes."""
+    earlier_sha = {r["rule_id"]: r["sha256"] for r in earlier_rows if r.get("kind") == "prompt"}
+    repeats = {}
+    for rid, o in order_effects(earlier_rows).items():
+        outs = [r["output"] for r in sorted((r for r in earlier_rows if r.get("kind") == "answer"
+                                             and r["rule_id"] == rid and r.get("output") is not None),
+                                            key=lambda r: (r["at"], r["request"]))]
+        repeats[earlier_sha.get(rid)] = set(outs[1:])
+    out = {}
+    for r in (r for r in follow_rows if r.get("kind") == "prompt"):
+        rid, sha = r["rule_id"], r["sha256"]
+        again = {x["output"] for x in follow_rows if x.get("kind") == "follow_up" and x["prompt"] == rid
+                 and not x["fresh"] and x.get("output") is not None}
+        out[rid] = None if sha not in repeats or earlier_sha.get(rid) != sha else again == repeats[sha]
+    return out
+
+
 CONDITIONS = [("one at a time", False, None), ("one at a time, seed", False, 42),
               ("at once", True, None), ("at once, seed", True, 42)]
 
@@ -147,9 +222,18 @@ def main() -> int:
     parser.add_argument("--batch", type=int, default=4, help="requests sent at once")
     parser.add_argument("--out", required=True)
     parser.add_argument("--report", action="store_true", help="only summarise an existing --out file")
+    parser.add_argument("--follow-up", action="store_true",
+                        help="the follow-up order (follow_up_schedule) instead of the four conditions")
+    parser.add_argument("--earlier", help="the first probe's file, to compare repeats of identical prompts")
     args = parser.parse_args()
     if args.report:
-        report([json.loads(line) for line in open(args.out, encoding="utf-8") if line.strip()])
+        rows = [json.loads(line) for line in open(args.out, encoding="utf-8") if line.strip()]
+        if any(r.get("kind") == "follow_up" for r in rows):
+            earlier = [json.loads(line) for line in open(args.earlier, encoding="utf-8") if line.strip()] \
+                if args.earlier else []
+            follow_up_report(rows, earlier)
+        else:
+            report(rows)
         return 0
 
     from dotenv import load_dotenv
@@ -166,13 +250,32 @@ def main() -> int:
     model = orch.client.model_name
     base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
     api = OpenAI(base_url=f"{base_url}/v1", api_key="ollama")
-    rows, seen_prompts = [], {}
+    rows, seen_prompts, prompts = [], {}, []
     out = open(args.out, "a", encoding="utf-8")
 
     def write(row):
         rows.append(row)
         out.write(json.dumps(row) + "\n")
         out.flush()
+
+    def ask(text, temperature=0.0, seed=None, json_mode=True) -> dict:
+        started = time.monotonic()
+        res = {"at": datetime.now(timezone.utc).isoformat()}
+        try:
+            resp = api.chat.completions.create(**request_kwargs(text, model, seed=seed, json_mode=json_mode,
+                                                                temperature=temperature))
+            choice = resp.choices[0]
+            res.update(output=choice.message.content, finish_reason=choice.finish_reason,
+                       completion_tokens=getattr(resp.usage, "completion_tokens", None))
+            if json_mode:
+                try:
+                    res["primary_telemetry"] = orch.attack_vector.parse_json(res["output"]).get("primary_telemetry")
+                except Exception:
+                    res["primary_telemetry"] = "(does not parse)"
+        except Exception as exc:
+            res.update(output=None, error=f"{type(exc).__name__}: {exc}")
+        res["seconds"] = round(time.monotonic() - started, 2)
+        return res
 
     for case in cases:
         rid = case["rule_id"]
@@ -189,26 +292,33 @@ def main() -> int:
             print(f"{rid[:8]}: same prompt as {seen_prompts[digest][:8]} - not sent again")
             continue
         seen_prompts[digest] = rid
+        prompts.append((rid, prompt, kwargs))
 
+    if args.follow_up:
+        by_id = {rid: (prompt, kwargs) for rid, prompt, kwargs in prompts}
+        previous = "(capture)"
+        for n, step in enumerate(follow_up_schedule(list(by_id))):
+            if step["prompt"] == "unrelated":
+                res = ask(UNRELATED, json_mode=False)
+            else:
+                prompt, kwargs = by_id[step["prompt"]]
+                res = ask(prompt, temperature=kwargs["temperature"])
+            write({"kind": "follow_up", "step": n, "phase": step["phase"], "prompt": step["prompt"],
+                   "after": previous, "fresh": previous != step["prompt"], **res})
+            previous = step["prompt"]
+            print(f"[{n + 1}] {step['phase']:<16} {step['prompt'][:9]:<9} {res['seconds']:6.1f}s "
+                  f"{res.get('error') or ''}", flush=True)
+        out.close()
+        earlier = [json.loads(line) for line in open(args.earlier, encoding="utf-8") if line.strip()] \
+            if args.earlier else []
+        follow_up_report(rows, earlier)
+        return 0
+
+    for rid, prompt, kwargs in prompts:
         for condition, at_once, seed in CONDITIONS:
             def send(i, _seed=seed):
-                started = time.monotonic()
-                row = {"kind": "answer", "rule_id": rid, "condition": condition, "seed": _seed, "request": i,
-                       "at": datetime.now(timezone.utc).isoformat()}
-                try:
-                    resp = api.chat.completions.create(**request_kwargs(prompt, model, seed=_seed,
-                                                                        temperature=kwargs["temperature"]))
-                    choice = resp.choices[0]
-                    row["output"] = choice.message.content
-                    row["finish_reason"] = choice.finish_reason
-                    row["completion_tokens"] = getattr(resp.usage, "completion_tokens", None)
-                    try:
-                        row["primary_telemetry"] = orch.attack_vector.parse_json(row["output"]).get("primary_telemetry")
-                    except Exception:
-                        row["primary_telemetry"] = "(does not parse)"
-                except Exception as exc:
-                    row["output"], row["error"] = None, f"{type(exc).__name__}: {exc}"
-                row["seconds"] = round(time.monotonic() - started, 2)
+                row = {"kind": "answer", "rule_id": rid, "condition": condition, "seed": _seed, "request": i}
+                row.update(ask(prompt, temperature=kwargs["temperature"], seed=_seed))
                 return row
 
             results = run_batch(send, args.batch) if at_once else [send(i) for i in range(args.repeats)]
@@ -220,6 +330,16 @@ def main() -> int:
     out.close()
     report(rows)
     return 0
+
+
+def follow_up_report(rows: list, earlier: list) -> None:
+    analysis = follow_up_analysis([r for r in rows if r.get("kind") == "follow_up"])
+    same = same_as_first_probe(rows, earlier) if earlier else {}
+    print("\nQuestion  first-time: asks  different  most different after one question | asked again: asks  "
+          "different | labels | same as first probe")
+    for rid, a in analysis.items():
+        print(f"{rid[:8]}  {a['fresh']:>21}  {a['fresh_different']:>9}  {a['most_different_after_one_question']:>30} | "
+              f"{a['second_asks']:>16}  {a['second_different']:>9} | {a['telemetry_labels']:>6} | {same.get(rid)}")
 
 
 def report(rows: list) -> None:

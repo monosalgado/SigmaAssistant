@@ -4367,3 +4367,28 @@ identical code differ. Not tested yet.
 first answers repeatable among themselves, and does what came before change them? If the answer depends
 only on the prompt when it is sent fresh or only when warm, a fix is possible (e.g. a warm-up request
 before the real one); if it depends on what came before, the pipeline has to live with it (P-C).
+
+### P-B follow-up: is a first-time answer repeatable, and does what came before change it? (plan fixed before any call)
+User: "run the follow-up test … we are doing research so is very important for us to understand all of
+this". Pushed `e137d30` first (user). `probe_determinism.py --follow-up` (tests first: 4 new, seen to fail):
+the same 6 cases' attack-vector prompts, recaptured (a prompt can differ from the first probe's if the PoC
+stage answers differently at capture; each prompt's hash is recorded and compared). One request at a time,
+in a fixed, recorded order (`follow_up_schedule`, 95 requests): the questions in a **rotation** ×4 (each
+always after the same other question); the **reversed** rotation ×2 (after a different one); each **after
+an unrelated question** ×2 ("Reply with the single word OK.", no shared text); and each **asked twice in a
+row** after its rotation neighbour, its reversed neighbour and the unrelated question. Each answer records
+the question sent just before it. The report text starts at character 892 of this prompt: two different
+questions share only the instruction before it (and the JSON system message).
+**Measures, per question** (`follow_up_analysis`): first-time asks — different answers overall, and the
+most different answers after one and the same preceding question; asked again right away — different
+answers across the three contexts; telemetry labels; whether the asked-again answer equals the first
+probe's repeats of a byte-identical prompt (`same_as_first_probe`).
+**Reading, fixed now:** (i) one first-time answer per question whatever came before → first-time answers
+are repeatable; the first probe's difference was first-time vs repeat only. (ii) one answer after the same
+preceding question but different answers after different ones → **the answer depends on what the server
+processed just before** — which would explain why two runs of identical code differ. (iii) different
+first-time answers even after the same question → something else varies (other users' requests are not
+observed). Separately, (iv) asked-again answers identical across all three contexts (and equal to the first
+probe's) → **a warm-up request (ask twice, keep the second) would make answers repeatable** — a candidate
+pipeline change, to be measured on its own; otherwise the pipeline lives with it (P-C). 5 questions:
+descriptive, not a test.

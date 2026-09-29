@@ -115,3 +115,59 @@ def test_requests_sent_at_once_that_were_served_one_after_another():
     queued = [_answer("a", "at once", i, "W", seconds=s) for i, s in enumerate([12.1, 6.0, 24.0, 18.2])]
     together = [_answer("b", "at once", i, "W", seconds=s) for i, s in enumerate([7.0, 7.2, 6.9, 7.4])]
     assert served_in_turn(queued + together) == {("a", "at once"): True, ("b", "at once"): False}
+
+
+# --- the follow-up (user 2026-09-29): is a first-time answer repeatable, and does what came
+# --- before change it? Every request is sent one at a time, in a fixed, recorded order.
+
+def test_the_follow_up_order():
+    from eval.probe_determinism import follow_up_schedule
+    labels = [s["prompt"] for s in follow_up_schedule(["a", "b", "c"], forward_rounds=2, reverse_rounds=1,
+                                                      unrelated_rounds=1)]
+    assert labels[:6] == ["a", "b", "c", "a", "b", "c"]                          # rotation
+    assert labels[6:9] == ["c", "b", "a"]                                         # reversed
+    assert labels[9:15] == ["unrelated", "a", "unrelated", "b", "unrelated", "c"]
+    # asked twice in a row, after the question before it in the rotation, in the reversed
+    # rotation, and after the unrelated question
+    assert labels[15:24] == ["c", "a", "a", "b", "a", "a", "unrelated", "a", "a"]
+    assert labels[24:33] == ["a", "b", "b", "c", "b", "b", "unrelated", "b", "b"]
+    assert labels[33:] == ["b", "c", "c", "a", "c", "c", "unrelated", "c", "c"]
+
+
+def test_each_answer_records_what_came_just_before_it():
+    from eval.probe_determinism import annotate_order
+    rows = [{"prompt": p, "output": "x"} for p in ["a", "b", "b", "unrelated", "a"]]
+    annotate_order(rows, before_first="(start)")
+    assert [(r["after"], r["fresh"]) for r in rows] == [
+        ("(start)", True), ("a", True), ("b", False), ("b", True), ("unrelated", True)]
+
+
+def test_the_follow_up_answers_per_question():
+    from eval.probe_determinism import follow_up_analysis
+    rows = [
+        # fresh after c: the same twice; fresh after b: another answer -> depends on what came before
+        {"prompt": "a", "after": "c", "fresh": True, "output": "A1", "primary_telemetry": "file_event"},
+        {"prompt": "a", "after": "c", "fresh": True, "output": "A1", "primary_telemetry": "file_event"},
+        {"prompt": "a", "after": "b", "fresh": True, "output": "A2", "primary_telemetry": "file_event"},
+        # asked again right away, after different things before: the same answer each time
+        {"prompt": "a", "after": "a", "fresh": False, "output": "W", "primary_telemetry": "file_event"},
+        {"prompt": "a", "after": "a", "fresh": False, "output": "W", "primary_telemetry": "file_event"},
+        {"prompt": "unrelated", "after": "a", "fresh": True, "output": "OK"},
+    ]
+    out = follow_up_analysis(rows)
+    assert list(out) == ["a"]
+    assert out["a"] == {"fresh": 3, "fresh_different": 2, "most_different_after_one_question": 1,
+                        "second_asks": 2, "second_different": 1, "telemetry_labels": 1}
+
+
+def test_the_second_asks_compared_with_the_first_probes_repeats_for_the_same_prompt():
+    from eval.probe_determinism import same_as_first_probe
+    earlier = [{"kind": "prompt", "rule_id": "a", "sha256": "S"}, {"kind": "prompt", "rule_id": "b", "sha256": "T"},
+               _answer("a", "one at a time", 0, "COLD", at="t0"), _answer("a", "one at a time", 1, "Y", at="t1"),
+               _answer("a", "one at a time", 2, "Y", at="t2"),
+               _answer("b", "one at a time", 0, "Q", at="t0"), _answer("b", "one at a time", 1, "R", at="t1")]
+    follow = [{"kind": "prompt", "rule_id": "a", "sha256": "S"}, {"kind": "prompt", "rule_id": "b", "sha256": "U"},
+              {"kind": "follow_up", "prompt": "a", "fresh": False, "output": "Y"},
+              {"kind": "follow_up", "prompt": "b", "fresh": False, "output": "R"}]
+    # b's prompt changed (its PoC answer differed at capture), so it cannot be compared
+    assert same_as_first_probe(follow, earlier) == {"a": True, "b": None}
