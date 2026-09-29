@@ -77,6 +77,9 @@ Proposed next research (awaiting the user and the professor):
 - **P-B Where the non-determinism comes from**: one stage's call repeated on identical input (cheap),
   with the Spark idle vs busy and with Ollama's seed/single-request settings — can temperature 0 be
   made deterministic?
+  → **probed 2026-09-29 (user chose it; log "P-B results")**: only the first request of a prompt answered
+  differently (5 of 5); all 17 repeats identical, seed or not; concurrent requests are queued. Next,
+  proposed: a follow-up that alternates prompts (is a fresh answer repeatable; does what came before matter?)
 - **P-C Self-consistency instead of the human**: run the analysis k times and take the majority log
   source; runs that disagree = uncertainty → only those go to the analyst. Measures: S3/S5 vs the
   single run, and how often a human would be needed — against the 5.3 upper bound (+0.14 S5)

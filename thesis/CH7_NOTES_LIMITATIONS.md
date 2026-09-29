@@ -227,7 +227,9 @@ limitation in the log belongs here too.
     60 cases, and the temperature-0 first stage concluded differently in 12. Every per-case example
     in the thesis (a good rule, a wrong rule) can come out the other way on another run; results
     are reported as rates with intervals for this reason. The cause of the temperature-0 variation
-    is not yet measured. (log 2026-09-28)
+    is not yet measured. (log 2026-09-28) *Update 2026-09-29 (P-B):* a repeated prompt gets identical
+    answers; only the first request of a prompt differed (5 of 5) — the answer depends on the server's
+    state, not on chance in the model; the mechanism is not yet tested.
 52. **The May demo cannot be rescored, and its prompt was tuned on its reports** `[DISCLOSE]`
     (`thesis/MAY_VS_NOW_NOTES.md`). Only 20 saved answers survive from before September, none
     dated in May, none with a gold rule; which model wrote each is not recorded, nor the prompt text
