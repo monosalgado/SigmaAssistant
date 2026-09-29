@@ -4426,3 +4426,40 @@ must be designed for. (2) **For self-consistency (P-C): asking the same question
 same answer — agreement that means nothing.** Votes must come from independent samples (a temperature above
 0, reworded prompts, or asks far apart in time), and the design must say which. (3) Every result stays a
 rate over runs; a single example is one sample.
+
+---
+
+## 2026-09-29 — Better log-source picks (user): the diagnosis, and Change 37 (unreadable answers)
+
+User: "lets work on better log-source picks" (roadmap R7). **Diagnosis on the 60 tuning cases only** — the
+held-out cases are not looked at case by case, so they stay usable for confirmation (the May lesson).
+Three recent runs of today's analysis code on them (`p2g_shared60`, `oracle_ls60_unreviewed`,
+`c36_yaml60`). `compare_suggestions.py`: the analysis stage's top pick = the gold log source in 23 / 26 of 60;
+by the gold's form: service-defined 0 of 5, web 6–9 of 12, other categories 17 of 43; **no pick at all in 2–4
+of 60**; a pick without a category (the product + service form) **0 of 60 in every run**.
+**Wrong, or just different?** New `eval/alternative_logsources.py` (tests first, 4, seen to fail; post-hoc,
+descriptive): a pick that is not the gold's may match another human-written SigmaHQ rule for the same report
+(a rule citing one of the case's input URLs; a URL cited by more than 5 rules links nothing). Emerging-threats
+rules: 27 of 60 cases have another rule for the same report. Per run — gold 23 / 26 / 26; **another human rule
+9 / 5 / 5; neither 26 / 25 / 25**; no pick 2 / 4 / 4. So about 25 of 60 picks match no human rule for the
+report: the real room. Patterns among them: host reports whose gold targets a specific trace (a dropped file,
+a registry key, a DNS query, a PowerShell script block, a remote thread) picked as `process_creation`; exploit
+reports whose gold detects the host after the break-in picked as `webserver`; network C2 gold (proxy, DNS,
+firewall) picked as host; service-defined logs (Windows Security, FortiOS, Zeek) never picked. The stage gives
+confidence 0.95 on nearly every pick, right or wrong: its self-reported confidence carries no signal.
+**The no-pick cases** are unreadable answers: the run logs show `[analysis] Combined analysis failed: Invalid
+\escape` 6 times and the 16,384-token output limit on 3 attempts 2 times — the analysis-stage twin of defect 5
+(Change 36 fixed it for generation only).
+**Change 37 — repair stray backslashes, then read** (`base_stage.parse_json`, all JSON stages; tests first, 8,
+seen to fail). Only after `json.loads` has failed on an escape: every backslash is doubled except `\"`, `\\`,
+`\/` and a real `\uXXXX`. A first version kept `\b \f \n \r \t` as escapes; its own test showed `C:\Users\bob`
+turning `\b` into a control character, so in an answer that already failed on a stray backslash those are
+read as a path's backslash too. An answer that parses is untouched (by construction; a test holds it).
+**Measure, fixed before any call** (`eval/probe_json_repair.py`, 3 tests seen to fail): the 60 tuning cases
+(seed 0) through the pipeline's own analysis path (`analyse_for_review`: preprocessing, PoC, attack vector,
+analysis; saved pages; no web search); every PoC, attack-vector and analysis answer is captured and **read twice
+— with the reader before Change 37 and with today's** — so the comparison is on identical answers. Primary: per
+stage, answers unreadable before vs now. Also: cases with no log-source suggestion (earlier runs: 2–4 of 60,
+descriptive), and the repaired values listed for a check that they read as written. The output limit is not
+this change's (2 of the 8 failures). A full run's S3 effect is expected small (≤ 4 cases per run gain a pick)
+and will show in the next measured run.

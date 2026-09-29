@@ -17,6 +17,39 @@ from backend.telemetry import stage_scope
 # context the Spark serves qwen3-coder with.
 SOURCE_TEXT_MAX_CHARS = 100_000
 
+# Kept in a repaired answer: the escapes a path never contains. \b \f \n \r \t are doubled too - in an
+# answer that already failed on a stray backslash, "C:\temp" is a folder, not "C:" + a tab.
+_KEPT_ESCAPES = set('"\\/')
+_HEX = set("0123456789abcdefABCDEF")
+
+
+def repair_json_escapes(text: str) -> str:
+    """Double the backslashes of an answer JSON could not read, so it reads as the model wrote it (Change 37).
+
+    Models write Windows paths and regexes (C:\\Windows, \\d+) inside JSON strings with single
+    backslashes; one such backslash made the whole answer unreadable ("Invalid \\escape") and the
+    stage fell back to its empty default - the analysis stage lost its log-source recommendation this
+    way in 2-4 of 60 tuning cases per run. Kept: \\" \\\\ \\/ and a real \\uXXXX; every other backslash is
+    doubled. Called only on an answer that already failed to parse.
+    """
+    out, i, n = [], 0, len(text)
+    while i < n:
+        if text[i] != "\\":
+            out.append(text[i])
+            i += 1
+            continue
+        nxt = text[i + 1] if i + 1 < n else ""
+        if nxt and nxt in _KEPT_ESCAPES:
+            out.append(text[i:i + 2])
+            i += 2
+        elif nxt == "u" and all(c in _HEX for c in text[i + 2:i + 6]) and i + 6 <= n:
+            out.append(text[i:i + 6])
+            i += 6
+        else:
+            out.append("\\\\")
+            i += 1
+    return "".join(out)
+
 
 class PipelineStage(ABC):
     """Abstract base class for pipeline stages."""
@@ -108,4 +141,12 @@ class PipelineStage(ABC):
             if lines and lines[-1].strip() == "```":
                 lines = lines[:-1]
             text = "\n".join(lines)
-        return json.loads(text)
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError as exc:
+            if "escape" not in str(exc):
+                raise
+            # Change 37: repair only the backslashes JSON cannot read; an answer that already
+            # parsed never reaches this line.
+            print(f"[{self.name}] repaired invalid JSON escapes ({exc})")
+            return json.loads(repair_json_escapes(text))
