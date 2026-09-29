@@ -88,3 +88,30 @@ def test_the_summary_counts_different_answers_per_case_and_condition():
                                            "errors": 0}
     assert out[("a", "four at once")] == {"answers": 2, "different_answers": 2, "different_telemetry": 2,
                                           "errors": 1}
+
+
+# --- in time order (added after the first probe: its conditions ran in a fixed order) -------
+
+def _answer(rid, condition, i, output, seconds=6.0, at="2026-09-29T19:00:00"):
+    return {"kind": "answer", "rule_id": rid, "condition": condition, "request": i, "output": output,
+            "seconds": seconds, "at": at}
+
+
+def test_whether_only_the_first_request_of_a_prompt_answered_differently():
+    from eval.probe_determinism import order_effects
+    rows = [_answer("a", "one at a time", 0, "COLD", at="t0"),
+            _answer("a", "one at a time", 1, "WARM", at="t1"),
+            _answer("a", "one at a time, seed", 0, "WARM", at="t2"),
+            _answer("b", "one at a time", 0, "X", at="t0"), _answer("b", "one at a time", 1, "Y", at="t1"),
+            _answer("b", "one at a time", 2, "X", at="t2")]
+    out = order_effects(rows)
+    # first_differs: the first request's answer was never given again
+    assert out["a"] == {"requests": 3, "first_differs": True, "later_identical": True}
+    assert out["b"] == {"requests": 3, "first_differs": False, "later_identical": False}
+
+
+def test_requests_sent_at_once_that_were_served_one_after_another():
+    from eval.probe_determinism import served_in_turn
+    queued = [_answer("a", "at once", i, "W", seconds=s) for i, s in enumerate([12.1, 6.0, 24.0, 18.2])]
+    together = [_answer("b", "at once", i, "W", seconds=s) for i, s in enumerate([7.0, 7.2, 6.9, 7.4])]
+    assert served_in_turn(queued + together) == {("a", "at once"): True, ("b", "at once"): False}

@@ -4336,3 +4336,34 @@ sends that same prompt again and again. Every request is exactly the pipeline's 
   not fixable from the client, and the pipeline has to live with it by design (P-C, self-consistency).
 - *Limits:* other users' load on the shared server is not observed (each call's time is recorded); ≤ 6
   prompts × 18 calls is descriptive, not a test.
+
+### P-B results — the first request of a prompt answers differently; every repeat is identical
+The probe ran 19:12–19:25 (no errors; `eval/results/determinism_probe.jsonl`, 96 rows). `ad0960eb` sends the
+same prompt as `92389a99`, so 5 distinct prompts, 18 requests each.
+**By the plan's table** every prompt gave 2 different answers in "one at a time" and 1 in every other
+condition, and 1 telemetry label everywhere — which reads as case (b), "the seed makes them identical".
+**That reading is wrong, and the design is why:** the conditions always ran in the same order, so the
+seed conditions always came after the first request. In time order (`probe_determinism.py --report`,
+added after the probe — `order_effects`, `served_in_turn`, 2 tests seen to fail first):
+- **5 of 5 prompts: the first request's answer was never given again; all 17 later answers were identical**
+  — with or without the seed, one at a time or sent at once. The first requests were also slower (e.g.
+  14.4 s vs 6.4 s) and longer (481 vs 457 tokens).
+- **10 of 10 batches sent at once were answered one after another** (times ≈ 1×, 2×, 3×, 4× a single
+  request): the server queues requests; nothing was processed together, so batching was not tested and is
+  not a factor on this server as configured.
+- The stage's `primary_telemetry` label was the same in all 18 answers of every prompt: the first answer
+  differed in wording, not in the label the log source follows (these 5 prompts).
+**Design flaw, disclosed:** the order of conditions was fixed, so the seed was confounded with "not the
+first request". The seed's effect is therefore unmeasured; the repeats show it is not needed for
+repeatability once a prompt has been seen.
+**Reading:** at temperature 0 the model is repeatable **for a prompt the server has just processed**; the
+first time a prompt arrives it can answer differently. `[UNMEASURED]` Likely mechanism: the server reuses
+the already-processed prompt on a repeat (prompt caching), and computing it fresh vs reusing it gives
+slightly different numbers, enough to change a near-tie between words. In a pipeline run every prompt is
+new, so its answer may depend on what the server processed just before — the previous case's prompt
+(they share the long instruction part) or another user's request — which would explain why two runs of
+identical code differ. Not tested yet.
+**Next, proposed (P-B follow-up):** alternate between prompts so that every request is a first one — are
+first answers repeatable among themselves, and does what came before change them? If the answer depends
+only on the prompt when it is sent fresh or only when warm, a fix is possible (e.g. a warm-up request
+before the real one); if it depends on what came before, the pipeline has to live with it (P-C).

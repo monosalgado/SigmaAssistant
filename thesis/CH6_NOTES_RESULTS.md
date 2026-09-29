@@ -95,8 +95,12 @@ The professor's question after the demo. Two runs of **identical code on identic
   stage in 12 of 60 cases, at the analysis's first log-source suggestion in 15, at the first rule's
   log source in 19. Of the 6 log-source flips, 4 began at the attack-vector stage.
 - **Temperature 0 is not deterministic in practice:** that first stage runs at temperature 0, with
-  no code or prompt change between the two runs. `[UNMEASURED]` Likely: GPU inference on a shared
-  server breaking near-ties, amplified over long answers.
+  no code or prompt change between the two runs. **Probed 2026-09-29 (P-B, `eval/probe_determinism.py`)
+  `[MEASURED]`:** the same prompt sent 18 times — the **first** request's answer was never given again (5 of
+  5 prompts), **all 17 repeats were identical**, with or without a seed; requests sent at once were queued
+  (10 of 10 batches), so batching is not the cause. `[UNMEASURED]` Mechanism: likely the server's reuse of
+  an already-processed prompt; in a run every prompt is new, so its answer may depend on what the server
+  processed before. The label the log source follows did not change in these 5 prompts.
 - Example `ad7085ac` (Sourgum): `file_event` → right log source, S5 1.00; in the other run
   `registry_event` → wrong, S5 0.00. An early difference decides the log source, which gates the
   fields (§6.0b).

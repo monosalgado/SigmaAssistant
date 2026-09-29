@@ -109,6 +109,33 @@ def summarise(rows: list) -> dict:
             for key, e in out.items()}
 
 
+def order_effects(rows: list) -> dict:
+    """Per case, in the order the requests were sent: did the first request's answer never come
+    again, and were all later answers identical? (The first probe's conditions ran in a fixed order,
+    so a difference between conditions can be a difference between the first request and the rest.)"""
+    answers = {}
+    for row in sorted((r for r in rows if r.get("kind") == "answer" and r.get("output") is not None),
+                      key=lambda r: (r["at"], r["request"])):
+        answers.setdefault(row["rule_id"], []).append(row["output"])
+    return {rid: {"requests": len(out), "first_differs": out[0] not in out[1:],
+                  "later_identical": len(set(out[1:])) <= 1}
+            for rid, out in answers.items()}
+
+
+def served_in_turn(rows: list) -> dict:
+    """Requests sent at once that the server answered one after another: sorted by time taken,
+    the k-th took about k times the fastest (within 25%)."""
+    groups = {}
+    for row in rows:
+        if row.get("kind") == "answer" and row["condition"].startswith("at once") and row.get("seconds"):
+            groups.setdefault((row["rule_id"], row["condition"]), []).append(row["seconds"])
+    out = {}
+    for key, times in groups.items():
+        times = sorted(times)
+        out[key] = len(times) > 1 and all(abs(t / (times[0] * k) - 1) <= 0.25 for k, t in enumerate(times, 1))
+    return out
+
+
 CONDITIONS = [("one at a time", False, None), ("one at a time, seed", False, 42),
               ("at once", True, None), ("at once, seed", True, 42)]
 
@@ -119,7 +146,11 @@ def main() -> int:
     parser.add_argument("--repeats", type=int, default=5, help="requests per one-at-a-time condition")
     parser.add_argument("--batch", type=int, default=4, help="requests sent at once")
     parser.add_argument("--out", required=True)
+    parser.add_argument("--report", action="store_true", help="only summarise an existing --out file")
     args = parser.parse_args()
+    if args.report:
+        report([json.loads(line) for line in open(args.out, encoding="utf-8") if line.strip()])
+        return 0
 
     from dotenv import load_dotenv
     from openai import OpenAI
@@ -187,10 +218,21 @@ def main() -> int:
             print(f"{rid[:8]} {condition:<22} answers {s['answers']}  different {s['different_answers']}  "
                   f"telemetry labels {s['different_telemetry']}  errors {s['errors']}", flush=True)
     out.close()
+    report(rows)
+    return 0
+
+
+def report(rows: list) -> None:
     print("\nCase      condition               answers  different  telemetry labels")
     for (rid, condition), s in summarise(rows).items():
         print(f"{rid[:8]}  {condition:<22} {s['answers']:>7}  {s['different_answers']:>9}  {s['different_telemetry']:>16}")
-    return 0
+    print("\nIn the order sent (all conditions together):")
+    for rid, o in order_effects(rows).items():
+        print(f"  {rid[:8]}  {o['requests']} requests: first answer never given again: {o['first_differs']}; "
+              f"all later answers identical: {o['later_identical']}")
+    turns = served_in_turn(rows)
+    print(f"\nRequests sent at once that the server answered one after another: {sum(turns.values())} of "
+          f"{len(turns)} batches")
 
 
 if __name__ == "__main__":
