@@ -376,6 +376,30 @@ def _record_error(row: dict, exc: Exception) -> None:
     row["n_rules"] = 0
 
 
+def _head_revision() -> str:
+    import subprocess
+    return subprocess.run(["git", "-C", str(Path(__file__).resolve().parent.parent), "rev-parse", "--short",
+                           "HEAD"], capture_output=True, text=True).stdout.strip()
+
+
+def run_config(agent, args, head_revision=_head_revision) -> dict:
+    """What every row records about the run, including which code ran: this checkout's commit,
+    or the older checkout given with --code (eval/old_code.py)."""
+    client = agent.client
+    old = getattr(args, "code", None)
+    return {
+        "arm": args.arm,
+        "backend": getattr(client, "backend", None) or type(client).__name__,
+        "primary_model": getattr(client, "model_name", ""),
+        "fast_model": getattr(client, "fast_model_name", ""),
+        "economy_model": getattr(client, "economy_model_name", ""),
+        "web_enrich": not args.no_web_enrich,
+        "min_chars": args.min_chars,
+        "code": agent.code_revision if old else head_revision(),
+        "code_path": old,
+    }
+
+
 def run_case(agent, case: dict, config: dict, no_web_enrich: bool,
              poc_url_map: dict = None) -> dict:
     """Run the pipeline on one case and return its result row."""
@@ -637,6 +661,9 @@ def main() -> None:
                              "(build with eval/flag_contamination.py).")
     parser.add_argument("--dry-run", action="store_true",
                         help="Report the case selection without calling any LLM.")
+    parser.add_argument("--code", default=None, metavar="CHECKOUT",
+                        help="Run an older version of the pipeline from this checkout through this "
+                             "harness (eval/old_code.py), e.g. ../SigmaAssistant-may for the May code.")
     parser.add_argument("--oracle-logsource", action="store_true",
                         help="Simulated analyst (plan 5.3): one analysis per case, then generation "
                              "with no review and with the gold log source as the analyst's choice; "
@@ -707,21 +734,18 @@ def main() -> None:
     poc_url_map = load_github_manifest(repo_root / args.github_manifest)
     print(f"  PoC GitHub snapshots: {len(poc_url_map)} URLs from {args.github_manifest}")
 
-    # Imported late so --dry-run needs no vector store or API key.
-    from backend.agent import SigmaAgent
-
     print("\nInitialising agent ...")
-    agent = SigmaAgent()
+    if args.code:
+        if args.oracle_logsource:
+            raise SystemExit("--code runs the old pipeline end to end; it has no review checkpoint")
+        from eval.old_code import OldCodeAgent
+        agent = OldCodeAgent(code_path=args.code, no_web_enrich=args.no_web_enrich)
+    else:
+        # Imported late so --dry-run needs no vector store or API key.
+        from backend.agent import SigmaAgent
+        agent = SigmaAgent()
     client = agent.client
-    config = {
-        "arm": args.arm,
-        "backend": type(client).__name__,
-        "primary_model": getattr(client, "model_name", ""),
-        "fast_model": getattr(client, "fast_model_name", ""),
-        "economy_model": getattr(client, "economy_model_name", ""),
-        "web_enrich": not args.no_web_enrich,
-        "min_chars": args.min_chars,
-    }
+    config = run_config(agent, args)
     print(f"Config: {config}")
     if type(client).__name__ == "HybridLLMClient":
         print("NOTE: hybrid mode — rule generation uses the Gemini primary tier "

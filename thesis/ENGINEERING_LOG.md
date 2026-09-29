@@ -4196,3 +4196,68 @@ the prompt text between 15 April and 14 May, were not recorded.
 **Correction to the entry above ("The professor's feedback…"):** it called the 15 April AttackerKB rule
 defect 8 (a URL routed to chat). That chat went through the pipeline and saved its stage results, so it
 was not misrouted: the page's text never reached the stages, cause not recorded. CH6 §6.0c corrected.
+
+---
+
+## 2026-09-28 — May vs now rerun: the May code through today's harness, and the measurement plan (fixed before any run)
+
+User: "rerun the may code on the same saved pages, several times each. Gather results". Pushed
+`c0b689d` first (user).
+**How the May code runs** (new, committed with this entry): `run_eval.py --code <checkout>` runs an
+older version of the pipeline through today's harness. `eval/old_code_worker.py` imports the old code
+in its own process (its `backend` package cannot sit next to today's); `eval/old_code.py` sends it one
+case at a time with the case's saved pages and records its LLM calls here, so the row, the scorer,
+resuming and stopping at a failed call are the harness's own. Every row now records which code ran
+(`config.code`, `config.code_path`). Tests: `tests/test_old_code.py` (11). **Lapse:** the adapter's
+first 9 tests were written before the code but not run until after it (the rule is: seen to fail
+first). Checked instead by four planted bugs (calls not recorded; pages not restored; URL fragment
+not stripped; a dead worker not counted as a failed call): each made a test fail; restored, all pass.
+The two `run_config` tests were seen to fail first. Smoke: 2 cases (seed 7, a sample no run uses),
+`2ec05f6` through the adapter, CITABLE; every stage's calls recorded, pages served from snapshots.
+**What is today's in the May arm, and why (the rest is the May code unchanged — its prompts, stages,
+review-and-retry loop, page extraction, no Change 9 id fix):**
+- the LLM client and call recording: same model and server, with Change 24's output limit (without it
+  an unbounded answer hangs the run — held-out run 2 stopped this way six times);
+- the saved pages and web search off, as every run since September;
+- routing: bare-URL input goes straight to rule generation, as today (Change 8); the May classifier
+  sent about half of such inputs to chat (defect 8) — that failure is already measured and is left out
+  so the arms compare rules;
+- the retrieval index is today's (rebuilt in September, `d9d9e3f`: valid YAML examples, all
+  platforms); the May index no longer exists.
+**Not answered by this run:** Gemini vs qwen (the key was deleted), April's web-search results, the
+May index, defect 8's routing.
+**Found while preparing:** the review prompt, unchanged since May and in use today, still carries one
+example taken from the Citrix report (`/metadata/samlidp/asdf`). Not changed now (no pipeline change
+before or during a run); added to the plan's Inbox.
+
+### Measurement plan (fixed before any run)
+- **Cases:** the 60 held-out cases (`eval/manifest_heldout.jsonl`, no `--sample`), frozen pages,
+  `--no-web-enrich`. Held-out because no version's prompts were written from them (the tuning 60 were
+  used to develop `main`'s changes).
+- **Arms, k = 3 runs each:** May = `2ec05f6` via `--code ../SigmaAssistant-may`, arms
+  `may_heldout_r1..3`; main = the commit of this entry, arms `main_heldout_r1..3`. Files
+  `eval/results/{may,main}_heldout_r{1,2,3}.jsonl`. Both arms from one frozen checkout of this commit
+  (data linked in). Rounds: May r and main r run at the same time (same server load), r = 1, 2, 3, each
+  under `run_resilient.py`. More rounds, if ever added, are a separate labelled addition.
+- **Nobody reads rows or scores until all six runs finish** (progress lines only).
+- **Primary** (`eval/compare_arms.py`, committed with this entry, 7 tests seen to fail first): per
+  case, the mean over its 3 runs; main − May, paired over the cases every run of both arms has,
+  bootstrap 95% CI (10,000 resamples, seed 0) of: **S3u** and **S5u**, the log source and detection-field
+  F1 **as the user gets them** — a first rule that does not parse counts as wrong (0). Chosen over the
+  usual convention because the May code lacks Change 9, so some of its rules will not parse (defect 10)
+  and leaving them out would flatter it.
+- **Consistency (primary for the professor's question):** cases whose 3 runs chose the same first-rule
+  log source, per arm; exact McNemar between the arms.
+- **Secondary:** S1, S3, S4, S5 (the harness's convention), rules, seconds, tokens per case; S3 right in
+  every run / wrong in every run / mixed; per pair of runs of one arm, cases concluded differently at the
+  attack-vector stage, the analysis, the first rule's log source; rules with a log source SigmaHQ's rules
+  use (`old_sessions.py --results`, per run). The 2 contamination-flagged held-out cases are listed with
+  their values (descriptive).
+- **Failures:** an infrastructure failure stops and resumes. A case that stops one run three times is
+  removed from that run by a documented manual step and so drops out of every comparison (the tool
+  compares only cases every run has). An answer cut at the output limit is a scored failure, in both
+  arms (same client).
+- **Reading, fixed now:** a CI above 0 on S3u or S5u = the code and prompt changes since May make better
+  rules on unseen reports with the same model; a CI containing 0 = no detectable difference from code
+  and prompts, and the May-vs-now difference rests on what this run cannot test (model, web search, the
+  prompts' tuning on the demo reports) and on run-to-run variance.

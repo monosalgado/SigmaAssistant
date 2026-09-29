@@ -92,6 +92,9 @@ log source SigmaHQ's rules use. Open, for the user and the professor:
 - [ ] **Controlled rerun** May code (`2ec05f6`) vs `main` on frozen pages, k runs each — isolates code +
       prompts only (same local model unless a new Gemini key; April web results unrecoverable).
       Pre-register first; check the May retrieval collections still exist
+      → **started 2026-09-28** (user: "rerun the may code on the same saved pages, several times
+      each"): held-out 60, k = 3 per arm, plan fixed in the log ("May vs now rerun…"); then the
+      results and a presentation for the professor (user)
 
 Options to discuss, not decided:
 - **A.** Assistant + measured grounding failures + static evaluation (drop 1–3,
@@ -471,6 +474,10 @@ is a decision, not a default.
 ---
 
 ## Inbox — findings not yet triaged
+- **(2026-09-28, found preparing the May rerun)** The review prompt (`COMBINED_REVIEW`, unchanged
+  since May, in use) still carries an example from the Citrix demo report (`/metadata/samlidp/asdf`).
+  Replace it with a placeholder example, as Change 27 did for the attack-vector prompt — after the
+  May rerun, one change, measured.
 
 *(one line each; triaged at the end of the current phase)*
 
