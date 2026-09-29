@@ -4463,3 +4463,16 @@ stage, answers unreadable before vs now. Also: cases with no log-source suggesti
 descriptive), and the repaired values listed for a check that they read as written. The output limit is not
 this change's (2 of the 8 failures). A full run's S3 effect is expected small (≤ 4 cases per run gain a pick)
 and will show in the next measured run.
+
+### Change 37 measured — no answer needed the repair in this run
+`eval/probe_json_repair.py` on the 60 tuning cases (`eval/results/json_repair_probe.jsonl`, 60 rows, no
+crash). Answers read with the old reader / today's: PoC 33 answers, unreadable 0 / 0; attack vector 60, 1 / 1;
+analysis 59, 0 / 0; **repaired: 0 of 152**. Cases with no log-source suggestion: 1. **The stray-backslash
+failure did not occur in this run**; in the three earlier runs the run logs show it 6 times in the analysis
+stage (a `grep` of the gitignored logs, not a committed tool). It comes and goes between runs, like the
+answers themselves (P-B). The fix stays (it is correct by its tests and cannot change a readable answer), but
+**its benefit is unmeasured here: 0 cases to repair**.
+The two failures left are other kinds: `9a2d8b3e`'s analysis answer ran into the 16,384-token output limit
+on all 3 attempts — the same in 2 of the 3 earlier runs (plan Inbox item 7, "shorter analysis answer");
+`47a1658b`'s attack-vector answer was broken JSON of another kind (`Expecting ',' delimiter`), which the repair
+rightly leaves alone.
