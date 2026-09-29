@@ -154,19 +154,27 @@ First answer: CH6 §6.0c, log 2026-09-28. This file adds the May reconstruction.
 5. **Inputs differ** `[MEASURED]` (log 2026-09-27): the analysis is right for web reports far more
    often than for host or service ones. April's reports were almost all web exploits.
 
-## 5. What would measure May against now (not done; needs the user's decision)
+## 5. The rerun: the May code against today's, same model, same pages `[MEASURED]` (2026-09-29)
 
-- **Controlled rerun:** the May code (`2ec05f6`) and `main` on the same frozen pages, k runs each,
-  scored the same way. It isolates code + prompts. With qwen3-coder:30b for both, it does not
-  recover the model difference; with Gemini, a new API key is needed (the old one was deleted). The
-  April web-search results cannot be recovered. Pre-register it before any run; check first that
-  the May code's retrieval collections still exist (`cwe_kb`, `sigma_taxonomy`).
-- **Tuning leakage, measured directly:** score the May prompt on the April reports vs other reports.
-  Only possible with a gold rule for each; none of the April reports is in the corpus.
+The May code (`2ec05f6`) through today's harness (`run_eval.py --code`) and `main` (`8f6a91c`), 3 runs each
+on the 60 held-out reports; qwen3-coder:30b for every stage in both; web search off; plan fixed before the
+runs (log 2026-09-28), results in the log 2026-09-29 and CH6 §6.0d (`eval/compare_arms.py`).
+- **Log source right** (a rule that does not parse counts as wrong): May 0.072, now 0.439, **+0.367
+  [+0.250, +0.489]**. **Detection-field F1:** 0.171 → 0.330, **+0.158 [+0.096, +0.222]**. First rule
+  parses: 0.711 → 0.950.
+- **Same log source in all 3 runs:** May 18 of 60, now 43 of 60 (p = 1.1e-05). The May code's runs part at
+  the rule writer (32.3 of 60 per pair), today's in 13.3.
+- **So:** with the model held fixed, the code and prompt changes since May make better and steadier rules on
+  reports neither version was written from. On such reports the May code (with qwen) is below chance on
+  the log source. The good May rules came from the reports its prompt was tuned on, possibly from Gemini
+  (`[UNMEASURED]`), and from picking good runs out of unsteady ones.
+- **Not measured:** the May system itself (Gemini, web search, the May index) — CH7 item 53. Tuning leakage
+  measured directly would need a gold rule for each April report; none is in the corpus.
 
 ## Reproduce
 
 ```
+.venv/bin/python eval/compare_arms.py --a eval/results/may_heldout_r{1,2,3}.jsonl --b eval/results/main_heldout_r{1,2,3}.jsonl --label-a May --label-b main
 .venv/bin/python eval/prompt_history.py 2ec05f6 HEAD
 .venv/bin/python eval/prompt_history.py 7b80426 2ec05f6
 .venv/bin/python eval/prompt_history.py 2ec05f6 HEAD --diff ATTACK_VECTOR_EXTRACTION

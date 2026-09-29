@@ -4270,3 +4270,41 @@ this") holds the reconstruction and the rerun's design; the results slides wait 
 **Correction to `thesis/MAY_VS_NOW_NOTES.md` §1:** the May review stage checked rules with hand-written
 YAML checks, not pySigma; pySigma validation arrived on 2026-08-06 (`a1c4f37`). Found while checking
 the slides against the code.
+
+---
+
+## 2026-09-29 — May vs now rerun: results (as pre-registered)
+
+**Runs:** six, all 60 of 60 rows, all **CITABLE**, no stop or relaunch in any (rounds 00:04–04:41,
+04:41–09:50, 09:50–14:01; each run 240–309 min). Every call went to qwen3-coder:30b (`old_sessions.py
+--results`). Files: `eval/results/{may,main}_heldout_r{1,2,3}.jsonl`. No row or score was read before all
+six finished. Analysis: `eval/compare_arms.py --a may_heldout_r{1,2,3} --b main_heldout_r{1,2,3}`
+(committed; this entry adds its listing of the flagged cases and a two-significant-figure p, 2 tests seen
+to fail first — output formatting only, no measure changed). 60 cases in every run of both arms.
+**Primary** (case = mean of its 3 runs; main − May, paired, bootstrap 95% CI):
+| Measure | May code | main | main − May |
+|---|---|---|---|
+| **S3u** log source right, as the user gets it (n = 60) | 0.072 | 0.439 | **+0.367 [+0.250, +0.489]** |
+| **S5u** detection-field F1, as the user gets it (n = 60) | 0.171 | 0.330 | **+0.158 [+0.096, +0.222]** |
+| **Same first-rule log source in all 3 runs** (n = 60) | **18** | **43** | only May 4, only main 29; exact McNemar **p = 1.1e-05** |
+**Secondary:** S1 0.711 → 0.950 (+0.239 [+0.167, +0.317]); S3 (convention) 0.104 → 0.452, n = 56; S4
+0.217 → 0.224 (+0.007 [−0.065, +0.080], n = 42 — no difference); S5 (convention) 0.249 → 0.347 (+0.098
+[+0.034, +0.163], n = 56); rules per case 3.13 → 3.62; seconds 275 → 279 (no difference); tokens 36,565 →
+56,516 per case. S3 right in every run / wrong in every run / mixed: May 2 / 52 / 6, main 23 / 30 / 7.
+Per pair of runs of one arm, cases concluded differently at the attack-vector stage / the analysis / the
+first rule's log source: **May 2.0 / 9.0 / 32.3, main 3.3 / 6.0 / 13.3** (of 60). Rules with a log source
+SigmaHQ's rules use: May 81/178, 80/192, 92/193; main 207/217, 202/217, 202/217. The 2 contamination-flagged
+cases: S3u 0 in both arms; S5u May 0.00/0.00, main 0.00/0.11 — they do not carry the result.
+**Reading, as fixed before the runs:** both primary CIs lie above 0 — **with the same model and the same
+pages, today's code and prompts write better rules on unseen reports than the May code**, and far more
+consistently. With qwen writing its rules, the May code is below the chance baseline on the log source
+(0.072 vs the null 0.173) and 29% of its first rules do not parse (S1 0.711).
+**What this does not say:** the May system's rules were written by Gemini 2.5 Flash, with web search; this
+rerun gives the May code qwen for every stage, today's retrieval index and today's routing. So it measures
+the code and prompts, not the May system as it ran. `[UNMEASURED]` Gemini's contribution.
+**Interpretation (not a test):** in the May code the runs agree up to the analysis and part at the rule
+writer (32.3 of 60 per pair); in `main` the rule writer diverges in 13.3 — consistent with Change 26 tying the
+first rule to the analysis's recommendation, and with SigmaHQ's table (Changes 28–29) narrowing its choices.
+**Post-hoc observation:** in `main` the attack-vector stage concluded differently in 3.3 of 60 per pair of
+runs; the September A/A comparison found 12 of 60 (runs a day apart, sequential; these ran concurrently). Not
+a test; P-B (the source of temperature-0 variation) would have to settle it.

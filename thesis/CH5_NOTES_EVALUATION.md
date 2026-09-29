@@ -533,6 +533,17 @@ once copied from an earlier run — log, "Correction: two … denominators").
 source over **all** rows — the gold comes from the manifest, not from the scored first rule —
 paired, exact McNemar; a case with no suggestion counts as a miss. 9 tests.
 
+### Two code versions, k runs each — and an older version through today's harness `[DESIGN]` (added 2026-09-29)
+- **`run_eval.py --code <checkout>`** runs an older pipeline version (the May code) through today's harness: the
+  old code in a worker process, today's saved pages, LLM client and call recording, row, scorer, resume and
+  stop-on-failure (`eval/old_code.py`, `eval/old_code_worker.py`). Rows record which code ran.
+- **`eval/compare_arms.py`**: each case's value = the mean over an arm's k runs; arms compared case by case
+  (paired bootstrap CI). Primary view "as the user gets it": a first rule that does not parse counts as wrong,
+  so a version that fails to parse more often is not flattered by leaving those cases out. Consistency = the
+  same first-rule log source in all k runs (paired exact McNemar), plus per-stage divergence per pair of runs.
+- Used for the May-vs-now rerun (k = 3, held-out 60; CH6 §6.0d). One run is one sample (CH7 items 50–51):
+  a k-run design is what lets a result speak about consistency at all.
+
 ### Held-out confirmation — the answer to "did you tune on your test set?" `[DESIGN]` (added 2026-09-26)
 Every Phase 2 change was found by reading failures in the 60 seed-0 cases and measured on the
 same 60. The final check (plan 2.9) uses **60 cases no run has ever touched**: drawn by a

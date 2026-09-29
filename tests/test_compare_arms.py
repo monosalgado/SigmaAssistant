@@ -94,3 +94,22 @@ def test_stage_differences_are_averaged_over_every_pair_of_runs():
     out = stage_differences_within(runs)
     # pairs (1,2), (1,3), (2,3): the attack vector differs in 2 of 3
     assert out["pairs"] == 3 and out["attack vector"] == pytest.approx(2 / 3)
+
+
+# --- the contamination-flagged cases, listed apart (pre-registered, descriptive) ---------
+
+def test_the_flagged_cases_are_listed_with_each_arms_values():
+    from eval.compare_arms import flagged_rows
+    a = [{"x": dict(_row("x", exact=False), contamination={"flagged": True}), "y": _row("y")}]
+    b = [{"x": dict(_row("x", exact=True), contamination={"flagged": True}), "y": _row("y")}]
+    rows = flagged_rows(a, b)
+    assert [r["rule_id"] for r in rows] == ["x"]
+    assert rows[0]["S3u"] == (0.0, 1.0)
+    assert rows[0]["same_in_all"] == (True, True)
+
+
+def test_a_p_value_is_printed_with_two_significant_figures():
+    from eval.compare_arms import fmt_p
+    assert fmt_p(1.0928604751825333e-05) == "1.1e-05"
+    assert fmt_p(0.0391) == "0.039"
+    assert fmt_p(1.0) == "1"

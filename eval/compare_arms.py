@@ -129,6 +129,27 @@ def s3_stability(runs: list, cases: set) -> dict:
     return out
 
 
+def fmt_p(p: float) -> str:
+    return f"{p:.2g}"
+
+
+def flagged_rows(a_runs: list, b_runs: list) -> list:
+    """The contamination-flagged cases (a page that may quote the gold rule), with each arm's
+    S3u, S5u and consistency - reported apart, as every run since plan 1.3b."""
+    cases = _common(a_runs + b_runs)
+    ids = sorted(rid for rid in cases
+                 if any((run[rid].get("contamination") or {}).get("flagged") for run in a_runs + b_runs))
+    fields = gold_fields(a_runs + b_runs)
+    out = []
+    con_a, con_b = consistency(a_runs), consistency(b_runs)
+    for rid in ids:
+        pair = lambda metric: (case_means(a_runs, metric, fields).get(rid),  # noqa: E731
+                               case_means(b_runs, metric, fields).get(rid))
+        out.append({"rule_id": rid, "category": a_runs[0][rid].get("category", ""), "S3u": pair("S3u"),
+                    "S5u": pair("S5u"), "same_in_all": (con_a["same_in_all"][rid], con_b["same_in_all"][rid])})
+    return out
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--a", nargs="+", required=True, help="arm A's result files (one per run)")
@@ -161,7 +182,7 @@ def main() -> None:
     pairs = [(con_a["same_in_all"][rid], con_b["same_in_all"][rid]) for rid in sorted(cases)]
     m = mcnemar(pairs)
     print(f"  {la}: {m['a_true']} of {m['n']}   {lb}: {m['b_true']} of {m['n']}   "
-          f"(only {la} {m['only_a']}, only {lb} {m['only_b']}; exact McNemar p = {m['p']:.3f})")
+          f"(only {la} {m['only_a']}, only {lb} {m['only_b']}; exact McNemar p = {fmt_p(m['p'])})")
     for label, runs in ((la, a_runs), (lb, b_runs)):
         st = s3_stability(runs, cases)
         diff = stage_differences_within(runs)
@@ -170,6 +191,14 @@ def main() -> None:
         if diff["pairs"]:
             print(f"  {label}: per pair of runs ({diff['pairs']} pairs), cases concluded differently at - "
                   + ", ".join(f"{s} {diff[s]:.1f}" for s in STAGES) + f" (of {diff['cases']:.0f})")
+
+    flagged = flagged_rows(a_runs, b_runs)
+    print(f"\nContamination-flagged cases (included above; listed apart): {len(flagged)}")
+    num = lambda v: "-" if v is None else f"{v:.2f}"  # noqa: E731
+    for r in flagged:
+        print(f"  {r['rule_id'][:8]} {r['category']:<18} S3u {la} {num(r['S3u'][0])} {lb} {num(r['S3u'][1])}   "
+              f"S5u {la} {num(r['S5u'][0])} {lb} {num(r['S5u'][1])}   same log source in every run: "
+              f"{la} {r['same_in_all'][0]}, {lb} {r['same_in_all'][1]}")
 
 
 if __name__ == "__main__":

@@ -95,6 +95,10 @@ log source SigmaHQ's rules use. Open, for the user and the professor:
       → **started 2026-09-28** (user: "rerun the may code on the same saved pages, several times
       each"): held-out 60, k = 3 per arm, plan fixed in the log ("May vs now rerun…"); then the
       results and a presentation for the professor (user)
+      → **done 2026-09-29** (log "May vs now rerun: results"; CH6 §6.0d): log source right May 0.072 →
+      now 0.439 (+0.367 [+0.250, +0.489]); detection-field F1 +0.158 [+0.096, +0.222]; same log source in all
+      3 runs 18 → 43 of 60 (p = 1.1e-05). Presentation: web deck + `thesis/May_vs_Now.pptx` (local only,
+      never in git — user)
 
 Options to discuss, not decided:
 - **A.** Assistant + measured grounding failures + static evaluation (drop 1–3,

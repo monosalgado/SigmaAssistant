@@ -236,6 +236,13 @@ limitation in the log belongs here too.
     April/May rules for those reports are not evidence for new reports. The thesis's numbers come
     from September's runs on reports the prompts were not written from (the held-out set). (log
     2026-09-28)
+53. **The May rerun measures the May code, not the May system** `[DISCLOSE]` (CH6 §6.0d). Its rule
+    writer was qwen3-coder:30b, not Gemini 2.5 Flash; web search was off; the retrieval index was today's
+    (the May index no longer exists); bare URLs went straight to rule generation, as today (the May
+    classifier sent about half to chat, defect 8); today's LLM client carried the output limit. So the
+    +0.37 log-source and +0.16 detection-field gains are what the code and prompts changed with the model
+    held fixed. Three runs per version is a small k: consistency is estimated from 3 pairs of runs. (log
+    2026-09-29)
 
 ---
 

@@ -122,6 +122,29 @@ defect 8; that chat went through the pipeline, so it was not misrouted.)*
 
 ---
 
+### 6.0d The May code rerun against today's — same model, same pages `[MEASURED] 2026-09-29`
+The professor's question, part 2 (how different is now from May?), measured. The May code (`2ec05f6`) and
+`main` (`8f6a91c`), **3 runs each on the 60 held-out reports**, same model (qwen3-coder:30b), same saved
+pages, web search off; plan fixed before the runs (log 2026-09-28); `eval/compare_arms.py`. Case = mean of
+its 3 runs; paired; bootstrap 95% CI; a first rule that does not parse counts as wrong.
+| | May code | main | main − May |
+|---|---|---|---|
+| Log source right (S3u) | 0.072 | 0.439 | **+0.367 [+0.250, +0.489]** |
+| Detection-field F1 (S5u) | 0.171 | 0.330 | **+0.158 [+0.096, +0.222]** |
+| First rule parses (S1) | 0.711 | 0.950 | +0.239 [+0.167, +0.317] |
+| ATT&CK F1 (S4, n = 42) | 0.217 | 0.224 | +0.007 [−0.065, +0.080] |
+| **Same first-rule log source in all 3 runs** | **18 / 60** | **43 / 60** | exact McNemar p = 1.1e-05 |
+- **Code and prompts matter, on reports they were not tuned on.** With qwen writing its rules, the May code
+  is below the chance baseline on the log source (0.072 vs null 0.173); 29% of its first rules do not parse.
+- **Consistency is the professor's point in numbers:** the May code gives the same log source in all three
+  runs for 18 of 60 reports, today's for 43. Where the runs part (per pair of runs): May at the rule writer,
+  32.3 of 60; `main` 13.3. *Interpretation:* Change 26 ties the first rule to the analysis; SigmaHQ's table
+  narrows the choices.
+- Rules with a log source SigmaHQ's rules use: May 253 of 563, `main` 611 of 651 (sum of 3 runs).
+- Cost: same time per case (275 vs 279 s); `main` uses ~20k more tokens per case.
+- **Not measured:** the May *system* — its rule writer was Gemini 2.5 Flash with web search (`[UNMEASURED]`).
+  This rerun gives the May code qwen, today's retrieval index and today's routing (CH7 item 53).
+
 ## 6.1 Baseline system performance — baseline v1 `[MEASURED] 2026-09-19`
 
 `eval/results/baseline60.jsonl` · 60 cases, stratified sample (seed 0) of 303 ·
