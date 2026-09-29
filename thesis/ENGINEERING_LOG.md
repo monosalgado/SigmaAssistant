@@ -4136,3 +4136,21 @@ automate the process and rely more on the AI" — human input matters, but autom
    answers thousands of tokens long; not tested yet.
 **The mechanism** ties to 5.3: an early difference decides the log source, and the log source
 gates the detection fields (S5 0.13 vs 0.52 when it becomes right).
+
+---
+
+## 2026-09-28 — The analyst review and Change 36 merged into `main` (user)
+
+User: "go ahead with the merge", as decided before the demo. `analyst-review` (roadmap, professor's
+feedback) was merged into `defect5-yaml-rules` first (`b61cad3`; the log's appended ends were the only
+conflict, kept in date order; 562 tests passed), then **one live run through the review flow with
+Change 36** (sudo; the analysis again recommended `process_creation / windows`; the analyst chose
+`process_creation / linux`, rejected the bare `sudo` — its indicator copy went with it — and T1548.004,
+T1059.001, T1562.001): 3 rules, all `process_creation / linux`, **every generation answer read (0
+"Generation failed")**, explanations taken from the "### Rule N:" headings shown in the chat, the
+coverage retry ran, the check reported "the log source and techniques follow your review", and rule 3's
+use of the rejected `sudo` was shown, not rewritten; 76 s. Then `defect5-yaml-rules` into `main`: the one
+conflict was `DEMO_RUNBOOK.md`, where `main`'s pre-demo stopgap ("the web app does not retry",
+"prefer the lowest chat") met the branch's text for the code now merged — the branch's version kept,
+its header note updated. 562 tests passed on `main`. The user's own comments on four prompt section
+headers (uncommitted, 10:17) were set aside with `git stash` during the merge and put back afterwards.
