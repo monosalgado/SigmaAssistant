@@ -1,6 +1,7 @@
 # Assistant redesign — backend design notes
 
-Status: **Reviewed with the user 2026-09-26** (decisions in §9); nothing of Phases A–C built yet.
+Status: **Reviewed with the user 2026-09-26** (decisions in §9). **First slice built 2026-09-27**
+(Change 34, branch `analyst-review`): the checkpoint and the analyst's review — see §8a.
 Started 2026-09-23.
 Working notes, not thesis prose. Every claim about current code was verified by
 reading it on 2026-09-23; file:line references are to commit `9eb816d`.
@@ -223,6 +224,31 @@ behaviour and needs a 60-case rerun (~3 h 20 min since Change 12, VPN) to measur
    categories that do not exist in Sigma (former plan step 2.5); then `/assist/revise`.
    `/assist/convert` only if Phase 0 agrees.
 8. **GUI** — built against the settled contract.
+
+### 8a. Built 2026-09-27 — Change 34 (first slice, user's choice: log source + reject items)
+
+- **Step 3, for the web app only:** `analyse_for_review` (Phase A → checkpoint) and
+  `generate_after_review` (Phase B from the saved state) share `run_stream`'s code, which was split
+  without change (pinned by tests). `run_sync` — the harness — is **not** yet routed through A → B; it
+  is untouched, which is the stronger form of P5 for now.
+- **Step 6, first endpoints** (names differ from §6's draft): `/analyze_stream` with `review: true`,
+  `POST /generate_stream`, `GET /logsource_choices`. State in the session (decision 2) with a status
+  (`awaiting_review → generating → generated`).
+- **Step 8, first screens:** the Analysis panel carries the controls (Confirm/Reject, Restore, the
+  log-source choice among all 125 SigmaHQ log sources, a note) and, after generation, "Your review".
+- **Decisions as built:** a rejected fact is removed before generation; a restored excluded string
+  becomes a pattern; a chosen log source is validated against SigmaHQ's table and given as the
+  analyst's decision (the Change 26 slot). **Confirming** a technique, indicator or pattern is
+  recorded only. A rejected pattern is *not* added to the excluded strings (tried first; the coverage
+  check then flagged every rule containing the rejected substring — log 2026-09-27).
+- **Change 35 (same day): one decision per string** — a rejected pattern or indicator takes its exact
+  copies in the other list with it — and **P4's check (step 5)**: after generation, code compares the
+  rules with the review. As built, P4 is narrower than §3 wrote it: only the **unambiguous** decisions
+  get the one rewrite — the first rule's log source and rejected techniques. A rejected **string** used
+  in a detection is shown, not rewritten, because the same click can mean "not on its own" (the bare
+  `sudo`; a rule on the sudo process AND `-u#-1` is right) or "never" (`ysoserial.exe`), and code cannot
+  tell which. A rewrite that gives no rules (defect 5) keeps the rules before it.
+- **Not yet:** editing values, the report builder (step 2), evidence quotes (step 4), Phase C.
 
 Steps 4 and 5 both change prompts. Measuring them separately costs two runs but
 keeps each effect attributable; measuring them together is cheaper but

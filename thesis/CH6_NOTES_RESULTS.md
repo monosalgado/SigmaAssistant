@@ -51,6 +51,60 @@ confirmation"; log 2026-09-26/27):
   48/55 held-out); the remaining limit is the analysis stage's suggestion (web 12/15, host categories
   11/37, service-based 0/6).
 
+### 6.0b What the analyst's log source is worth — the simulated analyst `[MEASURED] 2026-09-27`
+
+Plan 5.3, measurement plan fixed before the run (CH5 5.8; log 2026-09-27). On the **60 tuning cases**
+each case was analysed **once**; rules were then generated twice from that same analysis — with no
+review (U) and with **the gold rule's log source given as the analyst's choice** (O), when SigmaHQ's
+table has it (58 of 60). Only the analyst's decision differs; nothing else from the gold rule
+reaches the pipeline. Both files CITABLE (every gate passed). An **upper bound**: what confirming
+the log source is worth when the analyst is right (no user study).
+- **Primary (pre-registered): S5 detection-field F1 0.388 → 0.531, +0.144, 95% CI [0.056, 0.241]**,
+  n = 53 paired (13 higher, 6 lower, 34 the same). The right log source leads to more of the right
+  detection fields.
+- *Where it comes from* `[MEASURED, post-hoc]` (`eval/s5_by_logsource.py`): **all of it from the 19
+  cases whose log source became right** — S5 0.132 → 0.521 (+0.389); right in both runs (25): 0.722
+  → 0.711; wrong in both (9): 0.000 → 0.056. The log source is the gate to the detection fields;
+  once it is right the model's own field choice is unchanged, and when it is *pushed* to the right
+  telemetry its fields reach 0.52, below the 0.72 of cases it got right by itself.
+  `[UNMEASURED]` To reconcile: Phase 2's S3 gain did not move S5 on held-out (+0.007, §6.0), yet here
+  a log source becoming right carries S5 with it — one possibility is that Phase 2's gains were
+  cases turned right by dropping an invented product while the fields already fit; not checked.
+- *Adherence* (reported, never as a gain — the review check enforces it): S3 in O **44 / 53**
+  (U 25 / 53). The first rule followed the analyst in **46 / 58**; the other 12 got the one
+  rewrite, which fixed **3**; **9 still depart** and are shown — in 4 a later rule uses the analyst's
+  log source (the model changed the order: the initial-access rule stays first), in 3 the analyst's
+  service-form choice (`windows/security`, `firewall`) got a category added, 1 rewrite gave no rules
+  (the earlier rules were kept). Overall **49 / 58 follow**. The rewrite is weak (3 of 12).
+  (`eval/count_review_checks.py`)
+- *Cost:* +4,330 tokens per case (95% CI [−484, 9,317]), +2.8 s (CI [−13.1, 16.5]) — none detectable.
+  S1 55 vs 54 of 58; S4 −0.007 (CI [−0.068, 0.052]).
+- **Noise floor, as a by-product** (U against `p2g_shared60`: the same code `a6e9157`, the same 60
+  cases, another run — Inbox M2): S3 22 vs 24 of 51 (**6 cases flip**, 2/4, McNemar p = 0.688); S1
+  52 vs 57 (p = 0.125; the reference lost 3 cases to defect 5); **S5 +0.086, 95% CI [−0.007, 0.187]**;
+  S4 +0.046 (CI [−0.039, 0.141]); seconds +23.8 (CI [0.0, 60.2]). Between two runs of identical code
+  S5 moves by up to ~0.09 and ~1 case in 8 flips S3 — why every comparison here is paired and
+  judged by its interval, and why 5.3 paired both arms on one analysis.
+
+### 6.0c Why the same report gets a good rule one time and a wrong one the next `[MEASURED] 2026-09-28`
+The professor's question after the demo. Two runs of **identical code on identical, frozen inputs**
+(`p2g_shared60` and the 5.3 unreviewed arm; `eval/list_disagreements.py`):
+- **16 of 60 cases disagree** — the first rule parses in one run only, the log source is right in
+  one run only, or detection-field F1 differs by ≥ 0.5.
+- **The difference grows down the chain:** the runs concluded differently at the attack-vector
+  stage in 12 of 60 cases, at the analysis's first log-source suggestion in 15, at the first rule's
+  log source in 19. Of the 6 log-source flips, 4 began at the attack-vector stage.
+- **Temperature 0 is not deterministic in practice:** that first stage runs at temperature 0, with
+  no code or prompt change between the two runs. `[UNMEASURED]` Likely: GPU inference on a shared
+  server breaking near-ties, amplified over long answers.
+- Example `ad7085ac` (Sourgum): `file_event` → right log source, S5 1.00; in the other run
+  `registry_event` → wrong, S5 0.00. An early difference decides the log source, which gates the
+  fields (§6.0b).
+Two other sources explain the May-vs-later impression: the **system changed** (model, and defects since
+fixed — the April library holds a rule on *visits to the report page*, defect 8, and one with an
+invented product/service, Changes 25–29), and **inputs differ in difficulty** (web sources right far
+more often than host or service ones).
+
 ---
 
 ## 6.1 Baseline system performance — baseline v1 `[MEASURED] 2026-09-19`
@@ -425,6 +479,16 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
 - For the thesis: evidence of how strongly one hand-written example steers this model — more
   than retrieved real rules. And `[DISCLOSE]` **S2 in every earlier run mostly measured this tag
   style**, not rule defects.
+
+### 6.4.11 One bad escape lost every rule — rules inside JSON strings (defect 5) `[MEASURED] 2026-09-28`, fixed (Change 36)
+Generation returned each rule inside a JSON string, so every backslash was escaped twice; one bad
+escape (`Invalid \escape`, a Windows path) made the whole answer unreadable and the case lost every
+rule — 3 cases in the shared run, 1 in the frozen pipeline's rerun, 0 in another run: rare and
+irregular. Change 36 has the rule writer answer with each rule as a ```yaml block, as in a Sigma file.
+On the 60 tuning cases, paired against the reference: **cases lost this way 3 → 0, unreadable
+generation answers 0 of 91 calls**; S1 52 → 57 (p = 0.125) is the pattern the noise floor also shows,
+so it is not claimed; no detectable effect on S3–S5, tokens or time; **+0.52 rules per case**
+(CI [0.12, 0.97]). What is claimed: the failure mode is gone at no measured cost. (log 2026-09-28)
 
 ## 6.5 A negative result — the security-pretrained model (contribution 3, dropped) `[MEASURED] 2026-09-23`
 

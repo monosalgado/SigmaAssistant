@@ -6,6 +6,9 @@ current phase goes to the Inbox or the Parking lot, not into the code.
 **Current phase: 2 — Fix the logsource failure.** Phase 1 complete 2026-09-24
 (its Inbox triaged with the user 2026-09-25). Phase 0 runs in parallel (it needs the
 professor, not the code).
+**Update 2026-09-27:** Phase 2 is complete (held-out confirmation). Active: the first slice of
+Phases 3/4 — the analyst confirms or corrects the analysis before generation (Change 34, branch
+`analyst-review`), started before the professor's sign-off by the user's decision.
 
 ---
 
@@ -62,6 +65,24 @@ semester).
       professor. Claude prepares notes only if asked.
 - [ ] **0.2** Update `OUTLINE.md` to the agreed contributions (user decides the
       wording).
+
+**Professor's feedback after the demo (2026-09-28, via the user):** (1) the thesis must *understand*
+why rules are good one time and wrong another (the May rules vs later ones) — research, with
+examples; (2) the assistant relies on the human; human input matters, but **the goal is to automate
+the process and rely more on the AI**. First evidence for (1): log 2026-09-28 (three sources;
+two runs of identical code disagree on 16/60 cases, the temperature-0 first stage on 12/60).
+Proposed next research (awaiting the user and the professor):
+- **P-A Consistency study**: the same cases run k times with frozen code (e.g. 20 cases × 5), per-stage
+  agreement and which case types are unstable; pre-registered
+- **P-B Where the non-determinism comes from**: one stage's call repeated on identical input (cheap),
+  with the Spark idle vs busy and with Ollama's seed/single-request settings — can temperature 0 be
+  made deterministic?
+- **P-C Self-consistency instead of the human**: run the analysis k times and take the majority log
+  source; runs that disagree = uncertainty → only those go to the analyst. Measures: S3/S5 vs the
+  single run, and how often a human would be needed — against the 5.3 upper bound (+0.14 S5)
+- **P-D Automated verification** of what analysts corrected most (e.g. the log source's platform
+  against the attacked product: sudo → Linux), by code or a second model
+Together: automate by default, measure confidence, escalate only uncertain cases to the human.
 
 Options to discuss, not decided:
 - **A.** Assistant + measured grounding failures + static evaluation (drop 1–3,
@@ -288,6 +309,40 @@ spent and the result is written up as a finding.
 
 ---
 
+## Next pipeline change (user order, 2026-09-27)
+
+- [x] **Change 36 — defect 5: the rule writer answers in YAML blocks, not JSON strings**
+      (prompt review item 6, P5). Built on branch `defect5-yaml-rules` (off `analyst-review` at
+      `c3f3e76`), so the simulated-analyst run (5.3) stays on the frozen pipeline.
+      *Why:* generation returns every rule as a JSON string, so each backslash is escaped twice; a
+      single bad escape (`Invalid \escape`, Windows paths) loses **every rule** of that answer. In
+      the shared run 3 of the 7 lost first rules were this (log 2026-09-26); live, it emptied a
+      review rewrite (2026-09-27). **Generation only** — one change at a time; a failed review
+      already falls back to the rules as they were (review stays JSON; a later change).
+      **Measurement plan — PROPOSED 2026-09-27, awaiting the user's approval; fixed before any run:**
+      - *Cases and reference:* the 60 tuning cases (seed 0), paired against `p2g_shared60`
+        (code `a6e9157`); `eval/compare_runs.py`.
+      - *Primary:* **cases with no rule because generation's answer could not be read** — rows
+        with zero rules whose response carries "Generation error" (both runs have it) — and **S1**
+        (first rule parses), exact McNemar. Expected: fewer lost rules; S1 up if those cases come back.
+      - *Recorded from this run on:* every generation call's parse failure in `generation_log`
+        (`parse_error`), so first-attempt failures that a retry hid become countable.
+      - *Watched for harm (paired, reported):* S3, S4, S5, rules per case, tokens, seconds — the
+        worked example changes format, and examples are copied (Change 27); the example's content
+        stays the same, only its encoding changes.
+      - *Rules:* the harness's stop rule; a case that stops 3 times is excluded.
+      - *Built 2026-09-27* (log); smoke on 2 cases: the new format was followed in 4 of 4 calls.
+        **Run only on the user's approval**, after 5.3 or in its own worktree (never two runs from
+        one checkout): `eval/run_resilient.py -- --sample 60 --seed 0 --no-web-enrich --arm c36_yaml
+        --out eval/results/c36_yaml60.jsonl`; then `compare_runs.py` against `p2g_shared60` and
+        `count_generation_failures.py` on both.
+      - Seen: the PoC stage's JSON failed once in the smoke — the same defect in another stage (Inbox).
+      - **MEASURED 2026-09-28 (log):** cases lost to an unreadable answer 3 → 0; unreadable generation
+        calls 0 of 91; S1 52 → 57 (p = 0.125, the noise-floor pattern — not attributable); no harm
+        detected on S3–S5, tokens, seconds; rules per case +0.52 (CI [0.12, 0.97]). The old format
+        loses 0–3 cases per run, so the gain is the failure mode gone, not a significant S1 rise.
+        **Kept (user, 2026-09-28).** Merged with the review work into `main` after the demo.
+
 ## Phase 3 — Assistant backend (after Phase 0 approves it)
 
 Design: `thesis/ASSISTANT_DESIGN.md` — **reviewed with the user 2026-09-26**; decisions in its §9
@@ -295,6 +350,14 @@ Design: `thesis/ASSISTANT_DESIGN.md` — **reviewed with the user 2026-09-26**; 
 later; SIEM/EDR conversion pending Phase 0).
 
 - [x] 3.0 Defect 13 fixed (`663f005`) — design step 1
+- [x] **First slice of 3.2 + 3.4 + 4.1 — Change 34 (2026-09-27, branch `analyst-review`, user):**
+      the web app's run stops after the analysis (`analyse_for_review`), the analysis waits in the
+      session, the analyst confirms/rejects patterns, techniques and indicators, restores excluded
+      strings, chooses the log source (validated against SigmaHQ's table) and adds a note; generation
+      starts from the saved analysis (`generate_after_review`). `run_sync` untouched (P5). Tested live
+      twice (sudo). **Change 35:** one decision per string (copies linked) and P4's check (log source and
+      rejected techniques → one rewrite; rejected strings in detection shown). Not yet: editing values,
+      the report builder (3.1), evidence quotes (3.3), rule validation (3.5).
 - [ ] **3.1** Report builder: a pure function from pipeline context to the report *(offline)*
       Include (user, 2026-09-25): suggestions marked `service_to_confirm` (Change 25) are
       shown for the analyst to confirm, with `service_dropped` explained.
@@ -309,7 +372,9 @@ later; SIEM/EDR conversion pending Phase 0).
       Includes former 2.5 (user: important): flag a logsource category that does not exist in
       Sigma (`email`, `security`, `network`: 4 of 237 rules in the step (c) run, none first) and
       ask the model to fix it — the same check for generated and analyst-edited rules.
-- [ ] **3.6** Regression: automated path against baseline v2, within run-to-run noise
+- [-] **3.6** Regression: automated path against baseline v2, within run-to-run noise — **deferred
+      2026-09-27:** `run_sync` stays separate from the review path, so it is unaffected by
+      construction; needed only if it is ever routed through analyse → review → generate
 
 Decisions needed before 3.4: where the checkpoint state is stored; whether "ask the
 assistant to revise this rule" is in scope.
@@ -331,8 +396,40 @@ Which of these run depends on the contributions agreed in Phase 0.
 - [ ] **5.1** Final reference run on the finished system
 - [ ] **5.2** Chosen ablations. Not all of A1–A7: the likely core is A1 (no RAG) and
       A5 (single prompt vs pipeline), and the naive-baseline arm
-- [ ] **5.3** Simulated-analyst experiment: confirm the gold logsource/techniques,
-      regenerate, rescore
+- [x] **5.3** Simulated-analyst experiment: confirm the gold logsource/techniques,
+      regenerate, rescore. **Moved up 2026-09-27 (user accepted the order).**
+      **DONE 2026-09-27 (log; CH6 §6.0b):** S5 0.388 → 0.531, +0.144, 95% CI [0.056, 0.241], n = 53 —
+      all of it in the 19 cases whose log source became right (post-hoc). Adherence 49/58; the one
+      rewrite fixed 3 of 12. By-product noise floor: S3 flips 6/51, S5 +0.086 (CI crosses 0).
+      A techniques oracle remains possible (not run).
+      **Measurement plan — PROPOSED 2026-09-27, awaiting the user's approval; fixed before any run:**
+      - *Question:* when the analyst gets the log source right, how much better are the rules?
+        An upper bound — what confirmation is worth when the analyst is right (no user study).
+      - *Cases:* the **60 tuning cases** (`--sample 60 --seed 0`), snapshots, no web search.
+        (First written as the held-out cases; changed the same day, before any run: reading
+        oracle-run failures on held-out cases would spoil them for the next phase's confirmation.)
+      - *Design, paired within case:* the analysis runs **once** (`analyse_for_review`); then two
+        generations from that same analysis — arm **U** (unreviewed, no review: the automated path)
+        and arm **O** (oracle): the gold rule's log source given as the analyst's choice, when that
+        log source is in SigmaHQ's table (otherwise the case is out of O, counted). **Nothing else
+        from the gold rule reaches the pipeline.** Same analysis in both arms, so only the
+        analyst's decision differs.
+      - *Primary measure:* **S5 (detection-field F1)**, O − U, paired on the cases in both, mean
+        difference with a paired bootstrap 95% CI (`eval/compare_runs.py`). Does the right log
+        source lead to the right detection fields? (The next direction: detection quality.)
+      - *Reported, not tested:* S3 in O = **adherence** to the analyst's log source (high by
+        construction — the check enforces it with one rewrite; never reported as a gain); rewrites
+        and remaining departures; S1, S4; tokens and seconds per arm.
+      - *By-product:* U against `p2g_shared60` (same pipeline `a6e9157`, same cases, another run) =
+        the run-to-run noise floor (Inbox M2) — descriptive, no test.
+      - *Rules:* the harness's stop rule (a failed LLM call → the case is redone); a case that
+        stops 3 times is excluded (as in 2.9); both arms' rows are written only when both finished.
+      - *Not in this run:* a techniques oracle (rejecting non-gold techniques makes S4 mechanical).
+      - *Output:* `eval/results/oracle_ls60_unreviewed.jsonl`, `eval/results/oracle_ls60_oracle.jsonl`.
+      - *Built and smoke-tested 2026-09-27* (log): 58 of 60 cases choosable; ~3–6 min per case in the
+        smoke runs, so the run is likely 4–6 h — **start only on the user's approval**:
+        `eval/run_resilient.py -- --sample 60 --seed 0 --no-web-enrich --oracle-logsource --arm oracle_ls --out eval/results/oracle_ls60.jsonl`
+        (the stall watchdog watches `oracle_ls60_unreviewed.jsonl`: both rows are written together)
 - [ ] **5.4** Evidence metrics from 3.3: verified-quote rate, report accuracy vs gold
 - [-] **5.5** User study — dropped by the user 2026-09-23
 - [ ] **5.6** Detonation testing (R1/R2) — only if agreed in Phase 0. Needs both
@@ -393,6 +490,34 @@ From the retrieval check (2026-09-26, user: a and b to the Inbox) — awaiting t
 - b the analysis stage searches ATT&CK with `combined_text[:500]` — URLs plus, often, the site menu
   (Securelist case: the Kaspersky menu); the attack-vector summary exists by then. Mainly S4.
 
+From Change 34's live test (2026-09-27) — awaiting triage:
+- ~~**Defect 20**: the web app's coverage retry never runs~~ — **fixed 2026-09-27 on `analyst-review`**
+  (user): decided once, as `run_sync` does; a test holds the stream to the harness path's calls
+- the review stage merged 3 generated rules into 1 ("Merged duplicate rules") — measure how often review drops rules (needs M1)
+- ~~P4 check~~ — **built 2026-09-27 (Change 35)**: log source + rejected techniques → one rewrite; rejected strings in detection shown, not rewritten; a rewrite with no rules keeps the rules before it. Retested live 2026-09-27 (sudo, SharePoint)
+- remove the unused `feedback_data` / `_apply_user_feedback` path (superseded by Change 34)
+- the Analysis panel (and so the review) is hidden under 900 px wide
+- (5.3) the one rewrite fixes 3 of 12 log-source departures — a stronger rewrite, or the analyst's choice earlier in the prompt?
+- (5.3) a service-form choice (`windows/security`, `linux/auditd`, `firewall`) gets a category added, although the block says "no `category`" (3 cases + live sudo)
+- (5.3) stage order: the first rule stays the initial-access rule when the analyst's log source is a later stage (4 of 9 departures use it in a later rule)
+- ~~M2 A/A run~~ — **done as 5.3's by-product** (CH6 §6.0b)
+- the review can reject but not add: SharePoint's analysis once omitted T1190 (Exploit Public-Facing Application) — adding a technique/indicator = "editing values"
+- ~~rejecting a pattern does not reject the same string as an indicator~~ — **linked 2026-09-27 (Change 35)**, exact match; PoC behaviours are display-only and do not reach generation
+
+Assistant roadmap (proposed 2026-09-28, user: "add them to the plan") — awaiting triage:
+- R1 the analyst can **add and edit** techniques, indicators, patterns — not only reject (T1190 was missing once)
+- R2 **evidence "found in the report"**: code checks each quoted basis against the page; verified-quote rate (= plan 3.3)
+- R3 **rule editor with live pySigma validation**, incl. log-source categories that do not exist in Sigma (= plan 3.5)
+- R4 **"ask the assistant to revise this rule"** from a plain-words instruction, then validated (design decision 3)
+- R5 **a stronger rewrite**: 3 of 12 departures fixed (5.3) — the analyst's decisions earlier in the prompt; service form; rule order
+- R6 **an exportable report**: what the model understood, evidence, the analyst's decisions, the rules (= plan 3.1)
+- R7 **better log-source suggestions** (analysis stage): the log source gates S5 (5.3); 45% held-out, weakest on host and service sources
+- R8 **a value-level detection score**: S5 compares field names only (sudo: S5 = 1.0, the human's match broader)
+- R9 **do the rules fire?** replay with Zircolite over SigmaHQ's 138 regression EVTX files; detonation in the lab (= 5.6, Phase 0)
+- R10 **false positives**: the rules over benign logs
+- R11 **"a rule already exists"**: search SigmaHQ for the same CVE/behaviour before generating (prior art: SIGMERGE)
+- R12 **a realistic simulated analyst**: wrong 10–30% of the time — what a wrong confirmation costs (extends 5.3)
+
 ## Security — do first (the user's action)
 
 - [x] **S1** Delete the Gemini API key in Google AI Studio / Cloud Console. The
@@ -441,6 +566,15 @@ so removing one is reversible; untracked and ignored files have no such safety n
       drifted (8 declared fields vs 15 real, no attack-vector model).
 
 ## Parking lot — good ideas, deliberately not scheduled
+
+- **From the assistant roadmap (2026-09-28), beyond the thesis:** R13 conversion to SIEM/EDR
+  queries (Splunk SPL, Sentinel KQL, Elastic) through pySigma backends with field mappings — Phase 0
+  option D; new packages need the user's approval · R14 **prompt-injection hardening** — fetched
+  pages are untrusted input; test with poisoned pages · R15 learn from the analyst's decisions (which
+  stage errs most; later an evaluation or training set — examples are copied, so carefully) · R16
+  detection-as-code: an approved rule becomes a pull request with its test data · R17 watch CTI feeds
+  and queue new reports for review · R18 several analysts: logins and an audit trail of who confirmed
+  what.
 
 - **A run without retrieval (RAG ablation)** — user, 2026-09-26: later, with the proper testing
   (Phase 5). Answers "does the RAG help?"; never measured (`--arm` is a label, no ablation is wired).
@@ -501,6 +635,10 @@ so removing one is reversible; untracked and ignored files have no such safety n
 | 2026-09-26 | Prompt review item 1 (the rule writer's example: hyphen tactic tags, no fixed id) joins the shared run as Change 33 | user |
 | 2026-09-27 | Interface: a visual-only polish before the live demo (no emojis, own sober look), one revertable commit; the real GUI work stays Phase 4 | user |
 | 2026-09-27 | Direction after Phase 2: improve **detection quality**, and in the assistant keep the analyst in the loop to **verify what the LLM understood about the attack** — the tool must not depend on generated rules being right ("it is almost impossible to always produce Sigma rules that are true"). Pending the professor (Phase 0) | user |
+| 2026-09-28 | Keep Change 36 (rules as YAML blocks): the failure mode is gone at no measured cost; merge with the review work after the demo. The two run worktrees removed | user |
+| 2026-09-27 | Order after Changes 34–35: the simulated-analyst experiment (5.3) first, then defect 5 (rules as YAML blocks, prompt-review item 6); 3.6 only if `run_sync` is ever routed through the review path; merge `analyst-review` into `main` after the demo. No A/A run on its own (it comes as 5.3's by-product) | user |
+| 2026-09-27 | Start the confirm/correct step now (Phases 3/4 before the professor's sign-off); first slice = log source + reject items (confirm/reject patterns, techniques, indicators; restore excluded; choose any SigmaHQ log source; a note). Built on a branch; `main` stays the demo's code | user |
+| 2026-09-28 | Professor's feedback: explain the good-then-wrong rules (research, with examples); automate more and rely less on the human. Proposed P-A…P-D (consistency, the non-determinism's source, self-consistency with escalation, automated verification) — awaiting decision | professor (via user) |
 | 2026-09-26 | Phase 2 frozen at `a6e9157` before the held-out confirmation; open items (quota, defect 5, prompt review, retrieval) go to the next phase | user |
 | 2026-09-26 | 2.9 held-out confirmation added: final pipeline and baseline v2 on 60 cases never run before; the chance test moves to the final pipeline's held-out run | user |
 | 2026-09-25 | Inbox triage: 2.5 (invented categories) and 2.6 (complete reference table) added after (d); order (d) → 2.5 → 2.6 → ATT&CK ID check → 10 most relevant techniques; Foundation-Sec out of the thesis; paraphrased evidence is fine; delete the unused suggestion prompt | user |

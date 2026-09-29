@@ -185,71 +185,76 @@ class LLMTelemetry:
         return [asdict(c) for c in self.calls()]
 
     def summary(self) -> dict:
-        """Aggregate the recorded calls.
+        """Aggregate the recorded calls (see `summarise_calls`)."""
+        return summarise_calls(self.calls())
 
-        Token totals sum only the calls that reported counts;
-        `calls_without_token_data` states how many did not, so a partial total is
-        never mistaken for a complete one.
-        """
-        calls = self.calls()
-        by_tier: dict = {}
-        missing = 0
-        prompt_total = completion_total = thinking_total = grand_total = 0
-        counted = 0
 
-        for call in calls:
-            bucket = by_tier.setdefault(
-                call.tier,
-                {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0,
-                 "thinking_tokens": 0, "total_tokens": 0,
-                 "latency_s": 0.0, "errors": 0, "model": call.model},
-            )
-            bucket["calls"] += 1
-            bucket["latency_s"] += call.latency_s
-            if not call.ok:
-                bucket["errors"] += 1
+def summarise_calls(calls: list) -> dict:
+    """Aggregate a list of recorded calls (`LLMTelemetry.calls()`).
 
-            if (call.prompt_tokens is None and call.completion_tokens is None
-                    and call.total_tokens is None):
-                missing += 1
-                continue
+    Token totals sum only the calls that reported counts;
+    `calls_without_token_data` states how many did not, so a partial total is
+    never mistaken for a complete one. Used for the whole record, and for parts
+    of it kept between resets (the simulated-analyst run costs each arm).
+    """
+    by_tier: dict = {}
+    missing = 0
+    prompt_total = completion_total = thinking_total = grand_total = 0
+    counted = 0
 
-            counted += 1
-            prompt = call.prompt_tokens or 0
-            completion = call.completion_tokens or 0
-            thinking = call.thinking_tokens or 0
+    for call in calls:
+        bucket = by_tier.setdefault(
+            call.tier,
+            {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0,
+             "thinking_tokens": 0, "total_tokens": 0,
+             "latency_s": 0.0, "errors": 0, "model": call.model},
+        )
+        bucket["calls"] += 1
+        bucket["latency_s"] += call.latency_s
+        if not call.ok:
+            bucket["errors"] += 1
 
-            # Prefer the provider's own total. Recomputing it as
-            # prompt + completion would drop thinking tokens, which Gemini bills
-            # but excludes from candidates_token_count.
-            if call.total_tokens is not None:
-                total = call.total_tokens
-            else:
-                total = prompt + completion + thinking
+        if (call.prompt_tokens is None and call.completion_tokens is None
+                and call.total_tokens is None):
+            missing += 1
+            continue
 
-            prompt_total += prompt
-            completion_total += completion
-            thinking_total += thinking
-            grand_total += total
+        counted += 1
+        prompt = call.prompt_tokens or 0
+        completion = call.completion_tokens or 0
+        thinking = call.thinking_tokens or 0
 
-            bucket["prompt_tokens"] += prompt
-            bucket["completion_tokens"] += completion
-            bucket["thinking_tokens"] += thinking
-            bucket["total_tokens"] += total
+        # Prefer the provider's own total. Recomputing it as
+        # prompt + completion would drop thinking tokens, which Gemini bills
+        # but excludes from candidates_token_count.
+        if call.total_tokens is not None:
+            total = call.total_tokens
+        else:
+            total = prompt + completion + thinking
 
-        return {
-            "n_calls": len(calls),
-            "n_errors": sum(1 for c in calls if not c.ok),
-            "calls_output_limited": sum(1 for c in calls if c.output_limited),
-            "total_latency_s": round(sum(c.latency_s for c in calls), 3),
-            "prompt_tokens": prompt_total if counted else None,
-            "completion_tokens": completion_total if counted else None,
-            "thinking_tokens": thinking_total if counted else None,
-            "total_tokens": grand_total if counted else None,
-            "calls_with_token_data": counted,
-            "calls_without_token_data": missing,
-            "by_tier": by_tier,
-        }
+        prompt_total += prompt
+        completion_total += completion
+        thinking_total += thinking
+        grand_total += total
+
+        bucket["prompt_tokens"] += prompt
+        bucket["completion_tokens"] += completion
+        bucket["thinking_tokens"] += thinking
+        bucket["total_tokens"] += total
+
+    return {
+        "n_calls": len(calls),
+        "n_errors": sum(1 for c in calls if not c.ok),
+        "calls_output_limited": sum(1 for c in calls if c.output_limited),
+        "total_latency_s": round(sum(c.latency_s for c in calls), 3),
+        "prompt_tokens": prompt_total if counted else None,
+        "completion_tokens": completion_total if counted else None,
+        "thinking_tokens": thinking_total if counted else None,
+        "total_tokens": grand_total if counted else None,
+        "calls_with_token_data": counted,
+        "calls_without_token_data": missing,
+        "by_tier": by_tier,
+    }
 
 
 TELEMETRY = LLMTelemetry()

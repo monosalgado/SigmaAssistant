@@ -590,6 +590,19 @@ Write them as defects identified by code audit, not as improvements.
       A5 (single prompt vs pipeline).
 - [ ] R1/R2 detonation — depends on the contributions agreed with the professor.
 - [ ] S6 backend compilability — cheap, not built.
+- [ ] **Simulated analyst (plan 5.3)** `[DESIGN]` (added 2026-09-27) — Change 34 made it
+      implementable without new pipeline code: `generate_after_review(saved analysis, review)`
+      generates from a saved analysis and a review, so the "analyst" can choose the **gold** log
+      source (and reject techniques absent from the gold) and the rules are rescored. It shows what
+      confirmation is worth *when the analyst is right* (no user study).
+      **Built 2026-09-27** (`eval/run_eval.py --oracle-logsource`): per case the analysis runs
+      **once**, then generation twice from it — no review (arm U) and the gold log source as the
+      analyst's choice (arm O, when SigmaHQ's table has it: 58 of the 60 tuning cases). Paired
+      within case, so only the decision differs; nothing else from the gold rule reaches the
+      pipeline. Primary measure S5; S3 in O reported as *adherence*, not a gain (the review check
+      enforces it). U against `p2g_shared60` doubles as the A/A noise floor. Measurement plan in
+      `ACTION_PLAN.md` 5.3, fixed before the run. **Run 2026-09-27 (265 min, 60/60, CITABLE):
+      results CH6 §6.0b.**
 
 ---
 

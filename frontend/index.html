@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sigma Rule Assistant</title>
-    <link rel="stylesheet" href="style.css?v=2026-09-27d">
+    <link rel="stylesheet" href="style.css?v=2026-09-27f">
     <link
         href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
         rel="stylesheet">
@@ -79,11 +79,11 @@
                     <textarea id="user-input"
                         placeholder="Paste a threat report URL, or describe the attack (e.g. attackers dump lsass.exe with procdump)"
                         rows="3"></textarea>
-                    <button id="send-btn">Generate rules</button>
+                    <button id="send-btn">Analyse</button>
                 </div>
                 </div>
 
-                <!-- Analysis panel: what the model understood, read-only -->
+                <!-- Analysis panel: what the model understood; the analyst confirms or corrects it -->
                 <aside class="analysis-panel" aria-label="Analysis">
                     <div class="analysis-header">
                         <h2>Analysis</h2>
@@ -94,6 +94,10 @@
                         <p class="empty-state">The attack vector, log source, ATT&amp;CK techniques, indicators and
                             checks of the latest answer appear here.</p>
                         <div id="context-content"></div>
+                    </div>
+                    <div class="review-bar" id="review-bar" hidden>
+                        <div class="review-summary" id="review-summary"></div>
+                        <button type="button" id="generate-btn" class="primary-btn">Generate rules</button>
                     </div>
                 </aside>
             </div>
@@ -133,7 +137,7 @@
 
         </main>
     </div>
-    <script src="script.js?v=2026-09-27c"></script>
+    <script src="script.js?v=2026-09-27h"></script>
 </body>
 
 </html>

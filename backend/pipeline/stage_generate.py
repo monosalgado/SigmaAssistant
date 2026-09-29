@@ -30,6 +30,40 @@ _TITLE_LINE_RE = re.compile(r"^title:.*$", re.MULTILINE)
 _LOGSOURCE_TABLE = load_logsource_table()
 
 
+# The rule writer's answer (Change 36, defect 5): each rule a ```yaml block under a
+# "### Rule N: <why>" heading; optionally "### Notes" after the last rule.
+_YAML_FENCE_RE = re.compile(r"```ya?ml[^\n]*\n(.*?)```", re.DOTALL | re.IGNORECASE)
+_RULE_HEADING_RE = re.compile(r"^#{2,4}[ \t]*Rule[ \t]*\d+[ \t]*[:.\u2014\u2013-]?[ \t]*(.*)$",
+                              re.IGNORECASE | re.MULTILINE)
+_NOTES_HEADING_RE = re.compile(r"^#{2,4}[ \t]*Notes?[ \t]*:?[ \t]*$", re.IGNORECASE | re.MULTILINE)
+
+
+def parse_rule_blocks(text: str) -> dict:
+    """The rules in the rule writer's answer (Change 36, defect 5).
+
+    Each rule is a ```yaml block, written as in a Sigma file - so a backslash is written
+    once, where the old JSON strings needed it escaped twice and one bad escape lost every
+    rule. A block's explanation is the text of the last "### Rule N:" heading before it;
+    text after a "### Notes" heading is the notes. Returns
+    {"rules": [{"yaml_content", "explanation"}], "notes", "parse_error"} - parse_error is
+    None, or why no rule could be read.
+    """
+    text = text or ""
+    notes_at = _NOTES_HEADING_RE.search(text)
+    body = text[:notes_at.start()] if notes_at else text
+    notes = text[notes_at.end():].strip() if notes_at else ""
+    headings = [(h.start(), h.group(1).strip()) for h in _RULE_HEADING_RE.finditer(body)]
+    rules = []
+    for block in _YAML_FENCE_RE.finditer(body):
+        content = block.group(1).strip()
+        if not content:
+            continue
+        before = [why for at, why in headings if at < block.start()]
+        rules.append({"yaml_content": content, "explanation": before[-1] if before else ""})
+    parse_error = None if rules else "no ```yaml block with a rule in the answer"
+    return {"rules": rules, "notes": notes, "parse_error": parse_error}
+
+
 def _is_valid_uuid(value: str) -> bool:
     try:
         uuid.UUID(value.strip().strip("'\""))
@@ -250,6 +284,12 @@ class GenerateStage(PipelineStage):
         if validation_feedback:
             user_query += f"\n\n### Validation Feedback (fix these issues):\n{validation_feedback}"
 
+        # Set only for the one rewrite after the analyst's review (design P4).
+        analyst_feedback = context.get("analyst_check_feedback", "")
+        if analyst_feedback:
+            user_query += ("\n\n### What departs from the analyst's review (the analyst's decisions are final - "
+                           f"rewrite the rules to follow them):\n{analyst_feedback}")
+
         logsource_text = ""
         if logsource_info.get("suggestions"):
             logsource_text = "\n\n### Recommended Log Sources (from analysis)\n"
@@ -292,12 +332,15 @@ class GenerateStage(PipelineStage):
         )
 
         # --- LLM call ---
+        # The answer is YAML blocks, not JSON (Change 36, defect 5).
         try:
-            response_text = self.llm_call(prompt, temperature=0.3, json_mode=True)
-            result = self.parse_json(response_text)
+            response_text = self.llm_call(prompt, temperature=0.3, json_mode=False)
+            result = parse_rule_blocks(response_text)
         except Exception as e:
-            print(f"[{self.name}] Generation failed: {e}")
-            result = {"rules": [], "notes": f"Generation error: {e}"}
+            result = {"rules": [], "notes": "", "parse_error": f"{type(e).__name__}: {e}"}
+        if result["parse_error"]:
+            print(f"[{self.name}] Generation failed: {result['parse_error']}")
+            result["notes"] = f"Generation error: {result['parse_error']}"
 
         rules = result.get("rules", [])
 
@@ -318,7 +361,7 @@ class GenerateStage(PipelineStage):
         # A regeneration replaces context["generation"]; this log keeps every
         # call, so the invalid-id rate has the full denominator.
         context.setdefault("generation_log", []).append(
-            {"rules": len(rules), "ids_replaced": ids_replaced})
+            {"rules": len(rules), "ids_replaced": ids_replaced, "parse_error": result["parse_error"]})
 
         if ids_replaced:
             print(f"[{self.name}] Replaced {ids_replaced} invalid/missing rule id(s)")

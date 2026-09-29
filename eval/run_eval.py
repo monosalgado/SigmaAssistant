@@ -47,6 +47,7 @@ import time
 import traceback
 from collections import defaultdict
 from contextlib import contextmanager
+from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urldefrag
@@ -55,8 +56,9 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from backend.pipeline.sigma_logsource import _clean, load_logsource_table, on_table  # noqa: E402
 from backend.pipeline.stage_preprocess import PreprocessStage  # noqa: E402
-from backend.telemetry import TELEMETRY  # noqa: E402
+from backend.telemetry import TELEMETRY, summarise_calls  # noqa: E402
 from eval.scorers import score_case  # noqa: E402
 
 _YAML_BLOCK_RE = re.compile(r"```ya?ml\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
@@ -70,6 +72,8 @@ DIAGNOSIS_FIELDS = (
     "logsource_suggestions", "logsource_primary", "suggested_log_sources",
     "coverage_check", "validation_issues", "poc_snippets_found",
     "generations", "generation_retried",
+    # Only in the simulated-analyst run's oracle rows (plan 5.3): the review and its check.
+    "analyst_review", "analyst_check",
 )
 
 
@@ -330,13 +334,8 @@ def extract_rule_yamls(response_text: str) -> list:
 # Runner
 # --------------------------------------------------------------------------
 
-def run_case(agent, case: dict, config: dict, no_web_enrich: bool,
-             poc_url_map: dict = None) -> dict:
-    """Run the pipeline on one case and return its result row."""
-    client = agent.client
-    TELEMETRY.reset()
-    started = time.time()
-    row = {
+def _base_row(case: dict, config: dict) -> dict:
+    return {
         "rule_id": case["rule_id"],
         "rule_path": case["rule_path"],
         "title": case["title"],
@@ -349,6 +348,41 @@ def run_case(agent, case: dict, config: dict, no_web_enrich: bool,
         "config": config,
         "run_at": datetime.now(timezone.utc).isoformat(),
     }
+
+
+def _record_result(row: dict, result: dict, gold: dict) -> None:
+    response_text = result.get("rule", "")
+    rules = extract_rule_yamls(response_text)
+    # Every generated rule is stored so best-of-N can be computed
+    # later without paying for another run; scoring uses the first,
+    # which is what a user sees.
+    row["n_rules"] = len(rules)
+    row["rules_yaml"] = rules
+    row["scores"] = score_case(rules[0], gold) if rules else score_case(response_text, gold)
+    row["response_chars"] = len(response_text)
+    if not rules:
+        # Only kept when there is nothing else to look at: rules_yaml already
+        # holds every rule, and the full text would double the file.
+        row["response_text"] = response_text
+    metadata = result.get("pipeline_metadata") or {}
+    row["pipeline"] = {k: metadata[k] for k in DIAGNOSIS_FIELDS if k in metadata}
+    row["error"] = None
+
+
+def _record_error(row: dict, exc: Exception) -> None:
+    row["error"] = f"{type(exc).__name__}: {exc}"
+    row["traceback"] = traceback.format_exc()[-1500:]
+    row["scores"] = None
+    row["n_rules"] = 0
+
+
+def run_case(agent, case: dict, config: dict, no_web_enrich: bool,
+             poc_url_map: dict = None) -> dict:
+    """Run the pipeline on one case and return its result row."""
+    client = agent.client
+    TELEMETRY.reset()
+    started = time.time()
+    row = _base_row(case, config)
 
     try:
         with snapshots_instead_of_network(case["url_to_path"]) as shim, \
@@ -367,28 +401,9 @@ def run_case(agent, case: dict, config: dict, no_web_enrich: bool,
                 row["poc_snapshots_served"] = poc_shim.served
                 row["poc_snapshots_missed"] = poc_shim.missed
 
-        response_text = result.get("rule", "")
-        rules = extract_rule_yamls(response_text)
-        # Every generated rule is stored so best-of-N can be computed
-        # later without paying for another run; scoring uses the first,
-        # which is what a user sees.
-        row["n_rules"] = len(rules)
-        row["rules_yaml"] = rules
-        row["scores"] = score_case(rules[0], case["gold"]) if rules else \
-            score_case(response_text, case["gold"])
-        row["response_chars"] = len(response_text)
-        if not rules:
-            # Only kept when there is nothing else to look at: rules_yaml already
-            # holds every rule, and the full text would double the file.
-            row["response_text"] = response_text
-        metadata = result.get("pipeline_metadata") or {}
-        row["pipeline"] = {k: metadata[k] for k in DIAGNOSIS_FIELDS if k in metadata}
-        row["error"] = None
+        _record_result(row, result, case["gold"])
     except Exception as exc:
-        row["error"] = f"{type(exc).__name__}: {exc}"
-        row["traceback"] = traceback.format_exc()[-1500:]
-        row["scores"] = None
-        row["n_rules"] = 0
+        _record_error(row, exc)
 
     row["elapsed_s"] = round(time.time() - started, 2)
     row["telemetry"] = TELEMETRY.summary()
@@ -453,6 +468,153 @@ def run_cases(agent, cases: list, config: dict, no_web_enrich: bool, out_file,
     return n_ok, n_failed, stopped
 
 
+# --------------------------------------------------------------------------
+# Simulated analyst (plan 5.3): one analysis, two generations
+# --------------------------------------------------------------------------
+
+def load_done(path: Path) -> set:
+    """The rule_ids already in a result file, so a rerun resumes after them."""
+    done = set()
+    if path.exists():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                try:
+                    done.add(json.loads(line)["rule_id"])
+                except Exception:
+                    continue
+    return done
+
+
+def gold_logsource(gold: dict):
+    """The gold rule's log source in Sigma's form (placeholders absent), or None."""
+    logsource = gold.get("logsource") if isinstance(gold, dict) else None
+    if not isinstance(logsource, dict):
+        return None
+    choice = {f: _clean(logsource.get(f)) for f in ("category", "product", "service")}
+    return choice if any(choice.values()) else None
+
+
+def oracle_review(gold: dict, table: dict):
+    """The simulated analyst's review: the gold log source as the analyst's choice, when
+    SigmaHQ's table has it (the same check a real analyst's choice passes); else None.
+    Nothing else from the gold rule is used."""
+    choice = gold_logsource(gold)
+    return {"logsource": choice} if choice and on_table(choice, table) else None
+
+
+def _result_of(events) -> dict:
+    result = None
+    for event in events:
+        if event.get("event") == "result":
+            result = event["data"]
+    if result is None:
+        raise RuntimeError("the pipeline stream ended without a result")
+    return result
+
+
+def run_oracle_case(agent, case: dict, config: dict, no_web_enrich: bool,
+                    poc_url_map: dict = None, table: dict = None) -> tuple:
+    """The simulated analyst on one case (plan 5.3).
+
+    The analysis runs once; generation then runs from it twice: arm "unreviewed" with no
+    review (the automated path; nothing from the gold rule) and arm "oracle" with the gold
+    log source as the analyst's choice. Each arm's row is scored against the gold rule and
+    costed as the analysis plus its own generation. Returns (unreviewed row, oracle row) -
+    the oracle row is None when SigmaHQ's table lacks the gold log source.
+    """
+    table = table if table is not None else load_logsource_table()
+    review = oracle_review(case["gold"], table)
+    arms = [("unreviewed", {})] + ([("oracle", review)] if review else [])
+    rows = {}
+    for arm, arm_review in arms:
+        rows[arm] = _base_row(case, dict(config, arm=f"{config.get('arm', 'default')}_{arm}"))
+        if arm == "oracle":
+            rows[arm]["oracle_review"] = arm_review
+
+    TELEMETRY.reset()
+    started = time.time()
+    analysis_calls, analysis_s = [], 0.0
+    try:
+        with snapshots_instead_of_network(case["url_to_path"]) as shim, \
+                poc_snapshots_instead_of_network(poc_url_map or {}) as poc_shim, \
+                web_enrichment_disabled(agent.client, no_web_enrich):
+            checkpoint = None
+            try:
+                for event in agent.orchestrator.analyse_for_review(description=" ".join(case["urls"])):
+                    if event.get("event") == "checkpoint":
+                        checkpoint = event["data"]
+            finally:
+                analysis_calls = TELEMETRY.calls()
+                analysis_s = time.time() - started
+                for row in rows.values():
+                    row["snapshots_served"] = shim.served
+                    row["snapshots_missed"] = shim.missed
+                    row["poc_snapshots_served"] = poc_shim.served
+                    row["poc_snapshots_missed"] = poc_shim.missed
+            if checkpoint is None:
+                raise RuntimeError("the analysis ended without a checkpoint")
+
+            for arm, arm_review in arms:
+                row = rows[arm]
+                TELEMETRY.reset()
+                arm_started = time.time()
+                try:
+                    _record_result(row, _result_of(
+                        agent.orchestrator.generate_after_review(checkpoint["state"], arm_review)), case["gold"])
+                except Exception as exc:
+                    _record_error(row, exc)
+                calls = analysis_calls + TELEMETRY.calls()
+                row["elapsed_s"] = round(analysis_s + time.time() - arm_started, 2)
+                row["telemetry"] = summarise_calls(calls)
+                row["llm_calls"] = [asdict(c) for c in calls]
+    except Exception as exc:
+        # The analysis failed: neither arm has anything to generate from.
+        for row in rows.values():
+            _record_error(row, exc)
+            row["elapsed_s"] = round(time.time() - started, 2)
+            row["telemetry"] = summarise_calls(analysis_calls)
+            row["llm_calls"] = [asdict(c) for c in analysis_calls]
+    return rows["unreviewed"], rows.get("oracle")
+
+
+def run_oracle_cases(agent, cases: list, config: dict, no_web_enrich: bool, out_unreviewed, out_oracle,
+                     poc_url_map: dict = None, table: dict = None):
+    """Run the simulated analyst over the cases. A case's rows are written only when both
+    arms ran with every LLM call answered; otherwise the loop stops and neither row is
+    written, so rerunning resumes from that case (the harness's stop rule).
+    Returns (n_ok, n_failed, stopped) as `run_cases` does."""
+    table = table if table is not None else load_logsource_table()
+    n_ok = n_failed = 0
+    stopped = None
+    for idx, case in enumerate(cases, 1):
+        row_u, row_o = run_oracle_case(agent, case, config, no_web_enrich, poc_url_map, table)
+        reasons = [r for r in (unmeasured_reason(row_u), unmeasured_reason(row_o) if row_o else None) if r]
+        if reasons:
+            stopped = (f"STOPPED at case {case['rule_id']} ({idx}/{len(cases)}): {reasons[0]}. "
+                       "Neither row was written. Check the backend (VPN, SSH tunnel, "
+                       "Ollama), then rerun the same command to resume from this case.")
+            print("\n" + stopped)
+            break
+
+        if row_u["error"] is None and (row_o is None or row_o["error"] is None):
+            n_ok += 1
+        else:
+            n_failed += 1
+        out_unreviewed.write(json.dumps(row_u) + "\n")
+        out_unreviewed.flush()
+        if row_o is not None:
+            out_oracle.write(json.dumps(row_o) + "\n")
+            out_oracle.flush()
+
+        def s3(row):
+            logsource = (row.get("scores") or {}).get("logsource") or {}
+            return logsource.get("exact_match")
+        print(f"[{idx}/{len(cases)}] {case['rule_id'][:8]} {case['category']:<18} "
+              f"S3 unreviewed={s3(row_u)} oracle={s3(row_o) if row_o else 'n/a (not in the table)'} "
+              f"{row_u['elapsed_s']}s/{row_o['elapsed_s'] if row_o else '-'}s")
+    return n_ok, n_failed, stopped
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", default="eval/manifest.jsonl")
@@ -475,6 +637,10 @@ def main() -> None:
                              "(build with eval/flag_contamination.py).")
     parser.add_argument("--dry-run", action="store_true",
                         help="Report the case selection without calling any LLM.")
+    parser.add_argument("--oracle-logsource", action="store_true",
+                        help="Simulated analyst (plan 5.3): one analysis per case, then generation "
+                             "with no review and with the gold log source as the analyst's choice; "
+                             "writes <out>_unreviewed.jsonl and <out>_oracle.jsonl.")
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parent.parent
@@ -495,17 +661,18 @@ def main() -> None:
 
     out_path = repo_root / args.out
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    oracle_paths = None
+    if args.oracle_logsource:
+        oracle_paths = (out_path.with_name(out_path.stem + "_unreviewed.jsonl"),
+                        out_path.with_name(out_path.stem + "_oracle.jsonl"))
+        print(f"  simulated analyst: {oracle_paths[0].name} + {oracle_paths[1].name}")
 
-    done = set()
-    if out_path.exists():
-        for line in out_path.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                try:
-                    done.add(json.loads(line)["rule_id"])
-                except Exception:
-                    continue
-        if done:
-            print(f"  resuming: {len(done)} cases already in {out_path}")
+    # In the oracle mode a case is done when its unreviewed row is written (both rows
+    # are written together).
+    resume_path = oracle_paths[0] if oracle_paths else out_path
+    done = load_done(resume_path)
+    if done:
+        print(f"  resuming: {len(done)} cases already in {resume_path}")
 
     flags_path = repo_root / args.contamination
     flags = {}
@@ -527,6 +694,11 @@ def main() -> None:
     for case in todo:
         mix[case["category"]] += 1
     print("  category mix:", dict(sorted(mix.items(), key=lambda kv: -kv[1])))
+
+    if args.oracle_logsource:
+        table = load_logsource_table()
+        choosable = sum(1 for c in todo if oracle_review(c["gold"], table))
+        print(f"  oracle arm: {choosable} of {len(todo)} cases have a gold log source in SigmaHQ's table")
 
     if args.dry_run:
         print("\nDry run: no LLM calls made.")
@@ -557,9 +729,15 @@ def main() -> None:
               "Set LLM_PROVIDER=ollama for a zero-cost run.")
 
     started_all = time.time()
-    with open(out_path, "a", encoding="utf-8") as out_file:
-        n_ok, n_failed, stopped = run_cases(agent, todo, config, args.no_web_enrich, out_file,
-                                            poc_url_map)
+    if oracle_paths:
+        with open(oracle_paths[0], "a", encoding="utf-8") as out_u, \
+                open(oracle_paths[1], "a", encoding="utf-8") as out_o:
+            n_ok, n_failed, stopped = run_oracle_cases(agent, todo, config, args.no_web_enrich,
+                                                       out_u, out_o, poc_url_map)
+    else:
+        with open(out_path, "a", encoding="utf-8") as out_file:
+            n_ok, n_failed, stopped = run_cases(agent, todo, config, args.no_web_enrich, out_file,
+                                                poc_url_map)
 
     elapsed = time.time() - started_all
     print(f"\n--- Done in {elapsed/60:.1f} min ---")
@@ -570,6 +748,10 @@ def main() -> None:
         # Non-zero, so a wrapper can tell "stopped early" from "finished".
         print("\n" + stopped)
         raise SystemExit(2)
+    if oracle_paths:
+        print("\nCompare the arms with: .venv/bin/python eval/compare_runs.py "
+              f"{os.path.relpath(oracle_paths[0], repo_root)} {os.path.relpath(oracle_paths[1], repo_root)}")
+        return
     print("\nSummarise with: .venv/bin/python eval/summarise.py " + str(args.out))
 
 

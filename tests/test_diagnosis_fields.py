@@ -7,8 +7,6 @@ explain a score, not just the final rules.
 
 from __future__ import annotations
 
-import json
-
 from backend.pipeline.orchestrator import PipelineOrchestrator
 from backend.pipeline.stage_generate import GenerateStage
 
@@ -28,8 +26,8 @@ class _Client:
     model_name = "fake"
 
     def generate(self, prompt, **kwargs):
-        return json.dumps({"rules": [{"yaml_content": BAD_ID_RULE, "explanation": ""}],
-                           "notes": ""})
+        # The rule writer's answer format since Change 36: YAML blocks, not JSON.
+        return "### Rule 1: x\n```yaml\n" + BAD_ID_RULE + "```\n"
 
 
 class _NoRag:
@@ -54,8 +52,8 @@ def test_each_generation_call_is_logged():
     context = stage.run(_generation_context())
     context = stage.run(context)
     assert context["generation_log"] == [
-        {"rules": 1, "ids_replaced": 1},
-        {"rules": 1, "ids_replaced": 1},
+        {"rules": 1, "ids_replaced": 1, "parse_error": None},
+        {"rules": 1, "ids_replaced": 1, "parse_error": None},
     ]
 
 

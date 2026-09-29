@@ -10,6 +10,7 @@ Optimized for Gemini free tier:
 """
 
 from __future__ import annotations
+import copy
 import json
 import re
 import datetime
@@ -24,10 +25,33 @@ from backend.pipeline.stage_analysis import AnalysisStage
 from backend.pipeline.stage_generate import GenerateStage
 from backend.pipeline.stage_review import ReviewStage
 from backend.pipeline import prompts
+from backend.pipeline.analyst_review import (
+    ENFORCED_DEPARTURES, apply_review, format_departures, has_checks, review_departures,
+)
+from backend.pipeline.sigma_logsource import load_logsource_table
 from backend.telemetry import stage_scope
 
 
 _URL_RE = re.compile(r"https?://\S+")
+
+# SigmaHQ's log sources: the analyst's choice is validated against them.
+LOGSOURCE_TABLE = load_logsource_table()
+
+# What a rewrite replaces; kept, to put back if the rewrite gives no rules.
+_RULE_STATE = ("generation", "validation", "optimization", "coverage_check")
+
+# Left out of the saved analysis: the conversation is already in the session, and the
+# media file is not needed once the input is preprocessed.
+_NOT_SAVED = ("history", "media_file")
+
+
+def analysis_state(context: dict) -> dict:
+    """The analysis as saved for the analyst's review, as JSON.
+
+    Raises TypeError for anything JSON cannot store, rather than save a state that
+    could not be read back.
+    """
+    return json.loads(json.dumps({k: v for k, v in context.items() if k not in _NOT_SAVED}))
 
 # Characters of non-URL prose tolerated before we stop treating the input as a
 # bare URL drop. Allows trailing filler ("please", "thanks") but any real
@@ -240,6 +264,65 @@ class PipelineOrchestrator:
             feedback_data: Optional user corrections from the feedback loop.
                 Keys: confirmed_logsource, removed_indicators, added_indicators, notes
         """
+        context = yield from self._analysis_events(description, history, media_file)
+        if context is None:
+            return
+
+        ext = context["extraction"]
+        ttps = context["ttp_mapping"]
+        ls = context.get("logsource_suggestion", {})
+
+        # Stage 4b: User Feedback (send preview for confirmation)
+        yield {"event": "feedback_request", "data": {
+            "stage": "feedback",
+            "indicators": ext.get("indicators", []),
+            "ttp_mappings": ttps.get("mappings", []),
+            "logsource_suggestions": ls.get("suggestions", []),
+            "primary_logsource": ls.get("primary_source", ""),
+            "attack_summary": ext.get("attack_summary", ""),
+        }}
+
+        # Check for user feedback from the feedback_data parameter
+        if feedback_data:
+            context = self._apply_user_feedback(context, feedback_data)
+            yield {"event": "stage", "data": {"stage": "feedback", "status": "complete", "detail": "User feedback applied"}}
+        else:
+            yield {"event": "stage", "data": {"stage": "feedback", "status": "complete", "detail": "No corrections needed"}}
+
+        yield from self._generation_events(context)
+
+    def analyse_for_review(self, description: str, history: list[dict] = None, media_file: dict = None) -> Generator[dict, None, None]:
+        """The analysis only, ending at a checkpoint for the analyst's review (plan Phase 3/4).
+
+        The checkpoint carries the analysis to save (`state`), what the Analysis panel
+        shows, and the references retrieved so far. Generation starts later from the
+        saved state (`generate_after_review`), so the analyst reviews exactly what the
+        rules will be written from.
+        """
+        context = yield from self._analysis_events(description, history, media_file)
+        if context is None:
+            return
+        yield {"event": "checkpoint", "data": {
+            "state": analysis_state(context),
+            "pipeline_metadata": self._pipeline_metadata(context),
+            "context": self._references(context),
+        }}
+
+    def generate_after_review(self, state: dict, review: dict, history: list[dict] = None) -> Generator[dict, None, None]:
+        """Generation from a saved analysis and the analyst's review; no analysis runs again.
+
+        Raises ReviewError when called - before any stage runs - if the review does not
+        fit the saved analysis or SigmaHQ's log source table.
+        """
+        context = apply_review(state, review, LOGSOURCE_TABLE)
+        context["history"] = history or []
+        return self._generation_events(context)
+
+    def _analysis_events(self, description: str, history: list[dict] = None, media_file: dict = None) -> Generator[dict, None, dict]:
+        """Classification and the analysis stages, as progress events.
+
+        Returns the context, or None after answering a chat or question message.
+        """
         # Step 0: Intent classification (FAST)
         yield {"event": "stage", "data": {"stage": "classification", "status": "running", "detail": "Classifying intent..."}}
         intent_result = self.classify_intent(description, history)
@@ -256,7 +339,7 @@ class PipelineOrchestrator:
                     "pipeline_metadata": None,
                 },
             }
-            return
+            return None
 
         context = {
             "original_query": description,
@@ -319,24 +402,11 @@ class PipelineOrchestrator:
             "stage": "analysis", "status": "complete",
             "detail": f"{len(ext['indicators'])} indicators, {len(ttps['mappings'])} TTPs, logsource: {ls.get('primary_source', 'unknown')}"
         }}
+        return context
 
-        # Stage 4b: User Feedback (send preview for confirmation)
-        yield {"event": "feedback_request", "data": {
-            "stage": "feedback",
-            "indicators": ext.get("indicators", []),
-            "ttp_mappings": ttps.get("mappings", []),
-            "logsource_suggestions": ls.get("suggestions", []),
-            "primary_logsource": ls.get("primary_source", ""),
-            "attack_summary": ext.get("attack_summary", ""),
-        }}
-
-        # Check for user feedback from the feedback_data parameter
-        if feedback_data:
-            context = self._apply_user_feedback(context, feedback_data)
-            yield {"event": "stage", "data": {"stage": "feedback", "status": "complete", "detail": "User feedback applied"}}
-        else:
-            yield {"event": "stage", "data": {"stage": "feedback", "status": "complete", "detail": "No corrections needed"}}
-
+    def _generation_events(self, context: dict) -> Generator[dict, None, None]:
+        """Generation, review (one retry on errors), the coverage check (one retry on
+        gaps, if no retry ran yet), then the result - as progress events."""
         # Stage 5: Rule Generation (PRIMARY model)
         yield {"event": "stage", "data": {"stage": "generation", "status": "running", "detail": "Generating Sigma rules..."}}
         context = self.generate.run(context)
@@ -369,23 +439,27 @@ class PipelineOrchestrator:
         self._run_coverage_check(context)
         coverage = context.get("coverage_check", {})
         n_warnings = len(coverage.get("warnings", []))
+
+        # Coverage-directed regeneration pass.
+        # Skipped if a validation-driven regeneration already ran — at most
+        # 1 regeneration per request total (quota-safe). Decided once, as in
+        # run_sync: the check marks the request as retried when it says yes, so
+        # asking it again would always say no (defect 20).
+        regenerate = (
+            not context.get("generation_retried")
+            and self._should_regenerate_for_coverage(context)
+        )
         yield {"event": "stage", "data": {
             "stage": "coverage_check", "status": "complete",
             "detail": (
                 "No gaps detected" if n_warnings == 0
                 else f"{n_warnings} coverage gap(s) — regenerating with feedback..."
-                if self._should_regenerate_for_coverage(context)
+                if regenerate
                 else f"{n_warnings} coverage gap(s) — see notes below"
             ),
         }}
 
-        # Coverage-directed regeneration pass.
-        # Skipped if a validation-driven regeneration already ran — at most
-        # 1 regeneration per request total (quota-safe).
-        if (
-            not context.get("generation_retried")
-            and self._should_regenerate_for_coverage(context)
-        ):
+        if regenerate:
             yield {"event": "stage", "data": {
                 "stage": "generation", "status": "running",
                 "detail": "Regenerating to close coverage gaps...",
@@ -406,8 +480,63 @@ class PipelineOrchestrator:
                 ),
             }}
 
+        # The analyst's review is final (design P4): the rules are checked against it. A rule off
+        # the analyst's log source, or tagged with a rejected technique, gets one rewrite with the
+        # reason, apart from the regeneration above; a rewrite that gives no rules keeps the rules
+        # before it. A rejected string used in a detection is shown, not rewritten: it can be fine
+        # inside a larger condition (the process is sudo AND the argument is -u#-1). Code never
+        # edits a rule.
+        if has_checks(context):
+            found = review_departures(self._final_rules(context), context)
+            departures = [d for d in found if d["kind"] in ENFORCED_DEPARTURES]
+            remaining, failed = departures, False
+            if departures:
+                yield {"event": "stage", "data": {
+                    "stage": "analyst_check", "status": "complete",
+                    "detail": f"{len(departures)} departure(s) from your review — rewriting...",
+                }}
+                yield {"event": "stage", "data": {
+                    "stage": "generation", "status": "running",
+                    "detail": "Rewriting to follow your review...",
+                }}
+                before = {k: copy.deepcopy(context[k]) for k in _RULE_STATE if k in context}
+                context["analyst_check_feedback"] = format_departures(departures)
+                context = self.generate.run(context)
+                context.pop("analyst_check_feedback", None)
+                context = self.review.run(context)
+                self._run_coverage_check(context)
+                if self._final_rules(context):
+                    found = review_departures(self._final_rules(context), context)
+                    remaining = [d for d in found if d["kind"] in ENFORCED_DEPARTURES]
+                else:
+                    failed = True
+                    context.update(before)
+            flagged = [d for d in found if d["kind"] not in ENFORCED_DEPARTURES]
+            context["analyst_check"] = {
+                "departures_before": departures,
+                "departures": remaining,
+                "flagged": flagged,
+                "rewritten": bool(departures),
+                "rewrite_failed": failed,
+            }
+            yield {"event": "stage", "data": {
+                "stage": "analyst_check", "status": "complete",
+                "detail": (
+                    "The rewrite gave no rules; the earlier rules are kept — see Your review" if failed
+                    else f"{len(remaining)} departure(s) remain after one rewrite — see Your review" if remaining
+                    else f"{len(flagged)} rejected string(s) used in detection — see Your review" if flagged
+                    else "Rules follow your review after one rewrite" if departures
+                    else "Rules follow your review"
+                ),
+            }}
+
         # Final result
         yield {"event": "result", "data": self._format_output(context)}
+
+    @staticmethod
+    def _final_rules(context: dict) -> list:
+        """The rules as returned: after review if it ran, else as generated."""
+        return context.get("optimization", {}).get("rules", []) or context.get("generation", {}).get("rules", [])
 
     def _should_regenerate_for_coverage(self, context: dict) -> bool:
         """Decide whether to run a single coverage-directed regeneration pass.
@@ -563,9 +692,39 @@ class PipelineOrchestrator:
             )
             parts.append("\n".join(warning_block))
 
+        # What the check against the analyst's review left (design P4)
+        check = context.get("analyst_check") or {}
+        if check.get("departures"):
+            heading = ("**Departures from your review** (The rewrite failed - these are the rules before it; "
+                       "they were not edited):" if check.get("rewrite_failed")
+                       else "**Departures from your review** (after one rewrite; the rules were not edited):")
+            parts.append("\n".join(["\n---", heading, format_departures(check["departures"])]))
+        if check.get("flagged"):
+            parts.append("\n".join(["\n---", "**Rejected strings used in detection** (shown, not rewritten - "
+                                     "check whether each rule depends on it):", format_departures(check["flagged"])]))
+
         response_text = "\n\n".join(parts) if parts else "I was unable to generate a rule. Please provide more details about the attack technique."
 
-        # Build pipeline metadata for enhanced context panel
+        return {
+            "rule": response_text,
+            "context": self._references(context),
+            "pipeline_metadata": self._pipeline_metadata(context),
+        }
+
+    @staticmethod
+    def _references(context: dict) -> dict:
+        """The retrieved references, for the panel (backward compatible)."""
+        return {
+            "sigma": context.get("rag_sigma", []),
+            "mitre": context.get("rag_mitre", []),
+            "sysmon": context.get("rag_sysmon", []),
+        }
+
+    @staticmethod
+    def _pipeline_metadata(context: dict) -> dict:
+        """What the Analysis panel shows, after the analysis or after generation."""
+        optimization = context.get("optimization", {})
+        coverage = context.get("coverage_check", {})
         extraction = context.get("extraction", {})
         ttp_mapping = context.get("ttp_mapping", {})
         validation = context.get("validation", {})
@@ -594,14 +753,8 @@ class PipelineOrchestrator:
             "generations": context.get("generation_log", []),
             "generation_retried": bool(context.get("generation_retried")),
         }
-
-        # Build context for sidebar (backward compatible)
-        return {
-            "rule": response_text,
-            "context": {
-                "sigma": context.get("rag_sigma", []),
-                "mitre": context.get("rag_mitre", []),
-                "sysmon": context.get("rag_sysmon", []),
-            },
-            "pipeline_metadata": pipeline_metadata,
-        }
+        if "analyst_review" in context:
+            pipeline_metadata["analyst_review"] = context["analyst_review"]
+        if "analyst_check" in context:
+            pipeline_metadata["analyst_check"] = context["analyst_check"]
+        return pipeline_metadata

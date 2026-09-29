@@ -3760,3 +3760,379 @@ analysis clears the panel, a **live run** (sudo CVE-2019-14287) fills it on comp
 tests 432 passed. That live run again recommended `process_creation / windows` for the Linux sudo bug
 (2 of 3 live runs today) — now visible at a glance in the panel; the demo runbook uses it as the
 verification example.
+
+---
+
+## 2026-09-27 — Change 34: the analyst confirms or corrects what the model understood, before any rule is written (user)
+
+User: "lets work on the confirm/correct buttons". First slice chosen by the user: **the log source +
+rejecting items** (confirm or change the log source; confirm/reject techniques, indicators and attack
+patterns; restore an excluded string; a note). Built on branch `analyst-review` so `main` stays what
+the demo runbook describes. Starts plan Phase 3/4 before the professor's sign-off (Phase 0) — the
+user's decision, logged in the plan.
+**Why it could not simply be wired up** (design §2): the old `feedback_data` was applied at the start
+of a *new* run, which re-analyses — the analyst would correct facts the rules are then not written
+from. The run now **stops after the analysis and keeps its state**.
+**What was built** (tests first, each seen to fail):
+- `backend/pipeline/analyst_review.py` — `apply_review(saved analysis, review, SigmaHQ table)`, pure:
+  rejected techniques/indicators/patterns are removed before generation; a restored excluded string
+  becomes a pattern; a chosen log source is validated against SigmaHQ's table (`on_table`, Change 28),
+  put first and marked `user_confirmed` with `confirmed_logsource`; the note goes to the existing
+  "User Instructions" slot; the review is recorded (`analyst_review`). Invalid reviews (unknown
+  position, status or field; a log source not in SigmaHQ's rules) raise before anything changes.
+  Confirming a technique, indicator or pattern is **recorded only** — it changes nothing the rule
+  writer receives (said so in the panel). `logsource_choices(table)`: the 125 log sources.
+- `sigma_logsource.first_rule_logsource_block`: an analyst-chosen log source is given as YAML +
+  "Confirmed by the analyst: use it for the first rule" (the old string form kept).
+- `orchestrator.py`: `run_stream` split into `_analysis_events` + `_generation_events` (code moved,
+  not changed; two tests pin its exact event sequence, written against the old code and passing
+  before and after); `analyse_for_review` (analysis, then a `checkpoint` event with the JSON state to
+  save, the panel's data and references); `generate_after_review` (applies the review, raises before
+  any stage runs if it is invalid, then generation from the saved state — **no second analysis**);
+  `analysis_state` (JSON, without the conversation); `_pipeline_metadata` / `_references` factored
+  out of `_format_output` (same keys; `analyst_review` added only when present). **`run_sync`, which
+  the harness calls, is not touched** (design P5): no measured number can move.
+- `backend/review_sessions.py` — the analysis waits in the session record (design decision 2):
+  `awaiting_review → generating → generated` (back to awaiting on failure or restart); generated from
+  once; the browser never receives the saved state.
+- `main.py`: `/analyze_stream` with `review: true` stops at the checkpoint; `POST /generate_stream`
+  (400 invalid review, 404 unknown, 409 already generated); `GET /logsource_choices`; the page is
+  served `no-cache` (the browser pane showed a stale pre-redesign page twice). Greeting and the input
+  button ("Analyse") say the run stops for the analyst.
+- Frontend: Confirm/Reject on each pattern, technique and indicator (by its position in the saved
+  list — the panel groups indicators by type); Restore on excluded strings; "Use this" on each
+  suggested log source (disabled, with the reason, if it is not in SigmaHQ's rules) and a list of all
+  125; a note; a bar with the running summary and **Generate rules**. After generation a **"Your
+  review"** section heads the panel. A pending review survives a page reload. The SSE reader now
+  handles events split across network chunks. The informational preview is removed.
+Tests: 482 passed (+50).
+**Live test (sudo CVE-2019-14287, two runs, anecdotal — not a measurement):** both analyses again
+recommended Windows (`process_creation / windows` 95%, `file_event / windows` 85%) — 4 of 5 live runs
+today. Run 1: the analyst chose `process_creation / linux` (not among the model's suggestions),
+rejected T1548.004 (a macOS technique), T1059.001 (PowerShell), T1562.001 and the bare pattern
+`sudo`; the rule came out `process_creation / linux`, tagged only the confirmed T1068 and T1059.004.
+Run 2 (after a mid-review reload, which restored the analysis): Linux chosen, the pattern `root`
+rejected → 3 rules, all `process_creation / linux`, no coverage warnings. 400/404/409 checked; the
+saved demo chats still open read-only.
+**A design mistake found live and fixed:** a rejected pattern first joined the excluded strings. The
+coverage check then flagged every sudo rule as using a "researcher artifact" (`sudo` is a substring of
+every real pattern). Rejecting means "not given to the rule writer", as for techniques and indicators;
+the test was changed first.
+**Found, not fixed (Inbox):**
+- **Defect 20 — the web app's coverage retry never runs.** `_should_regenerate_for_coverage` marks
+  `coverage_retried` as a side effect; the stream calls it once to word the progress line, so the real
+  check always sees "already retried" — while the line says "regenerating with feedback…". Present in
+  `run_stream` since the retry was added; `run_sync` (the harness) calls it once, so **no evaluation
+  number is affected**. The demo runbook's "one retry if not" is wrong for the web app.
+- The review stage returned 1 rule for 3 generated in run 1 ("Merged duplicate rules into a single
+  comprehensive rule") — the known "review rewrites the rules" behaviour, now seen dropping rules.
+- The old `feedback_data` path (`_apply_user_feedback`) is unused by any client; the panel is hidden
+  under 900 px wide, so no review there; P4's check (a rule that violates the analyst's log source →
+  one rewrite) is not built yet.
+
+---
+
+## 2026-09-27 — Defect 20 fixed: the web app's coverage retry runs again (user)
+
+User: "fix defect 20". Branch `analyst-review`.
+**Cause** (entry above): `_should_regenerate_for_coverage` sets `coverage_retried` when it answers yes;
+the stream asked it once to word the progress line, so the real check always answered no.
+**Fix** (`orchestrator._generation_events`): the decision is taken once — `not generation_retried and
+_should_regenerate_for_coverage(...)`, exactly `run_sync`'s expression — and both the progress line and
+the retry use it. So the line also stops saying "regenerating" after a validation retry has already used
+the request's one regeneration (it said so before, too).
+**Tests first** (5 failed before the fix, as defect 20 predicts): the stream regenerates once when the
+first rules miss the attack vector; `generate_after_review` does too; the line says "regenerating" only
+when it does; and **the stream makes exactly the stage calls `run_sync` makes** in five scenarios
+(valid/invalid first review × rules covering from the first, second or no generation). The fake review
+stage now passes generation's rules through (before, it always returned a covering rule, so no test could
+see a gap). Tests: 490 passed. `run_sync` untouched: **the evaluated pipeline always retried; the web app
+now matches it.**
+**Live (SharePoint ToolShell, through the analyst review):** analysis 113 s; review — `webserver` confirmed
+(the model's first suggestion), the pattern `ysoserial.exe` rejected, T1566.002 and T1204.002 rejected,
+T1190 confirmed. First generation: 5 rules, **4/7 patterns missed** → the progress line said
+"regenerating", and the server log shows a **second generation** → **1/7 missed**. 134 s from Generate to
+the rules. Four rules `webserver`, one `process_creation / windows` (the ASPX file creation); tags carry
+T1190 and none of the rejected techniques.
+**Seen, for the Inbox:** `ysoserial.exe` still appears in one rule — in its `description` only ("use of
+ysoserial.exe to generate ViewState payloads"), which is correct context; the detection matches
+`__VIEWSTATEGENERATOR` on the server. The same value was also an indicator and a PoC behaviour, which the
+analyst did not reject: rejecting a pattern does not reject the same string elsewhere. A check of the
+analyst's rejections (design P4) should look at detection values, not the whole rule text.
+
+---
+
+## 2026-09-27 — Change 35: one decision per string, and the rules checked against the analyst's review (design P4) (user)
+
+User: "go ahead with option 1 and then the P4 check". Branch `analyst-review`.
+**Option 1 — one decision per string.** The model often lists the same string as an attack pattern
+and as an indicator; both reach the rule writer. Live on SharePoint, `ysoserial.exe` was rejected as a
+pattern and still reached it as an indicator. Now rejecting a pattern or an indicator also rejects its
+copies in both lists (`apply_review`): matched **exactly**, case and spacing aside — never "contains",
+so rejecting the bare pattern `sudo` leaves the indicator `sudo -u#-1 id`. Copies are recorded as
+`linked`; confirming a copy of a rejected string is refused (a contradiction). The panel crosses the
+copy out ("rejected with its copy in the other list") and disables its buttons; the bar counts copies.
+Tests first (5 failed).
+**P4 — the rules checked against the review.** `review_departures(rules, context)` (pure; YAML parsed,
+a rule that does not parse is left to validation): the **first** rule's log source against the
+analyst's choice (the prompt asks for it on the first rule; later rules may observe other stages —
+SharePoint's ASPX file); every rule's **ATT&CK tags** against the rejected techniques (a parent of a
+rejected sub-technique is not a departure); every rule's **detection values** against the rejected
+strings and their copies (exact, without `*` wildcards or a leading path separator — `\ysoserial.exe`
+detects on ysoserial.exe; a description naming the string is not a departure). In
+`_generation_events`, after the coverage step: departures → **one rewrite** with the reason in a new
+prompt slot ("What departs from the analyst's review … final"), apart from the one regeneration for
+errors/gaps; what remains is recorded (`analyst_check`), shown in "Your review", listed under the
+rules, and never edited by code. A review that asks nothing of the rules adds no step. `run_sync`
+untouched (it never has a review). Tests first.
+**First live test (sudo, analyst chose `linux / auditd`, rejected the bare `sudo` and T1548.004,
+T1059.001, T1562.001) showed two problems, both fixed with tests first:**
+1. **The rewrite's answer could not be read** (`Invalid \escape` — defect 5) and gave **0 rules**; the
+   check then said the rules "follow your review after one rewrite" (true of no rules) and the three
+   earlier rules were lost. Now a rewrite that gives no rules **puts back the rules before it** and says
+   so ("The rewrite gave no rules; the earlier rules are kept"), with the departures still listed.
+2. **Rules 2 and 3 were flagged for detecting on `sudo`** — almost certainly `Image|endswith: '/sudo'`
+   AND the `-u#-1` argument, which is right. Rejecting the bare pattern meant "not on its own"; for
+   `ysoserial.exe` rejecting means "never". Code cannot tell which, so **only the unambiguous
+   decisions get the rewrite** (`ENFORCED_DEPARTURES`: the log source and rejected techniques); a
+   rejected string used in a detection is **shown, not rewritten** ("Rejected strings used in
+   detection … check whether each rule depends on it"). A departure from what was described to the
+   user before building ("detection values … one rewrite"), for the reason above.
+The first departure of that run was real: the first rule was `process_creation / linux / auditd`
+where the analyst chose `linux / auditd` (Sigma's service form has no category).
+Tests: 521 passed (+31). **Live retest of the fixed code: pending** — the VPN dropped (Spark
+unreachable) after the fixes.
+
+---
+
+## 2026-09-27 — Change 35 live retest, after the VPN came back (user: "run the retest")
+
+Both cases through the web app on `5294a99` (anecdotes, not measurements).
+**Sudo (CVE-2019-14287)** — the analysis was identical to the failing run (Windows again, 7 of 8 live
+runs today); the same review: `linux / auditd` chosen, the bare pattern `sudo` rejected (its indicator
+copy crossed out with it — "1 copy rejected with them"), T1548.004, T1059.001, T1562.001 rejected.
+Generation 3 rules → coverage regeneration (3 gaps → 1) → the check found **1 enforced departure**
+(first rule `process_creation / linux / auditd` against the analyst's `linux / auditd`) → **one
+rewrite, which produced 3 rules this time** → the model **kept the extra `category: process_creation`**
+on all three. Shown plainly: "Still departing after one rewrite. The rules were not edited — check
+them before use", and listed under the rules. The rules detect on the `-u#-1` / `-u#4294967295`
+arguments; no rule detected on the bare `sudo`, so nothing was flagged; no rejected technique in any
+tag. 146 s. The first fix (no rules → keep the earlier rules) was not exercised: the rewrite parsed.
+**SharePoint (ToolShell)** — analysis 111 s; `ysoserial.exe` was pattern 3 and indicator 35: rejecting
+the pattern crossed out the indicator (buttons disabled). Weak techniques this run (T1036.012
+"Browser Fingerprint", T1216, T1185, T1189 drive-by, T1566.002) rejected; `webserver` confirmed; **T1190
+was not proposed at all** (the review can reject but not add). Generation 5 rules → coverage
+regeneration (2 gaps → 1/7) → check: **"the log source and techniques follow your review"** — no
+rewrite. First rule `webserver`; no rejected technique tagged; **`ysoserial` appears nowhere in the
+rules**, description included. 164 s.
+**Observed:** a model that keeps a non-standard log-source form after one explicit rewrite (sudo) — the
+check's value is that the analyst sees it; code does not force it. Adding a technique the model missed
+(T1190) is outside this slice ("editing values", not built).
+
+---
+
+## 2026-09-27 — The simulated-analyst run built (plan 5.3), and a Change 34 regression it found (user)
+
+User, leaving for a few hours: no A/A run on its own; "keep working on the other changes on the order"
+— the order: 5.3 first, then defect 5 (plan Decisions log). Measurement plan for 5.3 written into
+`ACTION_PLAN.md` before any run, as a proposal for the user to approve.
+**Cases changed before any run:** first written as the 60 held-out cases, then the **60 tuning cases**
+(seed 0) — reading oracle-run failures on held-out cases would spoil them for the next confirmation.
+On the tuning cases arm U against `p2g_shared60` (same code `a6e9157`) is the A/A noise floor.
+**Built** (tests first, each seen to fail):
+- `eval/run_eval.py --oracle-logsource`: `run_oracle_case` — the analysis once
+  (`analyse_for_review`), then generation twice from its state: arm **U** with no review, arm **O**
+  with the gold log source as the analyst's choice (`oracle_review`: in Sigma's form, only when
+  SigmaHQ's table has it — the check a real analyst's choice passes; nothing else from the gold rule).
+  Each arm scored against the gold rule and costed as the analysis plus its own generation; rows
+  labelled `<arm>_unreviewed` / `<arm>_oracle`; the oracle row keeps `oracle_review`,
+  `analyst_review`, `analyst_check`. `run_oracle_cases` writes both rows or neither (the stop rule).
+  `load_done` shared by both modes. `run_case` split into `_base_row` / `_record_result` /
+  `_record_error` without change (its tests pass unchanged).
+- `backend/telemetry.summarise_calls(calls)`: the summary of any list of calls; `summary()` uses it.
+- Dry run (committed code): **58 of the 60 tuning cases** have a gold log source in SigmaHQ's table
+  (57 of 60 held-out).
+**Smoke run, 1 tuning case (a4a899e8, webserver; scratch output, not cited):** wiring right — one
+analysis, two arms, per-arm cost, the check recorded. **It found a regression from Change 34:** the
+analyst's `webserver` was given to the rule writer as YAML **without Change 29's note** ("no
+`product` and no `service`: leave them out"), which the model's own suggestion carries; the rule
+writer wrote `product: webserver`, the check rewrote once, the model kept it — S3 wrong *with* the
+right answer. Fixed: the analyst's choice gets the same note (test first). Rerun of the same case:
+first rule `category: webserver` only, no departure, S3 right in both arms, 3.3 min. Also: the
+unreviewed arm's S5 on that case was 0.0 in the first smoke and 0.667 in the second — sampling at
+generation's 0.3, the reason for the paired design and the noise floor. A closing-message crash for
+output outside the repo fixed. Tests: 535 passed. **The 60-case run has not started** — the plan
+awaits the user.
+
+---
+
+## 2026-09-27 — Change 36 (defect 5): the rule writer answers in YAML blocks, not JSON strings — built, not measured (user)
+
+The next change in the user's order. Branch **`defect5-yaml-rules`** (off `analyst-review` at
+`c3f3e76`), so the simulated-analyst run (5.3) stays on the frozen pipeline. Measurement plan in
+`ACTION_PLAN.md` ("Next pipeline change"), written before building, awaiting the user's approval.
+**Why:** each rule travelled inside a JSON string, so every backslash was escaped twice, and one bad
+escape (`Invalid \escape`, a Windows path) lost every rule of the answer. **Generation only** — one
+change at a time; a failed review already falls back to the rules as they were.
+**What changed** (tests first, each seen to fail):
+- `prompts.RULE_GENERATION`: an "Output Format" section — each rule under "### Rule N: <what it
+  detects and why>" as a ```yaml block written as in a Sigma file (a backslash once), optional
+  "### Notes", no JSON; the worked example in that format with **the same content** (hyphenated
+  tags and the `<new UUID>` placeholder kept — Changes 30/33, their tests unchanged but for reading
+  the new format); the unused `target_ttp` dropped. The source writes `\\` so the prompt text has
+  one backslash (compiles with warnings as errors).
+- `stage_generate.parse_rule_blocks(text)`: rules = the ```yaml/```yml blocks, each explained by the
+  last "### Rule N" heading before it; notes after "### Notes"; `parse_error` when no block has a
+  rule. The stage calls the model with `json_mode=False`, and records every call's `parse_error` in
+  `generation_log` (so failures a retry hides become countable); an unreadable answer still gives
+  "Generation error: …" in the notes, as before.
+- `eval/count_generation_failures.py` (the plan's primary measure): cases with no rule whose kept
+  response carries "Generation error" — computable for old and new runs — and, from Change 36 on,
+  unreadable generation calls. On the reference `p2g_shared60`: **3 cases** (`c5a178bf`,
+  `b014ea07`, `ec3a3c2f` — the three the 2026-09-26 entry named by hand), 99 generation calls
+  (unreadable calls not recorded then). `p2f_product60`: 0 cases, 94 calls.
+Tests: 550 passed. **Smoke, the preflight's 2 cases (scratch output, not cited):** the model used the
+new format in all 4 generation calls (0 unreadable); both first rules valid. Those rules had no
+backslashes, so the smoke shows format compliance, not the escape fix — that is the 60-case run's.
+**Seen:** the PoC stage's own JSON failed once in the smoke (`Expecting ',' delimiter`) — the same
+family, another stage (Inbox).
+
+---
+
+## 2026-09-27 — The simulated-analyst run (5.3) and the Change 36 run, started (user: "run them")
+
+The user approved both measurement plans ("push it and run them"). **Never two runs from one
+checkout:** each runs from its own detached worktree at its commit — `../SigmaAssistant-run-oracle`
+at `c3f3e76` (5.3) and `../SigmaAssistant-run-c36` at `c605223` (Change 36, branch
+`defect5-yaml-rules`) — with `.env`, `data/chroma_db`, `data/sigma`, `eval/snapshots` linked from this
+repository (read-only use); results written into this repository's `eval/results/`. (A first
+attempt at the two worktrees named them wrongly — a zsh loop did not split its arguments — and put
+both at `c3f3e76`; both were removed, symlinks unlinked first, before any run; the linked data was
+checked intact: 379 snapshots.) Both harnesses' dry runs select **the same 60 cases as
+`p2g_shared60`** (checked by id; 5 flagged as contaminated, reported apart); 58 are choosable for
+the oracle arm.
+One chained background command, kept awake with `caffeinate`: preflight in the oracle worktree
+(**passed 16:26**: tunnel, model, context 262,144, smoke CITABLE) → run 1
+`run_resilient.py -- --sample 60 --seed 0 --no-web-enrich --oracle-logsource --arm oracle_ls --out
+eval/results/oracle_ls60.jsonl` → preflight in the Change 36 worktree → run 2 `… --arm c36_yaml --out
+eval/results/c36_yaml60.jsonl`. A watcher reports run 1's end or 40 min without a new row.
+
+---
+
+## 2026-09-27 — The simulated-analyst run (plan 5.3): results
+
+Run 1 of the chain: **60 / 60, 58 oracle rows, 0 failed, 265.4 min** (16:26–20:52); wrapper exit 0.
+`eval/results/oracle_ls60_unreviewed.jsonl` and `…_oracle.jsonl`, both **CITABLE** (`summarise.py`:
+every gate passed). Read as pre-registered, with committed code only (`compare_runs.py` U → O).
+**Primary — S5 detection-field F1, paired within case: 0.388 → 0.531, +0.144, 95% CI [0.056,
+0.241], n = 53** (13 higher, 6 lower, 34 the same). With the right log source as the analyst's
+choice, the rules use more of the right detection fields.
+**Reported, not tested:** S3 in O = adherence: 25 → 44 of 53 (19 gained, 0 lost; by construction
+mostly). S1 55 vs 54 of 58 (p = 1.000). S4 −0.007 (CI [−0.068, 0.052]). Tokens +4,330 (CI [−484,
+9,317]); seconds +2.8 (CI [−13.1, 16.5]); rules per case −0.07.
+**Adherence** (new committed counter `eval/count_review_checks.py`, the plan's "rewrites and
+remaining departures"; tests first): 58 checked; **followed first time 46**; 12 departed (all on the
+log source) → one rewrite each → **followed after it 3**; **still departing 9** (shown; rules not
+edited), of which **4 use the analyst's log source in a later rule** (post-hoc count added to the
+counter, test first) and **1 rewrite gave no rules** (`881834a4`; the earlier rules were kept — the
+Change 35 fix, exercised). Overall 49 / 58 follow the analyst. Read post-hoc: the 9 are form mixing
+(3 — a service-form choice, `windows/security` or `firewall`, given a category, as in the live sudo
+`linux/auditd` case) and stage order (6 — the gold is a later stage; the model keeps the
+initial-access rule first, generation instruction 2).
+**Where the S5 gain comes from** (post-hoc, `eval/s5_by_logsource.py`, `compare_runs.metric_value`
+pairing): **all from the 19 cases whose log source became right**, S5 0.132 → 0.521 (+0.389); right
+in both (25) 0.722 → 0.711; wrong in both (9) 0.000 → 0.056; became wrong 0. The log source gates
+the fields. (This script and its test were written together; the test was run with the script
+moved away first and seen to fail — weaker than test first, noted.)
+**Noise floor — the by-product** (`compare_runs.py p2g_shared60 → U`: code `a6e9157` both, same 60
+cases): S3 22 vs 24 of 51 (**6 discordant**, 2/4, p = 0.688); S1 52 vs 57 (1/6, p = 0.125 — the
+reference lost 3 cases to defect 5); **S5 +0.086, CI [−0.007, 0.187]** (11/5/34); S4 +0.046 (CI
+[−0.039, 0.141]); tokens +1,358 (CI crosses 0); **seconds +23.8 (CI [0.0, 60.2])** — the Spark is
+shared. So: ~1 case in 8 flips S3 between identical runs, and S5 swings of ~0.09 are within noise.
+Chapter notes: CH6 §6.0b; CH7 49 (upper bound), 50 (noise); CH5 5.8.
+**Inbox:** the one rewrite fixes 3 of 12 departures; service-form choices get a category added
+(the first-rule block already carries "no `category`"); stage order — the first rule is the
+initial-access rule even when the analyst's log source is a later stage.
+Run 2 (Change 36) started 20:57 after its preflight passed.
+
+---
+
+## 2026-09-28 — Change 36 (defect 5) measured: no answer lost to the format; no harm detected
+
+Run 2 of the chain, worktree `../SigmaAssistant-run-c36` at `c605223`: **60 / 60, 0 failed, 171.1
+min** (20:57–23:48), wrapper exit 0; `eval/results/c36_yaml60.jsonl`, **CITABLE**. Read as
+pre-registered against `p2g_shared60` (code `a6e9157`, the same 60 cases).
+**Primary** (`eval/count_generation_failures.py`, committed before the run):
+- **Cases with no rule because generation's answer could not be read: 3 → 0.** Context — the old
+  JSON format loses 0 to 3 such cases per run on these cases: `p2f_product60` 0, tonight's unreviewed
+  arm (same frozen code) 1 (`71c432c4`), `p2g_shared60` 3. So 3 → 0 is not by itself a significant
+  difference; the reference run was an unlucky one.
+- **Unreadable generation answers: 0 of 91 calls** (recorded from this change on). `[READ]` The run
+  logs (local) have 8 "Generation failed" lines in tonight's old-format run (both arms) and **0** in
+  this one.
+- **S1 52 → 57 of 60** (1 only A, 6 only B; exact McNemar p = 0.125) — the same pattern as the noise
+  floor measured tonight (U against the same reference: 52 vs 57, 1/6), so **not attributable**.
+**Watched for harm, paired:** S3 22 → 24 of 51 (2/4, p = 0.688); S4 +0.013 (95% CI [−0.040, 0.071]);
+S5 +0.059 (CI [−0.039, 0.155]); tokens −201 (CI [−3,636, 3,336]); seconds +17.0 (CI [−6.9, 54.3]) —
+**none detectable**. **Rules per case +0.517, CI [0.117, 0.967]** — the model writes more rules in the
+new format; part of it is the 3 recovered cases (`c5a178bf` 0 → 8 rules, `ec3a3c2f` 0 → 3, `b014ea07`
+0 → 2 — its first rule does not parse), the rest not examined.
+**Reading:** the change removes the failure mode it targeted (no unreadable answer in 91 calls, against
+several per run before) without a detectable cost on any score. It cannot be shown to raise S1 on 60
+cases, because the old format's losses are rare and irregular (0–3 per run). Review still returns JSON
+(a failed review falls back to the rules as they were); the PoC stage's JSON failed once in the smoke
+(Inbox).
+**Branches:** `analyst-review` merged into `defect5-yaml-rules` first (`13bc77e`; the log's two
+appended ends were the only conflict, kept both in date order; 556 tests passed after the merge).
+
+---
+
+## 2026-09-28 — Change 36 kept; the run worktrees removed (user)
+
+User: "keep change 36, remove the worktrees and push it". Change 36 stays in the pipeline (branch
+`defect5-yaml-rules`, which carries all of `analyst-review` too); it goes into `main` with the
+review work after the demo. The worktrees `../SigmaAssistant-run-oracle` and `../SigmaAssistant-run-c36`
+were removed — their data links unlinked first, then `git worktree remove`; they held only those links
+and each preflight's 2-case smoke output. `.env`, `data/chroma_db`, `data/sigma` and the 379 snapshots
+were checked intact afterwards; `../SigmaAssistant-baseline-v2` is kept (user, 2026-09-27).
+
+---
+
+## 2026-09-28 — The professor's feedback; why the same report gets a good rule one time and a wrong one the next (measured)
+
+After the demo (user): the professor (1) wants the thesis to **understand** why "some of the Sigma
+rules generated in May were good, then more were generated and they were wrong", and asked for
+examples; (2) said the assistant now relies on the human, and "the point of all of this is to
+automate the process and rely more on the AI" — human input matters, but automation is the goal.
+**Three sources, with evidence:**
+1. **The system changed between May and now** — model (Gemini hybrid → all-local qwen3-coder), and
+   defects since measured and fixed. The rule library (`data/saved_rules.json`, April) shows them:
+   "Access to CVE-2026-1731 Rapid7 Analysis on AttackerKB" (15 Apr) detects *visits to the report
+   page* (`cs-host|contains: 'attackerkb.com'`) — defect 8, the pasted URL routed to chat and the
+   page never read (57% of URLs, fixed by Change 8 on 2026-09-13); "Citrix NetScaler … NSC_TASS" (16
+   Apr) puts an invented `product: citrix` / `service: netscaler` on `category: webserver` and
+   looks for response cookies a web-server log does not record (Changes 25/28/29); "Follina MSDT"
+   (7 Apr) is close to SigmaHQ's but has a sequential fake id (defect 10) and the underscore tag
+   style (Change 33). No May result file exists (the harness came in September), so May cannot be
+   rescored.
+2. **Different inputs differ in difficulty** — held-out: the analysis stage's suggestion right for
+   web 12/15, host categories 11/37, service-based 0/6 (log 2026-09-27).
+3. **The same input, the same code, different outcomes — measured now.** New committed script
+   `eval/list_disagreements.py` (tests first, each seen to fail) on `p2g_shared60` against
+   `oracle_ls60_unreviewed` (the same pipeline, `a6e9157` path, the same 60 cases, frozen pages):
+   **16 of 60 cases disagree** (S1 or S3 flips, or S5 apart by ≥ 0.5). Over all 60, the two runs
+   concluded differently at the **attack-vector stage in 12**, the **analysis's first log-source
+   suggestion in 15**, and **the first rule's log source in 19** — the difference grows down the
+   chain. Of the 16, the first divergence was the attack-vector stage in 6, the analysis in 2, the
+   rule writer in 8; of the 6 log-source flips, 4 began at the attack-vector stage. Example
+   `ad7085ac` (Sourgum, CVE-2021-31979/33771): run A — attack vector `file_event` → suggestion
+   `file_event/windows` → first rule right, **S5 1.00**; run B — `registry_event` →
+   `registry_event/windows` → wrong, **S5 0.00**.
+   **Temperature 0 is not deterministic here:** the PoC, attack-vector and analysis stages call the
+   model at temperature 0 (checked in the code), none of their code or prompts changed between the two
+   commits (`git diff a6e9157 c3f3e76` empty for them and `prompts.py`), and the pages are snapshots —
+   yet the first stage concluded differently in 12 of 60. `[UNMEASURED]` Likely cause: inference
+   on a shared GPU (request batching, floating-point order) breaking near-ties, amplified over
+   answers thousands of tokens long; not tested yet.
+**The mechanism** ties to 5.3: an early difference decides the log source, and the log source
+gates the detection fields (S5 0.13 vs 0.52 when it becomes right).

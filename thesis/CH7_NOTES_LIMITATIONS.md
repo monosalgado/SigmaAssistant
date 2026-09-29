@@ -197,6 +197,37 @@ limitation in the log belongs here too.
     attempt after three stops and was excluded as the rule says (decided before any score was read;
     including it gives the same p). Both were S3-correct in the final pipeline: the exclusion works
     against the result, not for it. (log 2026-09-27)
+47. **The web app never ran its coverage retry (defect 20)** `[DISCLOSE]`. A side effect in the
+    retry check is triggered by the progress message first, so the streaming path always skipped
+    the retry while saying "regenerating". The harness's path (`run_sync`) calls the check once and
+    retries as designed, so **no reported number is affected** — but a description of the web app
+    must not claim the retry until it is fixed. (log 2026-09-27, Change 34) **Fixed 2026-09-27** on
+    branch `analyst-review`; a test now holds the web app to the harness path's stage calls.
+48. **The analyst's review is built but not measured** `[UNMEASURED]` (Change 34). Two live runs on
+    one case showed the rules following the analyst's log source and technique choices — anecdotes,
+    not evidence. Confirming an item is recorded but changes nothing the rule writer receives. Since
+    Change 35 code checks the rules against the review and gives one rewrite for the analyst's log
+    source and rejected techniques; **a rejected string used in a detection is only shown**, because
+    code cannot tell "not on its own" from "never". The rewrite shares generation's JSON fragility
+    (defect 5): once live it gave no rules, and the earlier rules are now kept. What the review is
+    worth is for the simulated-analyst experiment (plan 5.3); there is no user study. (log 2026-09-27)
+
+49. **The simulated analyst is an upper bound, on the log source only** `[DISCLOSE]` (CH6 §6.0b). The
+    "analyst" is the gold rule: always right, on one decision. Real analysts err, confirm more than
+    the log source, and were not studied. The gold is one human's rule — another valid log source
+    sometimes exists, and a case where the model's own choice is also defensible counts as wrong. The
+    S5 gain is concentrated in the 19 cases whose log source became right (post-hoc). 2 of 60 gold
+    log sources are not in SigmaHQ's table and could not be chosen. (log 2026-09-27)
+50. **Run-to-run noise is now measured** `[MEASURED]` (CH6 §6.0b): two runs of identical code flip S3
+    in 6 of 51 cases and move S5 by +0.086 (CI crosses 0). Phase 2's per-change S3 results were
+    paired tests on runs of this noise; the held-out confirmation stands, but single-run S5 changes
+    below ~0.1 should not be read as effects. (log 2026-09-27)
+
+51. **One run is one sample** `[MEASURED]` (CH6 §6.0c): two runs of identical code disagree on 16 of
+    60 cases, and the temperature-0 first stage concluded differently in 12. Every per-case example
+    in the thesis (a good rule, a wrong rule) can come out the other way on another run; results
+    are reported as rates with intervals for this reason. The cause of the temperature-0 variation
+    is not yet measured. (log 2026-09-28)
 
 ---
 

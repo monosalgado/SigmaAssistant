@@ -3,6 +3,11 @@
 Prepared 2026-09-27 for the demo on 2026-09-28. Both URLs below were run **live** through the web
 app on 2026-09-27 (pipeline frozen at `a6e9157`), fetching the pages from the internet.
 
+> **On `main` since 2026-09-28 (after the demo):** the run stops after the analysis and the analyst
+> confirms or corrects it before the rules are written (Change 34), the rules are checked against
+> the review (Change 35), and the rule writer answers in YAML blocks (Change 36). The demo on
+> 2026-09-28 ran the `analyst-review` version; this code was tested live again before the merge.
+
 ---
 
 ## 30 minutes before
@@ -23,7 +28,9 @@ app on 2026-09-27 (pipeline frozen at `a6e9157`), fetching the pages from the in
 
 ## The demo (~10 minutes)
 
-**+ New analysis → paste the URL → Generate rules.** While it runs, explain each step as it is ticked off.
+**+ New analysis → paste the URL → Analyse.** While it runs (about a minute), explain each step as it is ticked off.
+It **stops after the analysis**: the Analysis panel shows what the model understood, with a button on
+every item. Review it (below), then **Generate rules** at the bottom of the panel (about a minute).
 
 | Stage on screen | What to say |
 |---|---|
@@ -31,16 +38,19 @@ app on 2026-09-27 (pipeline frozen at `a6e9157`), fetching the pages from the in
 | PoC analysis | If the report links exploit code, it reads that too and lists what it would do on a machine. |
 | Attack vector | *How does the attack start and where would you see it?* — entry point, attacker input, patterns, and strings that belong to the researcher, not the attacker (kept out of rules). |
 | Analysis | Indicators, ATT&CK techniques, and the **recommended log source**, chosen from a table generated from SigmaHQ's own rules. |
-| Review & Confirm | **What the LLM understood** about the attack — this is where the analyst checks it (see "Be honest about"). |
-| Generation → Review | Rules written, then checked by pySigma; errors go back for a rewrite. |
-| Coverage check | Do the rules cover the attack vector? Gaps are listed in the panel. (The web app does not retry on a gap — a known bug, defect 20, found 2026-09-27 — even though the line says "regenerating".) |
+| *(stops)* Your review | **What the LLM understood** — the analyst confirms, rejects, or changes the log source, *before* any rule is written. |
+| Generation → Review | Rules written from the analysis as reviewed (no second analysis), then checked by pySigma; errors go back for one rewrite. |
+| Coverage check | Do the rules cover the attack vector? If they miss it, **one** regeneration with the gaps as feedback (fixed 2026-09-27 — before, the web app said "regenerating" but never did: defect 20). Remaining gaps are listed in the panel. |
+| Check against your review | Code compares the rules with the review. A first rule off your log source, or a tag of a technique you rejected → **one rewrite** with the reason; what remains is shown under "Your review". A string you rejected that a rule still detects on is **shown, not rewritten** — it can be right inside a larger condition. |
 
-**Then walk through the Analysis panel on the right** — *what the model understood; check it against
-the report*: the attack vector (how it starts, entry point, what the attacker controls, where it would be
-seen) and each pattern with the model's basis for it; strings excluded as researcher-only; the
-recommended log source (highlighted) with its reasoning; ATT&CK techniques and why; indicators by type;
-the checks (coverage gaps, pySigma). Say that the basis lines are the model's own words — the analyst
-confirms them against the report; confirm/correct buttons are the next step.
+**The review, in the Analysis panel** — *what the model understood; check it against the report*: the
+attack vector and each pattern with the model's basis (**Confirm / Reject**); strings excluded as
+researcher-only (**Restore**); the log source — **Use this** on a suggestion, or **choose any of the 125
+log sources in SigmaHQ's rules**; ATT&CK techniques (**Confirm / Reject**); indicators; a note to the
+rule writer. The bar at the bottom counts the decisions. Say it plainly: **rejected items are not given
+to the rule writer, a chosen log source is given as the analyst's decision, confirmations are
+recorded.** The basis lines are the model's own words, not quotes. After **Generate rules**, the panel
+opens with **"Your review"** — what was decided, next to the rules that came out.
 
 ### Main URL — SharePoint "ToolShell" (CVE-2025-53770), recent and real
 `https://research.eye.security/sharepoint-under-siege/` — **177 s live**. Attack vector:
@@ -48,26 +58,38 @@ deserialization over HTTP (confidence 90%); log source `webserver`; 5 valid rule
 via the authentication bypass, execution via the deserialization RCE, credential dumping,
 malicious ASPX file, …). Point out: the first rule is `category: webserver` with **no invented
 product** — exactly how SigmaHQ writes web rules (Phase 2's work).
-**Talking point for human verification:** one rule looks for `ysoserial.exe` running — but
+**Talking point for human verification:** the model proposes `ysoserial.exe` as a pattern — but
 ysoserial is usually run on the *attacker's* machine to build the payload, so it would rarely show
 up on the victim's server. This is why an analyst has to verify what the model understood.
+**With the review (tested live 2026-09-27: analysis 113 s, generation 134 s):**
+1. Log source: `webserver` is the model's first suggestion and right — **Use this**.
+2. Attack patterns: **Reject** `ysoserial.exe` (say why, as above). Its copy in the indicators is
+   crossed out with it ("rejected with its copy in the other list").
+3. ATT&CK: **Reject** T1566.002 (spearphishing) and T1204.002 (user execution) — neither fits a
+   server exploit; **Confirm** T1190.
+4. **Generate rules.** In the live test the first attempt missed 4 of 7 patterns; the app said
+   "regenerating" and did (defect 20 fixed) → 1 of 7 missed. The rules came out `webserver` (one
+   `process_creation / windows` for the ASPX file), tagged T1190, none of the rejected techniques;
+   ysoserial appeared only in a description ("used to generate ViewState payloads"), not in a detection.
 
 ### Backup URL — sudo CVE-2019-14287, fast and easy to follow
 `https://www.openwall.com/lists/oss-security/2019/10/14/1` — **89 s live**. Local privilege
 escalation; log source `process_creation / linux`; 3 valid rules on the `sudo -u#-1` trick
 (negative / very large user id); no coverage gaps.
-**Caution — live output varies between runs.** In 2 of 3 live runs on 2026-09-27 the analysis recommended
-`process_creation / windows` for this *Linux* bug (once with a final rule on `\sudo.exe`). Use it on
-purpose as the **verification example**: the Analysis panel shows "Log source: process_creation /
-windows 95%" right under an attack vector about `sudo` — the analyst catches it at a glance.
+**This is the verification example.** In 4 of 5 live runs on 2026-09-27 the analysis recommended
+`process_creation / windows` for this *Linux* bug. Tested twice with the review:
+1. The panel shows `process_creation / windows 95%` under an attack vector about `sudo`.
+2. Choose **`process_creation / linux`** in "Or choose another" (the model did not suggest it).
+3. Reject **T1548.004** "Elevated Execution with Prompt" (a macOS technique) and any too-broad pattern
+   (the model has proposed a bare `sudo` or `root`).
+4. **Generate rules** → the rules came out `process_creation / linux`, tagged only the techniques kept.
+If the model happens to suggest Linux this time, confirm it with **Use this** and say that in most runs today it did not.
 
 ### If the live run fails
 The runs are saved as chats in the list: "https://research.eye.security/…" (SharePoint, correct), and
-several "https://www.openwall.com/lists…" — the **lowest** is the correct run (Linux rules); the two
-above it recommended Windows (verification examples). The two **newest** (top) come from testing the
-analyst review on the `analyst-review` branch — Linux rules chosen by the analyst; on `main` they show an
-extra "The analysis is ready…" line, so prefer the lowest. Opening a saved chat also fills the Analysis
-panel. Say plainly it was run earlier.
+several "https://www.openwall.com/lists…" — the two **newest** (top) are the reviewed runs: the panel
+opens with "Your review" (Linux chosen by the analyst). Opening a saved chat fills the Analysis panel. A
+chat whose analysis is still waiting for review reopens with the buttons. Say plainly it was run earlier.
 (The "Empty Chat" entries from testing can be deleted.)
 
 ---
@@ -84,10 +106,10 @@ On **60 held-out cases no change was designed on** (drawn by committed code befo
 
 ## Be honest about
 
-- **The "Review & Confirm" panel is informational today**: it shows the model's understanding but
-  the analyst cannot yet correct it in the interface (the backend accepts corrections; the UI does
-  not send them). Next step: the analyst confirms or corrects what the LLM understood before the
-  rules are trusted.
+- **The review is new (built 2026-09-27) and not measured**: tested live twice on one case.
+  Confirming an item is recorded but does not change what the rule writer gets; a rule that departs
+  from the analyst's log source is not yet caught automatically (next step). What confirmation is
+  worth will be measured with a simulated analyst (the gold answer as the analyst's choice).
 - A URL takes about 1.5–3 minutes; if an answer runs away it is cut and retried (up to ~6 min).
 - Everything runs locally (the Spark); web search is off.
 - The numbers compare against human SigmaHQ rules; they do not show the rules fire on a real attack.
