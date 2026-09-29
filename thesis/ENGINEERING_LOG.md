@@ -4095,3 +4095,44 @@ review work after the demo. The worktrees `../SigmaAssistant-run-oracle` and `..
 were removed — their data links unlinked first, then `git worktree remove`; they held only those links
 and each preflight's 2-case smoke output. `.env`, `data/chroma_db`, `data/sigma` and the 379 snapshots
 were checked intact afterwards; `../SigmaAssistant-baseline-v2` is kept (user, 2026-09-27).
+
+---
+
+## 2026-09-28 — The professor's feedback; why the same report gets a good rule one time and a wrong one the next (measured)
+
+After the demo (user): the professor (1) wants the thesis to **understand** why "some of the Sigma
+rules generated in May were good, then more were generated and they were wrong", and asked for
+examples; (2) said the assistant now relies on the human, and "the point of all of this is to
+automate the process and rely more on the AI" — human input matters, but automation is the goal.
+**Three sources, with evidence:**
+1. **The system changed between May and now** — model (Gemini hybrid → all-local qwen3-coder), and
+   defects since measured and fixed. The rule library (`data/saved_rules.json`, April) shows them:
+   "Access to CVE-2026-1731 Rapid7 Analysis on AttackerKB" (15 Apr) detects *visits to the report
+   page* (`cs-host|contains: 'attackerkb.com'`) — defect 8, the pasted URL routed to chat and the
+   page never read (57% of URLs, fixed by Change 8 on 2026-09-13); "Citrix NetScaler … NSC_TASS" (16
+   Apr) puts an invented `product: citrix` / `service: netscaler` on `category: webserver` and
+   looks for response cookies a web-server log does not record (Changes 25/28/29); "Follina MSDT"
+   (7 Apr) is close to SigmaHQ's but has a sequential fake id (defect 10) and the underscore tag
+   style (Change 33). No May result file exists (the harness came in September), so May cannot be
+   rescored.
+2. **Different inputs differ in difficulty** — held-out: the analysis stage's suggestion right for
+   web 12/15, host categories 11/37, service-based 0/6 (log 2026-09-27).
+3. **The same input, the same code, different outcomes — measured now.** New committed script
+   `eval/list_disagreements.py` (tests first, each seen to fail) on `p2g_shared60` against
+   `oracle_ls60_unreviewed` (the same pipeline, `a6e9157` path, the same 60 cases, frozen pages):
+   **16 of 60 cases disagree** (S1 or S3 flips, or S5 apart by ≥ 0.5). Over all 60, the two runs
+   concluded differently at the **attack-vector stage in 12**, the **analysis's first log-source
+   suggestion in 15**, and **the first rule's log source in 19** — the difference grows down the
+   chain. Of the 16, the first divergence was the attack-vector stage in 6, the analysis in 2, the
+   rule writer in 8; of the 6 log-source flips, 4 began at the attack-vector stage. Example
+   `ad7085ac` (Sourgum, CVE-2021-31979/33771): run A — attack vector `file_event` → suggestion
+   `file_event/windows` → first rule right, **S5 1.00**; run B — `registry_event` →
+   `registry_event/windows` → wrong, **S5 0.00**.
+   **Temperature 0 is not deterministic here:** the PoC, attack-vector and analysis stages call the
+   model at temperature 0 (checked in the code), none of their code or prompts changed between the two
+   commits (`git diff a6e9157 c3f3e76` empty for them and `prompts.py`), and the pages are snapshots —
+   yet the first stage concluded differently in 12 of 60. `[UNMEASURED]` Likely cause: inference
+   on a shared GPU (request batching, floating-point order) breaking near-ties, amplified over
+   answers thousands of tokens long; not tested yet.
+**The mechanism** ties to 5.3: an early difference decides the log source, and the log source
+gates the detection fields (S5 0.13 vs 0.52 when it becomes right).

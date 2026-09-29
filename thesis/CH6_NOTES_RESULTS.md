@@ -86,6 +86,25 @@ the log source is worth when the analyst is right (no user study).
   S5 moves by up to ~0.09 and ~1 case in 8 flips S3 — why every comparison here is paired and
   judged by its interval, and why 5.3 paired both arms on one analysis.
 
+### 6.0c Why the same report gets a good rule one time and a wrong one the next `[MEASURED] 2026-09-28`
+The professor's question after the demo. Two runs of **identical code on identical, frozen inputs**
+(`p2g_shared60` and the 5.3 unreviewed arm; `eval/list_disagreements.py`):
+- **16 of 60 cases disagree** — the first rule parses in one run only, the log source is right in
+  one run only, or detection-field F1 differs by ≥ 0.5.
+- **The difference grows down the chain:** the runs concluded differently at the attack-vector
+  stage in 12 of 60 cases, at the analysis's first log-source suggestion in 15, at the first rule's
+  log source in 19. Of the 6 log-source flips, 4 began at the attack-vector stage.
+- **Temperature 0 is not deterministic in practice:** that first stage runs at temperature 0, with
+  no code or prompt change between the two runs. `[UNMEASURED]` Likely: GPU inference on a shared
+  server breaking near-ties, amplified over long answers.
+- Example `ad7085ac` (Sourgum): `file_event` → right log source, S5 1.00; in the other run
+  `registry_event` → wrong, S5 0.00. An early difference decides the log source, which gates the
+  fields (§6.0b).
+Two other sources explain the May-vs-later impression: the **system changed** (model, and defects since
+fixed — the April library holds a rule on *visits to the report page*, defect 8, and one with an
+invented product/service, Changes 25–29), and **inputs differ in difficulty** (web sources right far
+more often than host or service ones).
+
 ---
 
 ## 6.1 Baseline system performance — baseline v1 `[MEASURED] 2026-09-19`

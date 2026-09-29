@@ -66,6 +66,24 @@ semester).
 - [ ] **0.2** Update `OUTLINE.md` to the agreed contributions (user decides the
       wording).
 
+**Professor's feedback after the demo (2026-09-28, via the user):** (1) the thesis must *understand*
+why rules are good one time and wrong another (the May rules vs later ones) — research, with
+examples; (2) the assistant relies on the human; human input matters, but **the goal is to automate
+the process and rely more on the AI**. First evidence for (1): log 2026-09-28 (three sources;
+two runs of identical code disagree on 16/60 cases, the temperature-0 first stage on 12/60).
+Proposed next research (awaiting the user and the professor):
+- **P-A Consistency study**: the same cases run k times with frozen code (e.g. 20 cases × 5), per-stage
+  agreement and which case types are unstable; pre-registered
+- **P-B Where the non-determinism comes from**: one stage's call repeated on identical input (cheap),
+  with the Spark idle vs busy and with Ollama's seed/single-request settings — can temperature 0 be
+  made deterministic?
+- **P-C Self-consistency instead of the human**: run the analysis k times and take the majority log
+  source; runs that disagree = uncertainty → only those go to the analyst. Measures: S3/S5 vs the
+  single run, and how often a human would be needed — against the 5.3 upper bound (+0.14 S5)
+- **P-D Automated verification** of what analysts corrected most (e.g. the log source's platform
+  against the attacked product: sudo → Linux), by code or a second model
+Together: automate by default, measure confidence, escalate only uncertain cases to the human.
+
 Options to discuss, not decided:
 - **A.** Assistant + measured grounding failures + static evaluation (drop 1–3,
   or move 1 to future work)
@@ -486,6 +504,20 @@ From Change 34's live test (2026-09-27) — awaiting triage:
 - the review can reject but not add: SharePoint's analysis once omitted T1190 (Exploit Public-Facing Application) — adding a technique/indicator = "editing values"
 - ~~rejecting a pattern does not reject the same string as an indicator~~ — **linked 2026-09-27 (Change 35)**, exact match; PoC behaviours are display-only and do not reach generation
 
+Assistant roadmap (proposed 2026-09-28, user: "add them to the plan") — awaiting triage:
+- R1 the analyst can **add and edit** techniques, indicators, patterns — not only reject (T1190 was missing once)
+- R2 **evidence "found in the report"**: code checks each quoted basis against the page; verified-quote rate (= plan 3.3)
+- R3 **rule editor with live pySigma validation**, incl. log-source categories that do not exist in Sigma (= plan 3.5)
+- R4 **"ask the assistant to revise this rule"** from a plain-words instruction, then validated (design decision 3)
+- R5 **a stronger rewrite**: 3 of 12 departures fixed (5.3) — the analyst's decisions earlier in the prompt; service form; rule order
+- R6 **an exportable report**: what the model understood, evidence, the analyst's decisions, the rules (= plan 3.1)
+- R7 **better log-source suggestions** (analysis stage): the log source gates S5 (5.3); 45% held-out, weakest on host and service sources
+- R8 **a value-level detection score**: S5 compares field names only (sudo: S5 = 1.0, the human's match broader)
+- R9 **do the rules fire?** replay with Zircolite over SigmaHQ's 138 regression EVTX files; detonation in the lab (= 5.6, Phase 0)
+- R10 **false positives**: the rules over benign logs
+- R11 **"a rule already exists"**: search SigmaHQ for the same CVE/behaviour before generating (prior art: SIGMERGE)
+- R12 **a realistic simulated analyst**: wrong 10–30% of the time — what a wrong confirmation costs (extends 5.3)
+
 ## Security — do first (the user's action)
 
 - [x] **S1** Delete the Gemini API key in Google AI Studio / Cloud Console. The
@@ -534,6 +566,15 @@ so removing one is reversible; untracked and ignored files have no such safety n
       drifted (8 declared fields vs 15 real, no attack-vector model).
 
 ## Parking lot — good ideas, deliberately not scheduled
+
+- **From the assistant roadmap (2026-09-28), beyond the thesis:** R13 conversion to SIEM/EDR
+  queries (Splunk SPL, Sentinel KQL, Elastic) through pySigma backends with field mappings — Phase 0
+  option D; new packages need the user's approval · R14 **prompt-injection hardening** — fetched
+  pages are untrusted input; test with poisoned pages · R15 learn from the analyst's decisions (which
+  stage errs most; later an evaluation or training set — examples are copied, so carefully) · R16
+  detection-as-code: an approved rule becomes a pull request with its test data · R17 watch CTI feeds
+  and queue new reports for review · R18 several analysts: logins and an audit trail of who confirmed
+  what.
 
 - **A run without retrieval (RAG ablation)** — user, 2026-09-26: later, with the proper testing
   (Phase 5). Answers "does the RAG help?"; never measured (`--arm` is a label, no ablation is wired).
@@ -597,6 +638,7 @@ so removing one is reversible; untracked and ignored files have no such safety n
 | 2026-09-28 | Keep Change 36 (rules as YAML blocks): the failure mode is gone at no measured cost; merge with the review work after the demo. The two run worktrees removed | user |
 | 2026-09-27 | Order after Changes 34–35: the simulated-analyst experiment (5.3) first, then defect 5 (rules as YAML blocks, prompt-review item 6); 3.6 only if `run_sync` is ever routed through the review path; merge `analyst-review` into `main` after the demo. No A/A run on its own (it comes as 5.3's by-product) | user |
 | 2026-09-27 | Start the confirm/correct step now (Phases 3/4 before the professor's sign-off); first slice = log source + reject items (confirm/reject patterns, techniques, indicators; restore excluded; choose any SigmaHQ log source; a note). Built on a branch; `main` stays the demo's code | user |
+| 2026-09-28 | Professor's feedback: explain the good-then-wrong rules (research, with examples); automate more and rely less on the human. Proposed P-A…P-D (consistency, the non-determinism's source, self-consistency with escalation, automated verification) — awaiting decision | professor (via user) |
 | 2026-09-26 | Phase 2 frozen at `a6e9157` before the held-out confirmation; open items (quota, defect 5, prompt review, retrieval) go to the next phase | user |
 | 2026-09-26 | 2.9 held-out confirmation added: final pipeline and baseline v2 on 60 cases never run before; the chance test moves to the final pipeline's held-out run | user |
 | 2026-09-25 | Inbox triage: 2.5 (invented categories) and 2.6 (complete reference table) added after (d); order (d) → 2.5 → 2.6 → ATT&CK ID check → 10 most relevant techniques; Foundation-Sec out of the thesis; paraphrased evidence is fine; delete the unused suggestion prompt | user |
