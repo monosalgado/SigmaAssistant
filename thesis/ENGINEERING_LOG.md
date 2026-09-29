@@ -4154,3 +4154,45 @@ conflict was `DEMO_RUNBOOK.md`, where `main`'s pre-demo stopgap ("the web app do
 "prefer the lowest chat") met the branch's text for the code now merged — the branch's version kept,
 its header note updated. 562 tests passed on `main`. The user's own comments on four prompt section
 headers (uncommitted, 10:17) were set aside with `git stash` during the merge and put back afterwards.
+
+---
+
+## 2026-09-28 — May vs now: the prompts, the inputs and the outputs, reconstructed (professor's question)
+
+User: "go ahead with the prompt diff and the April chats". Notes: `thesis/MAY_VS_NOW_NOTES.md`. Two new
+committed scripts, tests first and each seen to fail (16 tests): `eval/prompt_history.py` (the prompts of
+two git versions side by side, parsed from `git show`, never run) and `eval/old_sessions.py` (the saved
+chats as runs; `--find` for strings, `--results` counts a result file the same way and lists the models
+called). `data/sessions.json` is local user data, so the chat counts can be re-run on this laptop only.
+**What survives:** the May code (`2ec05f6`; prompts identical to `f457855`), `7b80426` (12 April), and 20
+saved answers with rules dated 20 March – 23 April. **None is dated in May** (the next is 13 September):
+the rules shown in May were written by 23 April or never saved. Which model wrote each April rule, and
+the prompt text between 15 April and 14 May, were not recorded.
+**Findings:**
+- **Prompts:** of the 8 prompts the pipeline uses now, 5 are unchanged since May; attack vector (10,776
+  → 11,855 chars), analysis (4,358 → 4,280) and rule writing (6,145 → 7,100; one input added) changed.
+  The large prompt change came before May (rule writing 2,449 → 6,145 chars, 8 → 17 inputs, three new
+  stage prompts). The main differences are elsewhere: the rule writer (May: Gemini 2.5 Flash per the
+  code's routing and the 2026-08-06 banner; now qwen3-coder:30b — every September run checked called
+  only qwen3-coder:30b, e.g. baseline v1 321 of 321 calls), web search (April chats: 0–16 extra web
+  sources; now off), and what fills the slots.
+- **The May attack-vector prompt's worked examples were the demo reports:** Example A = Citrix
+  NetScaler (`/saml/login`, `NSC_TASS`), Example B = BeyondTrust CVE-2026-1731 (`remoteVersion`,
+  `BT26-02-RS.nss`, the patch password). Their strings are in 7 of the 20 April answers, all about these
+  two vulnerabilities; the 15 April BeyondTrust chat holds the password before the attack-vector stage
+  existed; on 22 April the model's output repeats Example B's sentence word for word (2 answers). The
+  prompt was tuned on its test reports, so their rules improved without evidence for new reports. On
+  September's 60 other reports these examples' text was in 10 of 60 attack-vector records (log
+  2026-09-26).
+- **April rules:** 56 rules, 54 complete, **7 with a log source SigmaHQ's rules use** (0 of 28 in the
+  attack-vector pipeline, 16–23 April); `linux-windows`, the May analysis table's product cell, is in
+  13 of the 20 answers. Same measure in September: held-out baseline v2 code 105/208 → final pipeline
+  188/204 (same 60 reports); `c36_yaml60` 236/250.
+- **Repeats:** BeyondTrust 5 runs → 5 different first-rule log sources (visits to the report page;
+  auditd rules on the researchers' patch-diffing; then three WebSocket rules on three invented web log
+  sources); SolarWinds 3 → 3; nginx-ui 4 → 3; Citrix 2 → 2; Follina 2 → 1, but the 12 April rules were
+  both incomplete (condition outside `detection`) and tagged T1548.003. Not a clean variance measure:
+  code and prompts changed between runs and the web search differed.
+**Correction to the entry above ("The professor's feedback…"):** it called the 15 April AttackerKB rule
+defect 8 (a URL routed to chat). That chat went through the pipeline and saved its stage results, so it
+was not misrouted: the page's text never reached the stages, cause not recorded. CH6 §6.0c corrected.

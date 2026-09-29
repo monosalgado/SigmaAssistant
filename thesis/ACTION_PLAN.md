@@ -84,6 +84,15 @@ Proposed next research (awaiting the user and the professor):
   against the attacked product: sudo → Linux), by code or a second model
 Together: automate by default, measure confidence, escalate only uncertain cases to the human.
 
+**Part (1), May reconstructed (2026-09-28, user: "go ahead with the prompt diff and the April chats"):**
+done — `thesis/MAY_VS_NOW_NOTES.md`, `eval/prompt_history.py`, `eval/old_sessions.py` (log 2026-09-28).
+5 of 8 prompts unchanged since May; the rule writer was Gemini 2.5 Flash with web search; the May
+attack-vector prompt's examples were the demo reports (tuned on its test inputs); April rules 7/56 with a
+log source SigmaHQ's rules use. Open, for the user and the professor:
+- [ ] **Controlled rerun** May code (`2ec05f6`) vs `main` on frozen pages, k runs each — isolates code +
+      prompts only (same local model unless a new Gemini key; April web results unrecoverable).
+      Pre-register first; check the May retrieval collections still exist
+
 Options to discuss, not decided:
 - **A.** Assistant + measured grounding failures + static evaluation (drop 1–3,
   or move 1 to future work)

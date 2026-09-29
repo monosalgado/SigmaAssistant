@@ -101,9 +101,24 @@ The professor's question after the demo. Two runs of **identical code on identic
   `registry_event` → wrong, S5 0.00. An early difference decides the log source, which gates the
   fields (§6.0b).
 Two other sources explain the May-vs-later impression: the **system changed** (model, and defects since
-fixed — the April library holds a rule on *visits to the report page*, defect 8, and one with an
-invented product/service, Changes 25–29), and **inputs differ in difficulty** (web sources right far
-more often than host or service ones).
+fixed — the April library holds a rule on *visits to the report page*, whose page text never reached the
+stages, and one with an invented product/service, Changes 25–29), and **inputs differ in difficulty**
+(web sources right far more often than host or service ones). *(Corrected 2026-09-28: first written as
+defect 8; that chat went through the pipeline, so it was not misrouted.)*
+
+**May reconstructed** `[MEASURED]` (`thesis/MAY_VS_NOW_NOTES.md`; `eval/prompt_history.py`,
+`eval/old_sessions.py`; log 2026-09-28):
+- **The prompts changed less than the system:** 5 of the 8 prompts in use are unchanged since May; the
+  rule writer was Gemini 2.5 Flash with Google search (0–16 extra web sources per April run), now
+  qwen3-coder:30b without web search `[UNMEASURED effect]`.
+- **The May prompt was tuned on the demo reports:** the attack-vector prompt's worked examples were the
+  Citrix and BeyondTrust reports; 7 of the 20 April answers carry their strings, and on 22 April the
+  model repeated the example's sentence word for word. Good rules for those reports say nothing about
+  new ones.
+- **April's rules:** 7 of 56 use a log source SigmaHQ's rules use (0 of 28 from the attack-vector
+  pipeline); on the same 60 held-out reports in September, 105/208 (baseline v2 code) → 188/204 (final).
+- **The same report, run again in April:** BeyondTrust 5 runs → 5 different first-rule log sources
+  (code, prompt and web results also changed between runs).
 
 ---
 

@@ -228,6 +228,14 @@ limitation in the log belongs here too.
     in the thesis (a good rule, a wrong rule) can come out the other way on another run; results
     are reported as rates with intervals for this reason. The cause of the temperature-0 variation
     is not yet measured. (log 2026-09-28)
+52. **The May demo cannot be rescored, and its prompt was tuned on its reports** `[DISCLOSE]`
+    (`thesis/MAY_VS_NOW_NOTES.md`). Only 20 saved answers survive from before September, none
+    dated in May, none with a gold rule; which model wrote each is not recorded, nor the prompt text
+    between 15 April and 14 May, nor the web-search results. The May attack-vector prompt's worked
+    examples were written from the Citrix and BeyondTrust reports it was being run on, so the good
+    April/May rules for those reports are not evidence for new reports. The thesis's numbers come
+    from September's runs on reports the prompts were not written from (the held-out set). (log
+    2026-09-28)
 
 ---
 
