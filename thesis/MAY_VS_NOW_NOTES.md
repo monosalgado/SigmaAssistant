@@ -36,7 +36,7 @@ First answer: CH6 §6.0c, log 2026-09-28. This file adds the May reconstruction.
 | Analysis | qwen3-coder:30b · 4,358 chars · a **hand-written 13-row log-source table** (`process_creation \| windows/sysmon`, `webserver \| linux-windows/apache-iis`…) | 4,280 chars + **SigmaHQ's full table in Sigma's two forms**, filled in at run time (Changes 25, 28, 29); at most 10 techniques |
 | **Rule writing** | **Gemini 2.5 Flash** (cloud, a thinking model) · 6,145 chars · answer in JSON | **qwen3-coder:30b** (local) · 7,100 chars · + the recommended log source for the first rule (Change 26) · answer as YAML blocks (Change 36) · SigmaHQ tag style |
 | Review | qwen3-coder:30b · `COMBINED_REVIEW` 3,300 chars | same prompt, same model |
-| Code checks after the model | pySigma, a coverage retry | + ids that are not UUIDs replaced (Change 9), placeholder values and unknown ATT&CK ids caught (Changes 30–33), the coverage retry made to run (defect 20) |
+| Code checks after the model | hand-written YAML checks, the LLM review, a retry on review errors | pySigma validation (since 2026-08-06, `a1c4f37`), ids that are not UUIDs replaced (Change 9), placeholder values and unknown ATT&CK ids caught (Changes 30–33), the coverage retry made to run (defect 20) |
 | Analyst | none | optional review of the log source and items (Changes 34–35) |
 
 - **Prompts `[MEASURED]`** (`prompt_history.py 2ec05f6 HEAD`): of the 8 prompts the pipeline uses

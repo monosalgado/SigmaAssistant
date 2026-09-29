@@ -4261,3 +4261,12 @@ before or during a run); added to the plan's Inbox.
   rules on unseen reports with the same model; a CI containing 0 = no detectable difference from code
   and prompts, and the May-vs-now difference rests on what this run cannot test (model, web search, the
   prompts' tuning on the demo reports) and on run-to-run variance.
+
+### The rerun started; a presentation begun; one correction
+The six runs started 2026-09-29 00:04 as three rounds (May r and main r side by side, from the frozen
+checkout `../SigmaAssistant-rerun` at `8f6a91c`; preflight passed: tunnel, model, 262,144-token server
+context, tests, smoke CITABLE). A slide deck for the professor (user: "lets make a presentation on
+this") holds the reconstruction and the rerun's design; the results slides wait for the six runs.
+**Correction to `thesis/MAY_VS_NOW_NOTES.md` §1:** the May review stage checked rules with hand-written
+YAML checks, not pySigma; pySigma validation arrived on 2026-08-06 (`a1c4f37`). Found while checking
+the slides against the code.
