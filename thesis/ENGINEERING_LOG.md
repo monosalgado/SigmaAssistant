@@ -4510,3 +4510,20 @@ with Change 38, compared with the three earlier runs of today's analysis on the 
 --manifest`: P, Pany; descriptive — run-to-run variation alone moves P by up to 5 of 60). If the picks barely
 move, the wording is revised on the tuning set and checked again; the confirmation set is run only once the
 wording is final, with its plan fixed in this log first.
+
+### Change 38 v1, development check (tuning set): the picks do not move
+`c38v1_tuning60.jsonl` (frozen checkout of `adc6c6a`; 60 of 60, CITABLE, 200.9 min, no stop). Against the three
+earlier runs of today's analysis on the same cases (`compare_arms.py --manifest`): **P 25 of 60 (0.417) vs 23 /
+26 / 26; Pany 0.567 vs 0.533 / 0.517 / 0.517; no pick 2 vs 2 / 4 / 4** — inside run-to-run variation. Top picks:
+`process_creation` 36 (c36: 32), `webserver` 17 (18), `registry_set` 3, `file_event` 1, `network_connection` 1;
+no product+service pick. Every suggestion carried `evidence` (237 of 237).
+**Why (descriptive, tuning set):** the evidence is found but the ranking ignores it. In 12 cases the gold's
+category is in the list below the top (rank 2–5), often with far more specific evidence than the top pick — e.g.
+`e94486ea`: top `process_creation` with `powershell.exe -nop -w hidden`, `spoolsv.exe`; rank 2 `file_event`
+with the full path of the dropped `user.exe`; `71c432c4`: top `process_creation` with `sqlservr.exe`, `gup.exe`;
+rank 5 `ps_script` with the script names. The model writes its suggestions in its habitual order: it commits
+to the first before it has laid out all the evidence.
+**Next, v2 (tuning set):** the evidence first — an inventory of the text's evidence, each item with the log
+source that records it and whether it is specific to the attack or also common in normal activity — written
+before the suggestions in the answer, which are then ranked from it. Iteration count on the tuning set so far:
+1 (disclosed as a researcher degree of freedom; the confirmation set is untouched).
