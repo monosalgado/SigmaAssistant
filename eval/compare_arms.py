@@ -20,7 +20,10 @@ on the cases every run of both arms has (paired), with a bootstrap 95% CI of the
 
 Usage:
     .venv/bin/python eval/compare_arms.py --a may_r1.jsonl may_r2.jsonl may_r3.jsonl \\
-        --b main_r1.jsonl main_r2.jsonl main_r3.jsonl [--label-a May --label-b main]
+        --b main_r1.jsonl main_r2.jsonl main_r3.jsonl [--label-a May --label-b main] [--manifest M]
+
+With --manifest (Change 38): P / Pany - the analysis stage's top log-source pick is the gold's / the
+gold's or another human rule's for the same report (`alternative_logsources.py`, emerging-threats rules).
 """
 
 from __future__ import annotations
@@ -44,8 +47,15 @@ def _parses(row: dict) -> bool:
     return bool(((row.get("scores") or {}).get("validity") or {}).get("parses"))
 
 
-def run_value(row: dict, metric: str, gold_has_fields: bool = None):
-    """One run's value for one case."""
+def run_value(row: dict, metric: str, gold_has_fields: bool = None, pick: tuple = None):
+    """One run's value for one case. P / Pany (Change 38): the analysis stage's top log-source pick is
+    the gold's / the gold's or another human rule's for the same report (`pick` = (gold log source,
+    the other rules' log sources), `alternative_logsources`); no pick counts as wrong."""
+    if metric in ("P", "Pany"):
+        from eval.alternative_logsources import classify
+        from eval.compare_suggestions import top_suggestion
+        verdict = classify(top_suggestion(row), pick[0], pick[1])
+        return 1.0 if verdict == "gold" or (metric == "Pany" and verdict == "another human rule") else 0.0
     if metric == "S3u":
         if not _parses(row):
             return 0.0
@@ -75,24 +85,27 @@ def _common(runs: list) -> set:
     return set.intersection(*(set(run) for run in runs)) if runs else set()
 
 
-def case_means(runs: list, metric: str, fields: dict = None) -> dict:
+def case_means(runs: list, metric: str, fields: dict = None, picks: dict = None) -> dict:
     """{case: mean of its defined values over the runs}, for the cases every run has."""
     fields = gold_fields(runs) if fields is None and metric == "S5u" else fields or {}
+    picks = picks or {}
     out = {}
     for rid in _common(runs):
-        values = [run_value(run[rid], metric, fields.get(rid)) for run in runs]
+        if metric in ("P", "Pany") and rid not in picks:
+            continue
+        values = [run_value(run[rid], metric, fields.get(rid), picks.get(rid)) for run in runs]
         values = [float(v) for v in values if v is not None]
         if values:
             out[rid] = sum(values) / len(values)
     return out
 
 
-def compare(a_runs: list, b_runs: list, metric: str) -> dict:
+def compare(a_runs: list, b_runs: list, metric: str, picks: dict = None) -> dict:
     """Arm B minus arm A, paired over the cases every run of both arms has."""
     cases = _common(a_runs + b_runs)
     everything = set().union(*(set(run) for run in a_runs + b_runs))
     fields = gold_fields(a_runs + b_runs) if metric == "S5u" else None
-    mean_a, mean_b = case_means(a_runs, metric, fields), case_means(b_runs, metric, fields)
+    mean_a, mean_b = case_means(a_runs, metric, fields, picks), case_means(b_runs, metric, fields, picks)
     pairs = [(mean_a[rid], mean_b[rid]) for rid in sorted(cases) if rid in mean_a and rid in mean_b]
     diffs = [y - x for x, y in pairs]
     n = len(pairs)
@@ -156,20 +169,39 @@ def main() -> None:
     parser.add_argument("--b", nargs="+", required=True, help="arm B's result files (one per run)")
     parser.add_argument("--label-a", default="A")
     parser.add_argument("--label-b", default="B")
+    parser.add_argument("--manifest", help="the cases' manifest: also score the analysis stage's top "
+                                           "log-source pick (P, Pany)")
     args = parser.parse_args()
     a_runs, b_runs = [load(Path(p)) for p in args.a], [load(Path(p)) for p in args.b]
     la, lb = args.label_a, args.label_b
     cases = _common(a_runs + b_runs)
     print(f"{la}: {len(a_runs)} runs; {lb}: {len(b_runs)} runs; {len(cases)} cases in every run of both")
 
+    picks = None
+    if args.manifest:
+        import json
+        from eval.alternative_logsources import EMERGING, alternatives, reference_index
+        manifest = {json.loads(l)["rule_id"]: json.loads(l) for l in open(args.manifest, encoding="utf-8") if l.strip()}
+        index = reference_index([EMERGING])
+        picks = {rid: (manifest[rid].get("logsource") or {}, alternatives(manifest[rid], index))
+                 for rid in cases if rid in manifest}
+
     def show(metric):
-        r = compare(a_runs, b_runs, metric)
+        r = compare(a_runs, b_runs, metric, picks)
         if not r["n"]:
             print(f"  {metric:<8} no cases")
             return
         print(f"  {metric:<8} n={r['n']:<3} {la} {r['mean_a']:.3f}   {lb} {r['mean_b']:.3f}   "
               f"{lb} - {la} {r['diff']:+.3f}  95% CI [{r['ci'][0]:+.3f}, {r['ci'][1]:+.3f}]")
 
+    if picks:
+        from eval.compare_suggestions import top_suggestion
+        print("\nThe analysis stage's top log-source pick (no pick = wrong); case = mean of its runs")
+        for metric in ("P", "Pany"):
+            show(metric)
+        for label, runs in ((la, a_runs), (lb, b_runs)):
+            missing = sum(1 for run in runs for rid in cases if top_suggestion(run[rid]) is None)
+            print(f"  {label}: answers with no pick {missing} of {len(runs) * len(cases)}")
     print("\nPrimary - as the user gets it (a rule that does not parse is wrong); case = mean of its runs")
     for metric in PRIMARY:
         show(metric)

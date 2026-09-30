@@ -4476,3 +4476,37 @@ The two failures left are other kinds: `9a2d8b3e`'s analysis answer ran into the
 on all 3 attempts — the same in 2 of the 3 earlier runs (plan Inbox item 7, "shorter analysis answer");
 `47a1658b`'s attack-vector answer was broken JSON of another kind (`Expecting ',' delimiter`), which the repair
 rightly leaves alone.
+
+---
+
+## 2026-09-29 — Change 38 (v1): the analysis ranks log sources by their evidence; a second confirmation set
+
+User: "Do it" (the plan: build and test the change, show the wording, then runs on fresh reports).
+**Confirmation set 2:** `eval/manifest_confirm2.jsonl`, drawn once by `draw_heldout.py --out … --exclude
+<scratch smoke files>` (new `draw()`, `--out`, `--exclude`; 1 test seen to fail first): 60 of the 182 corpus
+cases in no result file (and not in the scratch-folder smoke runs), stratified, seed 0 — process_creation 25,
+webserver 10, file_event 8, no category (service-defined) 7, registry_set 3, proxy 3, image_load 2, ps_script
+1, registry_event 1. No overlap with the tuning or the first held-out set. Not looked at beyond the categories.
+**Measure added:** `compare_arms.py --manifest` scores the analysis stage's top pick — **P** (= the gold) and
+**Pany** (= the gold or another human rule for the same report, `alternative_logsources`), no pick = wrong; and
+counts answers with no pick (2 tests seen to fail first). On two tuning runs it reproduces the earlier counts
+(P 0.383 / 0.433 = 23 / 26 of 60).
+**Change 38 v1** (`COMBINED_ANALYSIS`, part 3 only; tests first, 7, 4 seen to fail — the other 3 hold what must
+stay true): the instruction "Determine the best Sigma log sources for detecting this attack" becomes: recommend
+the log sources that would record the attack's **most specific evidence**; first look at what the text gives
+to detect on (commands and processes, files, registry keys and values, network destinations, script contents,
+events a specific log records — often by an event ID, or a product's or appliance's own log); name that
+evidence for each suggestion; put first the log source whose evidence a rule could match with the **fewest
+false positives**, whichever form it takes; a log source that records none of the text's evidence is not a
+suggestion. New field `evidence` (at most 5 strings from the text); the example's evidence is placeholders only.
+The instruction names no log source (a test holds it: no steer towards or away from a category). The user's
+uncommitted comments in `prompts.py` were set aside with `git stash` for this commit and put back after.
+**Smoke** (2 tuning cases, not the confirmation set): the new field was written in every suggestion; answers
+readable and short (2,511 and 1,205 tokens) — **but both top picks stayed `process_creation`**: Operation
+Triangulation listed its C2 domains as evidence yet ranked them third (and gave an iOS campaign `windows`);
+Kapeka's scheduled task stayed a process start. Two cases say nothing about a rate, but they warn.
+**Development check before the confirmation (tuning set only):** one full run of the 60 tuning cases (seed 0)
+with Change 38, compared with the three earlier runs of today's analysis on the same cases (`compare_arms.py
+--manifest`: P, Pany; descriptive — run-to-run variation alone moves P by up to 5 of 60). If the picks barely
+move, the wording is revised on the tuning set and checked again; the confirmation set is run only once the
+wording is final, with its plan fixed in this log first.

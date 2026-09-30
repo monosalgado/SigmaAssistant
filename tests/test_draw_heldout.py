@@ -75,3 +75,23 @@ def test_the_committed_held_out_list():
     assert set(ids) <= manifest
     tuning = {json.loads(l)["rule_id"] for l in (REPO / "eval/results/p2g_shared60.jsonl").open(encoding="utf-8")}
     assert not set(ids) & tuning
+
+
+# --- a second confirmation set (Change 38, 2026-09-29) --------------------------------------
+
+def test_a_later_draw_writes_where_it_is_told_and_leaves_out_every_used_case(tmp_path):
+    from eval.draw_heldout import draw
+    results = tmp_path / "results"
+    results.mkdir()
+    (results / "a.jsonl").write_text(json.dumps({"rule_id": "r000"}) + "\n")
+    extra = tmp_path / "smoke.jsonl"
+    extra.write_text(json.dumps({"rule_id": "r001"}) + "\n")
+    manifest = tmp_path / "manifest.jsonl"
+    manifest.write_text("".join(json.dumps(_case(i)) + "\n" for i in range(10)))
+    out = tmp_path / "confirm.jsonl"
+    drawn = draw(out, cases=[_case(i) for i in range(10)], results_dir=results, manifest=manifest,
+                 n=5, seed=0, exclude=[extra])
+    ids = [json.loads(l)["rule_id"] for l in out.read_text().splitlines()]
+    assert len(ids) == 5 == len(drawn) and not {"r000", "r001"} & set(ids)
+    with pytest.raises(FileExistsError):
+        draw(out, cases=[_case(i) for i in range(10)], results_dir=results, manifest=manifest, n=5, seed=0)

@@ -113,3 +113,27 @@ def test_a_p_value_is_printed_with_two_significant_figures():
     assert fmt_p(1.0928604751825333e-05) == "1.1e-05"
     assert fmt_p(0.0391) == "0.039"
     assert fmt_p(1.0) == "1"
+
+
+# --- the analysis stage's top log-source pick (Change 38, 2026-09-29) -----------------------
+
+def _pick_row(rid, pick):
+    row = _row(rid)
+    row["pipeline"]["logsource_suggestions"] = [pick] if pick else []
+    return row
+
+
+def test_the_pick_is_scored_against_the_gold_and_the_other_human_rules():
+    picks = {"x": ({"category": "proxy"}, [{"category": "dns"}])}           # (gold, other human rules)
+    assert run_value(_pick_row("x", {"category": "proxy", "product": None}), "P", pick=picks["x"]) == 1.0
+    assert run_value(_pick_row("x", {"category": "dns"}), "P", pick=picks["x"]) == 0.0
+    assert run_value(_pick_row("x", {"category": "dns"}), "Pany", pick=picks["x"]) == 1.0
+    assert run_value(_pick_row("x", None), "Pany", pick=picks["x"]) == 0.0      # no pick counts as wrong
+
+
+def test_arms_are_compared_on_the_pick():
+    picks = {"x": ({"category": "proxy"}, []), "y": ({"category": "dns"}, [])}
+    a = [{"x": _pick_row("x", {"category": "process_creation"}), "y": _pick_row("y", {"category": "dns"})}]
+    b = [{"x": _pick_row("x", {"category": "proxy"}), "y": _pick_row("y", {"category": "dns"})}]
+    out = compare(a, b, "P", picks=picks)
+    assert out["n"] == 2 and out["mean_a"] == 0.5 and out["mean_b"] == 1.0 and out["diff"] == 0.5
