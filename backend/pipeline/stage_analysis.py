@@ -120,6 +120,9 @@ class AnalysisStage(PipelineStage):
         context["logsource_suggestion"] = {
             "suggestions": logsource_suggestions,
             "primary_source": logsource_primary,
+            # The text's evidence, each item with the log source that records it and whether it is
+            # specific to the attack; the suggestions are ranked from it (Change 38). Recorded only.
+            "evidence_inventory": result.get("evidence_inventory", []),
         }
 
         # Log summary

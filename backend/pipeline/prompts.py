@@ -716,15 +716,20 @@ Each mapping needs: technique_id, technique_name, tactic, relevance (brief expla
 
 Recommend the Sigma log sources that would record this attack's most specific evidence.
 
-First look at what the text gives you to detect on: the attacker's commands and processes, files
-written or deleted, registry keys and values, network destinations (domains, URLs, IP addresses),
-script contents, and events that a specific log records (often named by an event ID, or a product's
-or appliance's own log). For each log source you suggest, name the evidence from the text it would
-record.
+First, in `evidence_inventory`, list what the text gives you to detect on, in the order it appears
+in the text (at most 15 items): the attacker's commands and processes, files written or deleted,
+registry keys and values, network destinations (domains, URLs, IP addresses), script contents, and
+events that a specific log records (often named by an event ID, or a product's or appliance's own
+log). For each item give the log source from the tables below that records it, and `specific`: true
+only when a defender could search for this exact value and expect no hits from normal activity (a
+malicious file's name or path, an attacker's domain, an attacker-chosen registry value or script
+name); false when normal activity also produces it, even if the attacker used it here (a standard
+operating-system program or file, a common command, a generic request).
 
-Then rank them: put first the log source that records the most specific attacker evidence — the
-evidence a rule could match with the fewest false positives — whichever form that log source takes.
-A log source that would record none of the text's evidence is not a suggestion.
+Then write `logsource_suggestions`, ranked from the inventory: put first the log source that records
+the most items marked specific — the evidence a rule could match with the fewest false positives —
+whichever form that log source takes. Each suggestion's `evidence` lists the inventory items it
+records. A log source that records none of them is not a suggestion.
 
 A Sigma log source takes one of two forms:
 1. **A category and a product, with no service** (first table below). The category names
@@ -744,7 +749,7 @@ that field empty.
 {logsource_services}
 
 Each suggestion needs: category, product, service (null for a field its form leaves empty),
-evidence (the strings from the text this log source would record, at most 5), confidence (0-1),
+evidence (the inventory items this log source records, at most 5), confidence (0-1),
 reasoning, relevant_fields.
 
 ---
@@ -766,6 +771,9 @@ Respond with JSON only:
       "relevance": "brief explanation of why this maps",
       "severity": "high|medium|low"
     }}
+  ],
+  "evidence_inventory": [
+    {{"evidence": "<a string from the text>", "log_source": "<category / product, or product / service, from the tables>", "specific": true}}
   ],
   "logsource_suggestions": [
     {{

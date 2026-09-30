@@ -4527,3 +4527,23 @@ to the first before it has laid out all the evidence.
 source that records it and whether it is specific to the attack or also common in normal activity — written
 before the suggestions in the answer, which are then ranked from it. Iteration count on the tuning set so far:
 1 (disclosed as a researcher degree of freedom; the confirmation set is untouched).
+
+### Change 38 v2 (tuning set, iteration 2): the evidence first — found and judged well, but not used to rank
+v2 (tests first, 6 new, seen to fail; one v2 test's phrase then updated to the refined definition): the answer
+lists `evidence_inventory` **before** the suggestions — each item with the log source from the tables that
+records it and `specific`; the suggestions are "ranked from the inventory"; the inventory is saved in every row
+(`stage_analysis`, `_pipeline_metadata`, `DIAGNOSIS_FIELDS`). Refined after a 2-case smoke (the inventory had
+followed the prompt's own list order, processes first, and marked every item specific, standard Apple
+processes included): the inventory is written **in the order it appears in the text**, and `specific` is true
+**only when a defender could search for the exact value and expect no hits from normal activity — false for a
+standard program even if the attacker used it**; rank by the log source recording the most items marked
+specific. Tests 641 pass.
+**Smoke (Operation Triangulation, tuning):** the labels are now calibrated — the Apple system processes false,
+all 15 attacker domains true (21 of 27 items true) — **but the top pick is still `process_creation` (1 specific
+item) over `network_connection` (15)**; the inventory also ignored its 15-item limit (27). Kapeka (first v2
+smoke): the inventory found event 4698 in the Security log (the gold's log source) but no suggestion used it.
+**Finding:** the model finds the evidence and, with a strict definition, judges its specificity well, but does
+not rank by its own judgements within one long answer. More wording in the same answer is unlikely to change
+that; no development run of v2 was started. Decision for the user: a separate short ranking step by the model
+(it compares the log sources' evidence on its own), code sorting by the model's own labels, or stopping here.
+Iterations on the tuning set so far: 2. The confirmation set is untouched.
