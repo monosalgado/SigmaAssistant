@@ -749,6 +749,7 @@ class PipelineOrchestrator:
             "logsource_suggestions": logsource_suggestion.get("suggestions", []),
             "logsource_primary": logsource_suggestion.get("primary_source", ""),
             "evidence_inventory": logsource_suggestion.get("evidence_inventory", []),
+            "logsource_ranking": logsource_suggestion.get("ranking"),
             "attack_vector": attack_vector,
             "coverage_check": coverage,
             "generations": context.get("generation_log", []),

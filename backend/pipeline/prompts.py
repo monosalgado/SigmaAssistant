@@ -793,6 +793,37 @@ Respond with JSON only:
 # --- Combined Review (Validation + Optimization) ---
 # Single call replaces 2 separate stages to reduce API usage.
 
+# Change 38 v3 (2026-09-30): the analysis finds the evidence and judges it, but in its one long answer
+# it does not rank by its own judgements; this short second call does only that.
+LOGSOURCE_RANKING = """You are ordering the candidate log sources for a detection rule, by the
+evidence each would record.
+
+### Candidate log sources (from the analysis)
+{candidates}
+
+### The evidence the text gives (from the analysis)
+Each item: the evidence, the log source that records it, and whether it is specific to this attack
+(specific: true = a defender could search for this exact value and expect no hits from normal activity;
+specific: false = normal activity also produces it).
+{inventory}
+
+### Task
+Order the log sources so that the first is the one a detection rule could use with the fewest false
+positives: the log source whose evidence is most specific to this attack. Evidence marked specific
+outweighs any amount of evidence normal activity also produces. You may add a log source that the
+evidence above names but no candidate uses, written with the names from the candidates' tables
+(category and product, or product and service). Keep every candidate that records some of the
+evidence; you may leave out one that records none.
+
+Respond with JSON only:
+{{
+  "ranking": [
+    {{"category": "<category or null>", "product": "<product or null>", "service": "<service or null>",
+     "evidence": ["<evidence items it records>"]}}
+  ],
+  "reason": "one sentence: why the first log source is first"
+}}"""
+
 COMBINED_REVIEW = """You are a Sigma rule quality reviewer and optimization expert. Review and optimize the following Sigma rule(s) in a single pass.
 
 ### Generated Rules

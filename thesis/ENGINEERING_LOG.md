@@ -4547,3 +4547,22 @@ not rank by its own judgements within one long answer. More wording in the same 
 that; no development run of v2 was started. Decision for the user: a separate short ranking step by the model
 (it compares the log sources' evidence on its own), code sorting by the model's own labels, or stopping here.
 Iterations on the tuning set so far: 2. The confirmation set is untouched.
+
+### Change 38 v3 (tuning set, iteration 3): a separate ranking step
+User (2026-09-30, choosing between a separate model step, code sorting by the model's labels, or stopping):
+**"Separate AI step"**. New `LogSourceRankingStage` (`stage_logsource_ranking.py`, stage name
+`logsource_ranking`), called by the analysis stage after its answer: a short prompt (`LOGSOURCE_RANKING`)
+shows only the candidate log sources with their evidence and the evidence inventory with its `specific` marks,
+and asks for one thing — an order, first the log source a rule could use with the fewest false positives
+(specific evidence outweighs any amount of evidence normal activity also produces); it may add a log source the
+evidence names but no candidate uses. **The model decides; code only checks:** an added log source must be one
+SigmaHQ's rules use (Sigma's service convention, then `on_table`), every earlier suggestion is kept (one left out
+goes to the end), a failed call leaves the analysis's order. Recorded in every row (`logsource_ranking`: before,
+after, changed_top, added, dropped, reason, error). Tests first (9, seen to fail; two phrase checks then
+collapsed whitespace); 650 pass.
+**Smoke (2 tuning cases):** Operation Triangulation — the ranker moved `network_connection` (the 15 attacker
+domains) above `process_creation` (364 tokens); Kapeka — kept `process_creation`, citing the malware's own path.
+But Triangulation's **first rule was still written on `process_creation`**: the rule writer departed from the
+new recommendation (defect 11's pattern). The development run measures both the pick (P) and the rule (S3u).
+**Development run (tuning set):** one full run of the 60 tuning cases with v3, from a frozen checkout of this
+commit, compared with v1's run and the three earlier runs (`compare_arms.py --manifest`; descriptive).

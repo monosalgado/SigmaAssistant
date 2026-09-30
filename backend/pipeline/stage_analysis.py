@@ -11,6 +11,7 @@ from backend.pipeline.base_stage import PipelineStage
 from backend.pipeline.stage_attack_vector import AttackVectorStage
 from backend.pipeline import prompts
 from backend.pipeline.attack_ids import load_attack_ids, split_known
+from backend.pipeline.stage_logsource_ranking import LogSourceRankingStage
 from backend.pipeline.sigma_logsource import (
     format_category_table,
     format_service_table,
@@ -36,6 +37,8 @@ class AnalysisStage(PipelineStage):
     def __init__(self, client, model_name: str, vector_store):
         super().__init__(client, model_name)
         self.vector_store = vector_store
+        # A short second call orders the suggestions by their evidence (Change 38 v3).
+        self.ranker = LogSourceRankingStage(client, model_name)
 
     def run(self, context: dict) -> dict:
         preprocessed = context["preprocessed"]
@@ -117,12 +120,16 @@ class AnalysisStage(PipelineStage):
             for s in result.get("logsource_suggestions", [])
         ]
         logsource_primary = result.get("logsource_primary", "")
+        # The text's evidence, each item with the log source that records it and whether it is specific
+        # to the attack (Change 38); the ranking step orders the suggestions from it (v3).
+        evidence_inventory = result.get("evidence_inventory", [])
+        logsource_suggestions, ranking = self.ranker.rank(
+            logsource_suggestions, evidence_inventory, _LOGSOURCE_TABLE, _KNOWN_SERVICES)
         context["logsource_suggestion"] = {
             "suggestions": logsource_suggestions,
             "primary_source": logsource_primary,
-            # The text's evidence, each item with the log source that records it and whether it is
-            # specific to the attack; the suggestions are ranked from it (Change 38). Recorded only.
-            "evidence_inventory": result.get("evidence_inventory", []),
+            "evidence_inventory": evidence_inventory,
+            "ranking": ranking,
         }
 
         # Log summary
