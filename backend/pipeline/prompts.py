@@ -181,7 +181,7 @@ TTP_MAPPING = """You are a MITRE ATT&CK classification expert. Map the following
 Respond with JSON only."""
 
 
-# --- Stage 4: Rule Generation ---
+# --- Stage 4: Rule Generation --- (writes the rule)
 
 RULE_GENERATION = """You are an expert Sigma rule author. Generate detection rules based on the analyzed threat intelligence below.
 
@@ -421,7 +421,7 @@ WEB_SEARCH_QUERIES = """You are a cybersecurity research assistant. Given the us
 Respond with JSON only."""
 
 
-# --- PoC Code Analysis (Improvement 4) ---
+# --- PoC Code Analysis (Improvement 4) --- (What the exploit code does)
 
 POC_CODE_ANALYSIS = """You are a cybersecurity exploit analyst. Analyze the following code snippet(s) and extract behavioral indicators that could be used for detection in security logs.
 
@@ -485,7 +485,7 @@ Current Date: {current_date}
 Respond naturally and helpfully. If the user is asking about detection or Sigma rules, provide useful guidance. If they're greeting you, be friendly and offer to help with Sigma rule creation."""
 
 
-# --- Attack Vector Extraction (anchoring stage) ---
+# --- Attack Vector Extraction (anchoring stage) --- (how the attack starts, patterns, researcher-only strings)
 # Runs BEFORE combined analysis. Forces the pipeline to explicitly identify the
 # primary attack vector before any IOC extraction, so downstream stages don't
 # over-index on incidental strings (patch-analysis artifacts, background color,
@@ -654,7 +654,7 @@ Output (abbreviated):
 Output JSON only, no commentary."""
 
 
-# --- Combined Analysis (Extraction + TTP Mapping + Log Source) ---
+# --- Combined Analysis (Extraction + TTP Mapping + Log Source) --- 
 # Single call replaces 3 separate stages to reduce API usage.
 
 COMBINED_ANALYSIS = """You are a cybersecurity threat intelligence analyst, MITRE ATT&CK classification expert, and Sigma log source specialist.
