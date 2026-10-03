@@ -563,6 +563,44 @@ so it is not claimed; no detectable effect on S3–S5, tokens or time; **+0.52 r
 - Prompt sizes come from `eval/results/baseline60.jsonl` (`llm_calls[].prompt_tokens`)
   and can be recomputed from it.
 
+## 6.5b A negative result — ranking the log sources by their evidence (Change 38, removed) `[MEASURED]` 2026-10-03
+
+**The room** (tuning set, three runs of today's analysis code; `compare_suggestions.py`,
+`alternative_logsources.py`, post-hoc, descriptive): the analysis stage's top log-source pick is the
+gold's in 23 / 26 / 26 of 60 and another human-written SigmaHQ rule's for the same report in 9 / 5 / 5,
+so **about 25 of 60 picks match no human rule for the report**. A pick in the product + service form
+(Windows Security, FortiOS, Zeek) was made 0 of 60 times in every run. The stage reports confidence 0.95
+on nearly every pick, right or wrong, so its confidence carries no signal. (log 2026-09-29)
+
+**The idea:** ask the model to recommend the log source that records the attack's most specific
+evidence, the one a rule could match with the fewest false positives. Three iterations, all on the
+tuning set; the second confirmation set was reserved for a version that moved the picks, and was never run.
+- **v1**: the instruction reworded. P (top pick = gold) **25 of 60 vs 23–26 before**: no movement.
+  Every suggestion listed evidence, but the top pick stayed the habitual one: in 12 cases the gold's
+  category was in the list below the top pick, often with far more specific evidence.
+- **v2**: the evidence written first (an inventory, each item marked specific or not), then the ranking.
+  Smoke: the specificity labels were calibrated (system processes not specific, 15 attacker domains
+  specific), but the ranking ignored them. Within one long answer the model does not rank by its own labels.
+- **v3**: a separate short model call orders the candidates by their evidence (code only checks additions
+  against SigmaHQ's table and keeps every candidate). One full run: **P 22 of 60, S3u 19 of 60**: the lowest
+  of five runs on both (earlier P 23 / 26 / 26, v1 25; S3u 22 / 26 / 26, v1 24); S3u against the three
+  earlier runs −0.094, 95% CI [−0.183, −0.017].
+- **The ranking step on the same answers** (`ranking_effect.py`; each row keeps the order before the step,
+  so this is free of run-to-run variation): it changed the top pick in 17 of 57, **3 towards the gold, 6
+  away from it**; P 25 → 22. 8 of the 17 new top picks were `file_event`, and none of those 8 reports' human
+  rules uses `file_event`. Where the top changed, the rule writer followed the new pick in 7 and the old
+  pick in 7 (defect 11).
+
+**What is claimed:** asking the model to rank log sources by the specificity of their evidence did not
+bring its picks closer to the human authors' choices; a separate ranking step moved them away. The
+model's "most specific evidence" (an exact path or hash) is not how SigmaHQ's authors chose these
+reports' log sources. Change 38 was removed (user, 2026-10-03); the pipeline is back to its earlier
+analysis prompt.
+`[DISCLOSE]` Three iterations on the tuning set are a researcher degree of freedom; nothing here was
+confirmed on unseen reports, and the v3 comparison is one run against three. That the gold rule is the
+right answer is the benchmark's assumption, not a fact: a rule on the specific file could be the better
+rule. The benchmark cannot tell (R10 false positives, R9 replay). (log 2026-09-29 to 2026-10-03)
+
 ---
 
 ## 6.6 Smaller observations worth a sentence each
@@ -575,3 +613,8 @@ so it is not claimed; no detectable effect on S3–S5, tokens or time; **+0.52 r
   were already gone (2026-09-23); earlier, 12 of 437 reference pages returned 404.
 - `[MEASURED]` Per-stage cost is now attributable (Change 13): the first stopped live
   run named `analysis, attack_vector, generation, poc_analysis` as the failing stages.
+- `[MEASURED]` A stray backslash (a Windows path) once made an analysis answer unreadable, so the case got
+  no log-source pick (6 times in three runs' logs; a grep of gitignored logs, not a committed tool).
+  Change 37 repairs only an answer that has already failed on an escape. Read twice on identical
+  answers (152, the 60 tuning cases), **0 needed it in that run**: the fix is correct by its tests and
+  kept, but its benefit is unmeasured. (log 2026-09-29)

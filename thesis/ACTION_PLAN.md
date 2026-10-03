@@ -538,7 +538,10 @@ Assistant roadmap (proposed 2026-09-28, user: "add them to the plan") — awaiti
 - R4 **"ask the assistant to revise this rule"** from a plain-words instruction, then validated (design decision 3)
 - R5 **a stronger rewrite**: 3 of 12 departures fixed (5.3) — the analyst's decisions earlier in the prompt; service form; rule order
 - R6 **an exportable report**: what the model understood, evidence, the analyst's decisions, the rules (= plan 3.1)
-- R7 **better log-source suggestions** (analysis stage): the log source gates S5 (5.3); 45% held-out, weakest on host and service sources
+- R7 **better log-source suggestions** (analysis stage): the log source gates S5 (5.3); 45% held-out, weakest on host and service sources.
+  **Tried 2026-09-29 to 10-03 (Change 38: rank by the specificity of the evidence; 3 iterations, tuning set): no gain, v3 worse → removed**
+  (user, 2026-10-03; CH6 §6.5b, CH7 54). Change 37 (JSON escape repair) kept. Still open: about 25 of 60 picks match no human
+  rule for the report; the product + service form is never picked; confirmation set 2 (`eval/manifest_confirm2.jsonl`) unused
 - R8 **a value-level detection score**: S5 compares field names only (sudo: S5 = 1.0, the human's match broader)
 - R9 **do the rules fire?** replay with Zircolite over SigmaHQ's 138 regression EVTX files; detonation in the lab (= 5.6, Phase 0)
 - R10 **false positives**: the rules over benign logs

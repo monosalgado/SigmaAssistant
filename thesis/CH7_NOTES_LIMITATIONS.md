@@ -248,6 +248,15 @@ limitation in the log belongs here too.
     +0.37 log-source and +0.16 detection-field gains are what the code and prompts changed with the model
     held fixed. Three runs per version is a small k: consistency is estimated from 3 pairs of runs. (log
     2026-09-29)
+54. **Change 38 was tuned and dropped on the tuning set only** `[DISCLOSE]` (CH6 §6.5b). Three
+    iterations of one idea (rank log sources by the specificity of their evidence) were tried and judged
+    on the 60 tuning cases; none moved the picks towards the human rules, and the change was removed. No
+    version ran on unseen reports, so the negative result is as tuning-set-bound as a positive one would
+    have been; the v3 comparison is one run against three. The benchmark scores agreement with one human
+    rule (or another for the same report), so a pick on more specific evidence that SigmaHQ's authors did
+    not choose counts as wrong. Whether such rules are better (fewer false positives) is not measured
+    (future work: R10). Confirmation set 2 (`eval/manifest_confirm2.jsonl`, 60 cases) is still unused.
+    (log 2026-10-03)
 
 ---
 
