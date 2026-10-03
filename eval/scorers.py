@@ -275,6 +275,76 @@ def score_detection_fields(predicted: Any, gold: Any) -> dict:
     return result
 
 
+def normalise_value(value: Any) -> Optional[str]:
+    """A detection value as S5v compares it: lower-cased, `*` wildcards at the ends removed, a
+    doubled backslash read as one (rules differ in how they escape a path)."""
+    if value is None:
+        return None
+    text = str(value).strip().lower().strip("*").replace("\\\\", "\\").strip()
+    return text or None
+
+
+def extract_detection_values(detection: Any) -> set:
+    """(field, value) pairs a Sigma `detection` looks for. The field is the name before the first
+    `|`, as in S5; a bare keyword list has field "". Selections named `filter...` (SigmaHQ's
+    convention for exclusions), `condition` and `timeframe` are skipped."""
+    values = set()
+
+    def walk(node: Any, field: str) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                walk(value, str(key).split("|")[0].strip().lower())
+        elif isinstance(node, list):
+            for item in node:
+                walk(item, field)
+        else:
+            value = normalise_value(node)
+            if value:
+                values.add((field, value))
+
+    if isinstance(detection, dict):
+        for name, selection in detection.items():
+            name = str(name).strip().lower()
+            if name in ("condition", "timeframe") or name.startswith("filter"):
+                continue
+            walk(selection, "")
+    return values
+
+
+def value_matches(gold: str, predicted: str) -> bool:
+    """A human value is found by one of ours that contains it (ours is at least as specific), or
+    that it contains if ours is at least half as long; under 3 characters, only when equal."""
+    if len(gold) < 3 or len(predicted) < 3:
+        return gold == predicted
+    return gold in predicted or (predicted in gold and 2 * len(predicted) >= len(gold))
+
+
+def score_detection_values(predicted: Any, gold: Any) -> dict:
+    """S5v (roadmap R8). Overlap of the values the detection looks for: recall in any field and in
+    the same field, precision and F1 in any field. Undefined (None) on a side with no values."""
+    ours, theirs = extract_detection_values(predicted), extract_detection_values(gold)
+    found = {g for g in theirs if any(value_matches(g[1], p[1]) for p in ours)}
+    found_same_field = {g for g in theirs if any(p[0] == g[0] and value_matches(g[1], p[1]) for p in ours)}
+    matched = {p for p in ours if any(value_matches(g[1], p[1]) for g in theirs)}
+    recall = len(found) / len(theirs) if theirs else None
+    precision = len(matched) / len(ours) if ours else None
+    if recall is None or precision is None:
+        f1 = None
+    else:
+        f1 = 0.0 if recall + precision == 0 else 2 * precision * recall / (precision + recall)
+    return {
+        "recall": recall,
+        "recall_same_field": len(found_same_field) / len(theirs) if theirs else None,
+        "precision": precision,
+        "f1": f1,
+        "n_gold": len(theirs),
+        "n_predicted": len(ours),
+        "found": sorted({g[1] for g in found}),
+        "missing": sorted({g[1] for g in theirs - found}),
+        "unmatched": sorted({p[1] for p in ours - matched}),
+    }
+
+
 # --------------------------------------------------------------------------
 # Top level
 # --------------------------------------------------------------------------

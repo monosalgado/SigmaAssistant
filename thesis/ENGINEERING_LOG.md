@@ -4637,3 +4637,58 @@ may not separate right picks from wrong ones. Time: 84–145 s per analysis answ
 10.5–13.8 min per case → 10–14 h for the 60 tuning cases.
 **Shelved** (user, 2026-10-03: "I don't think we gotta focus on right log source right now, what do we do about
 the detection fields?"). No measurement plan was fixed and no full run made; the tool stays for later.
+
+---
+
+## 2026-10-03 — Detection: a value-level score (S5v) and a detection diagnosis (user: "do 1 and 2")
+
+User: "I don't think we gotta focus on right log source right now, what do we do about the detection fields?"
+→ (1) diagnose the detection where the log source is right, (2) score the values, not only the field names.
+**Why both:** S5 is mostly the log source again. Within each held-out run of today's code (`s5_by_logsource.py`
+run against itself), first-rule S5 is **0.668 / 0.632 / 0.688 when the log source is right (27 / 27 / 25
+cases) and 0.043 / 0.070 / 0.119 when it is wrong (31 / 31 / 30)**: each log source has its own field names.
+And S5 ignores values: tuning case `20c6ed1c` (Sitecore) scores S5 0.67 with `cs-uri-query|contains: cmd=` and
+`request_body|contains: $(nslookup, <parameter>=a[$(` against a human rule matching the vulnerable page
+`/sitecore/shell/ClientBin/Reporting/Report.ashx`. Two of those strings are the attack-vector prompt's own
+inline examples of a `pattern` (`prompts.py`, the `payload_signatures` description: `"-enc JAB"`,
+`"<parameter>=a[$("`, `"$(nslookup"`, `"'; DROP TABLE"`, `"../../etc/passwd"`, `"rO0AB"`) — defect 15 reaching the
+detection; `count_example_copies.py` checks the worked examples' markers but not these inline examples.
+**S5v — definition, fixed before any run is scored** (`scorers.score_detection_values`; tests first, 9, seen to
+fail): the (field, value) pairs a detection looks for — every string or number, lower-cased, `*` at the ends
+removed, a doubled backslash read as one; field = the name before the first `|` (as S5), "" for a bare keyword
+list; selections named `filter…` (SigmaHQ's exclusions), `condition` and `timeframe` skipped. A human value g is
+**found** by one of ours p when p contains g (ours at least as specific), or g contains p and p is at least half
+as long; under 3 characters only when equal. Reported: recall in any field and in the same field, precision and
+F1 in any field; undefined on a side with no values. Not yet a harness metric: computed post-hoc from saved rules.
+**Diagnosis tool** `eval/diagnose_detection.py` (6 tests; **written before they were run — a lapse; checked
+instead by 3 planted bugs, each caught**): per case, first rule vs the human rule — S3 as scored, S5 with fields
+missed/added, S5v with values found/missed, the best of the case's rules on S5 and S5v, and with `--grounding`
+which of our values and of the human's occur in the report's own text (pages preprocessed offline from the
+snapshots + the GitHub files the PoC stage reads, as `count_example_copies.py`; a leading path separator not
+required; under 3 characters not judged). Descriptive, **tuning set only**: runs `c36_yaml60` (today's
+generation, Change 36), `p2g_shared60`, `oracle_ls60_unreviewed`, and `oracle_ls60_oracle` (the analyst's
+log source given, plan 5.3).
+
+### Detection diagnosis: results (tuning set, four runs; descriptive)
+`diagnose_detection.py --grounding` (+1 test, seen to fail: "of the human's values in the report, ours found").
+First rule, cases whose log source is right — `c36_yaml60` (26) / `p2g_shared60` (22) / `oracle_ls60_unreviewed` (26)
+/ `oracle_ls60_oracle` (45, the analyst's log source given):
+- **Fields mostly right, values mostly wrong.** S5 F1 0.708 / 0.647 / 0.720 / 0.637; **S5v F1 0.191 / 0.160 / 0.217
+  / 0.140** (recall 0.174 / 0.128 / 0.206 / 0.133; same field 0.140 / 0.085 / 0.174 / 0.078). Cases with S5 ≥ 0.5
+  but none of the human's values: **10 of 26 / 10 of 22 / 12 of 26 / 24 of 45**. Giving the right log source
+  (oracle) does not fix the values.
+- **Many human values are not in the report.** Of the human rules' values, 56 of 142 / 63 of 123 / 58 of 144 /
+  79 of 218 occur in the report's own text (36–51%); in 9 / 6 / 9 / 21 cases none does. A literal check: a value
+  the report writes differently counts as absent, so these are lower bounds on what the report gives.
+- **Of the human's values that are in the report, the first rule uses about a quarter to a third: 18 of 56 / 15
+  of 63 / 17 of 58 / 19 of 79.** That is the part a model reading the report could have got.
+- **Our values not in the report:** 34 of 83 / 12 of 58 / 34 of 89 / 38 of 129. Most common: Office and script
+  host binaries (`\winword.exe`, `\excel.exe`, `\wscript.exe`…: the model's knowledge of usual parents), and the
+  attack-vector prompt's inline examples (`$(nslookup` 2, `<parameter>=a[$(` 1 in `c36_yaml60`; `ro0ab`,
+  `username=` in `p2g_shared60`) — defect 15 in the detection; not yet counted by a committed criterion.
+- **The first rule is not always the case's best:** a later rule has a better S5v in 7 / 5 / 7 / 11 of these
+  cases (best-of-rules S5v 0.252 / 0.222 / 0.273 / 0.211).
+Where the log source is wrong (32 / 31 / 31 / 9), S5 0.04–0.09 and S5v 0.03: as expected, both fail together.
+**Reading:** the detection's weakness is the values, not the field names: right place, wrong strings. Two parts:
+the report's own specific strings mostly do not reach the rule (fixable from the text), and much of what the
+human rule matches is not in the report at all (knowledge the human brought: a bound on any report-only method).
