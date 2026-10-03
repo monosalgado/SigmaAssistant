@@ -714,22 +714,7 @@ Each mapping needs: technique_id, technique_name, tactic, relevance (brief expla
 
 ## PART 3: Log Source Recommendation
 
-Recommend the Sigma log sources that would record this attack's most specific evidence.
-
-First, in `evidence_inventory`, list what the text gives you to detect on, in the order it appears
-in the text (at most 15 items): the attacker's commands and processes, files written or deleted,
-registry keys and values, network destinations (domains, URLs, IP addresses), script contents, and
-events that a specific log records (often named by an event ID, or a product's or appliance's own
-log). For each item give the log source from the tables below that records it, and `specific`: true
-only when a defender could search for this exact value and expect no hits from normal activity (a
-malicious file's name or path, an attacker's domain, an attacker-chosen registry value or script
-name); false when normal activity also produces it, even if the attacker used it here (a standard
-operating-system program or file, a common command, a generic request).
-
-Then write `logsource_suggestions`, ranked from the inventory: put first the log source that records
-the most items marked specific — the evidence a rule could match with the fewest false positives —
-whichever form that log source takes. Each suggestion's `evidence` lists the inventory items it
-records. A log source that records none of them is not a suggestion.
+Determine the best Sigma log sources for detecting this attack.
 
 A Sigma log source takes one of two forms:
 1. **A category and a product, with no service** (first table below). The category names
@@ -749,8 +734,7 @@ that field empty.
 {logsource_services}
 
 Each suggestion needs: category, product, service (null for a field its form leaves empty),
-evidence (the inventory items this log source records, at most 5), confidence (0-1),
-reasoning, relevant_fields.
+confidence (0-1), reasoning, relevant_fields.
 
 ---
 
@@ -772,15 +756,11 @@ Respond with JSON only:
       "severity": "high|medium|low"
     }}
   ],
-  "evidence_inventory": [
-    {{"evidence": "<a string from the text>", "log_source": "<category / product, or product / service, from the tables>", "specific": true}}
-  ],
   "logsource_suggestions": [
     {{
       "category": "process_access",
       "product": "windows",
       "service": null,
-      "evidence": ["<a string from the text>", "<another string from the text>"],
       "confidence": 0.95,
       "reasoning": "why this log source captures the attack",
       "relevant_fields": ["SourceImage", "TargetImage", "GrantedAccess"]
@@ -792,37 +772,6 @@ Respond with JSON only:
 
 # --- Combined Review (Validation + Optimization) ---
 # Single call replaces 2 separate stages to reduce API usage.
-
-# Change 38 v3 (2026-09-30): the analysis finds the evidence and judges it, but in its one long answer
-# it does not rank by its own judgements; this short second call does only that.
-LOGSOURCE_RANKING = """You are ordering the candidate log sources for a detection rule, by the
-evidence each would record.
-
-### Candidate log sources (from the analysis)
-{candidates}
-
-### The evidence the text gives (from the analysis)
-Each item: the evidence, the log source that records it, and whether it is specific to this attack
-(specific: true = a defender could search for this exact value and expect no hits from normal activity;
-specific: false = normal activity also produces it).
-{inventory}
-
-### Task
-Order the log sources so that the first is the one a detection rule could use with the fewest false
-positives: the log source whose evidence is most specific to this attack. Evidence marked specific
-outweighs any amount of evidence normal activity also produces. You may add a log source that the
-evidence above names but no candidate uses, written with the names from the candidates' tables
-(category and product, or product and service). Keep every candidate that records some of the
-evidence; you may leave out one that records none.
-
-Respond with JSON only:
-{{
-  "ranking": [
-    {{"category": "<category or null>", "product": "<product or null>", "service": "<service or null>",
-     "evidence": ["<evidence items it records>"]}}
-  ],
-  "reason": "one sentence: why the first log source is first"
-}}"""
 
 COMBINED_REVIEW = """You are a Sigma rule quality reviewer and optimization expert. Review and optimize the following Sigma rule(s) in a single pass.
 

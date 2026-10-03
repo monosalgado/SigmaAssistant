@@ -4593,3 +4593,26 @@ source for these reports; ranking by it moved the picks away from the human rule
 Together with v1 (no movement) and v2 (evidence judged well, not used), Change 38 does not improve the picks
 after three iterations on the tuning set. Per the plan, the confirmation set is **not run** (it was reserved for
 a version that moved the picks); it stays unused. Decision for the user: remove Change 38, try again, or keep it.
+
+---
+
+## 2026-10-03 — Change 38 removed; Change 37 kept
+
+User (after the v3 result above): **"remove Change 38, keep Change 37"**. The pipeline goes back to its
+pre-Change-38 state (`ffeff82`): the analysis prompt's earlier log-source instruction ("Determine the best Sigma
+log sources for detecting this attack"), no evidence inventory, no ranking step (`stage_logsource_ranking.py`
+and the `LOGSOURCE_RANKING` prompt deleted), one model call in the analysis stage, and the two diagnosis fields
+taken out of `run_eval.DIAGNOSIS_FIELDS`. Checked: all 13 prompt strings equal `ffeff82`'s; `backend/` and
+`run_eval.py` differ from `ffeff82` only by the author's four section-header comments (`ad32dc8`). Change 37
+(`repair_json_escapes`) stays. Tests first (`test_change38_removed.py`, 4: 3 seen to fail, the Change 37 one
+holds what must stay true); the 22 tests of the removed code are deleted with it (in history at `efbef51`);
+638 pass (`pytest tests`).
+**Kept, because they measure rather than change the pipeline:** P / Pany in `compare_arms.py --manifest`,
+`alternative_logsources.py`, `draw_heldout.py --out/--exclude`, `ranking_effect.py` (reads saved rows), and
+**confirmation set 2** (`eval/manifest_confirm2.jsonl`), still unused — available to a later change.
+**For the thesis (negative result):** three iterations of one idea on the tuning set — ask the model to rank log
+sources by how specific their evidence is — none moved the top pick towards the human rules (v1 P 25 vs 23–26;
+v2 judged the evidence well but did not rank by it; v3's separate ranking step: P 25 → 22 on the same answers,
+S3u 19 of 60, the lowest of five runs). The model's notion of the most specific evidence (an exact file path or
+hash) is not how SigmaHQ's authors chose these reports' log sources. Tuning-set iterations are disclosed as a
+researcher degree of freedom; the confirmation set was never run on any version of Change 38.
