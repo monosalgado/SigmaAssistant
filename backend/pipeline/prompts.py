@@ -530,7 +530,7 @@ evidence so that does not happen.
 
 ### 3. Payload signatures (REQUIRED — what rules should match)
 - `payload_signatures`: List of 1-8 concrete, observable strings/patterns that would appear in telemetry DURING EXPLOITATION. Each item has:
-  - `pattern`: The literal string or simple regex (e.g. `"-enc JAB"`, `"<parameter>=a[$("`, `"$(nslookup"`, `"'; DROP TABLE"`, `"../../etc/passwd"`, `"rO0AB"`).
+  - `pattern`: The literal string or simple regex.
   - `where`: Where this pattern would be observed. One of `request_uri`, `request_body`, `request_header`, `response_body`, `response_header`, `process_cmdline`, `file_content`, `network_payload`, `dns_query`, `other`.
   - `derived_from`: Short quote (<=120 chars) from the input text or PoC that justifies this pattern. If derived from vuln class (e.g. generic deserialization magic bytes), write `"inferred_from_class"`.
 

@@ -4716,3 +4716,31 @@ hklm\sam %temp%\~reg_sam.save`, `\comsvcs.dll minidump`, `\report.wer`. The rest
 no earlier stage carried forward, which the rule writer cannot see. The incidental list almost never removed a
 human value (≤ 1 per run). "Given" is a literal match anywhere in the inputs, including inside an indicator's
 context sentence, so it is an upper bound on how clearly the value was offered.
+
+---
+
+## 2026-10-03 — Change 39: the attack-vector prompt's inline example patterns removed
+
+User: "remove the copied prompt examples". Found by the detection diagnosis (above): the description of a payload
+signature's `pattern` in `ATTACK_VECTOR_EXTRACTION` gave six literal attack strings as examples — `"-enc JAB"`,
+`"<parameter>=a[$("`, `"$(nslookup"`, `"'; DROP TABLE"`, `"../../etc/passwd"`, `"rO0AB"`. Searched every prompt:
+this is the only live one (`ENTITY_EXTRACTION`, `RULE_OPTIMIZATION` also give examples but are used nowhere);
+other suspicious values in rules (`cmd=`, `eval=`, `/login`) are in no prompt — the model's own knowledge.
+**Measured before the change** (`count_example_copies.py`, new count, tests first, 3, seen to fail): these are
+generic class patterns, which the copy criterion deliberately does not count (`probe_attack_vector`,
+`test_generic_patterns_are_not_markers`), so they are counted **apart**: an example string in the output that
+the input (pages + fetched GitHub code) does not contain. Reports with one in their rules — `c36_yaml60` 4,
+`p2g_shared60` 2, `oracle_ls60_unreviewed` 4, `oracle_ls60_oracle` 4 (same attack vectors), `c38v1_tuning60` 2,
+`c38v3_tuning60` 2, `main_heldout_r1/r2/r3` 2 / 1 / 2 (of 60 each); mostly `ro0ab` and `$(nslookup`; in the vector
+2–4. Not every one is wrong (`rO0AB` is a right generic pattern for a Java deserialization flaw), but e.g.
+`$(nslookup` in Sitecore's (.NET deserialization) rule, and the template text `<parameter>=a[$(`, came from the
+prompt.
+**Change** (tests first, 3: 1 seen to fail, 2 hold what must stay true): the list is **deleted** — "`pattern`:
+The literal string or simple regex." — not replaced by placeholders (placeholders are copied too, Change 30);
+the worked examples still show patterns. 677 tests pass.
+**Measure, fixed now (before any run):** primary — tuning reports with an inline example string in their rules
+(and in the vector), absent from the input: expected 2–4 → 0; the strings no longer occur in any prompt, so any
+left would come from the model's knowledge. Secondary, descriptive — S5v (first rule; right-log-source cases and
+all), S3u, S5u paired against `c36_yaml60`: no change expected beyond run-to-run noise (2–4 cases). The run is
+the user's decision (it may share a run with the next change; the primary count is attributable to this change
+alone, the secondary measures would not be).

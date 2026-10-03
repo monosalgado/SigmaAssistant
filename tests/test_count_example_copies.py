@@ -141,3 +141,29 @@ def test_the_summary_counts_ungrounded_patterns_by_case_and_in_total():
     ]
     s = summarise(results)
     assert (s["ungrounded_cases"], s["ungrounded_patterns"]) == (1, 2)
+
+
+# --- the attack-vector prompt's inline examples of a `pattern` (2026-10-03, before Change 39) ----------
+# `"-enc JAB"`, `"<parameter>=a[$("`, `"$(nslookup"`, `"'; DROP TABLE"`, `"../../etc/passwd"`, `"rO0AB"`. They
+# are generic patterns of a vulnerability class, which `probe_attack_vector` deliberately does not count as
+# copies (test_generic_patterns_are_not_markers); so they are counted apart, as "the prompt's example strings,
+# absent from the input" - in a rule of a deserialization exploit, `$(nslookup` came from the prompt, not
+# the report.
+
+from eval.count_example_copies import INLINE_EXAMPLES, inline_examples  # noqa: E402
+
+
+def test_the_six_inline_examples_are_counted_apart_from_the_markers():
+    assert INLINE_EXAMPLES == ("-enc jab", "<parameter>=a[$(", "$(nslookup", "'; drop table",
+                               "../../etc/passwd", "ro0ab")
+
+
+def test_an_inline_example_absent_from_the_input_is_counted_in_the_vector_and_the_rules():
+    av = _av(payload_signatures=[{"pattern": "$(nslookup", "derived_from": "inferred_from_class"}])
+    found = inline_examples(av, "a deserialization flaw in Report.ashx", "CommandLine|contains: '$(nslookup'")
+    assert found == {"in_vector": ["$(nslookup"], "in_rules": ["$(nslookup"]}
+
+
+def test_an_inline_example_the_report_contains_is_not_counted():
+    av = _av(payload_signatures=[{"pattern": "../../etc/passwd"}])
+    assert inline_examples(av, "GET /files?name=../../etc/passwd HTTP/1.1", "") == {"in_vector": [], "in_rules": []}

@@ -50,3 +50,27 @@ def test_the_structure_the_examples_teach_is_kept():
     """Generic, real tool names stay: they show the kind of evidence, not a case's facts."""
     assert "rundll32.exe" in EXAMPLES and "Upgrade: websocket" in EXAMPLES
     assert EXAMPLES.count("**Example ") == 3
+
+
+# --- Change 39 (2026-10-03, user: "remove the copied prompt examples") --------------------------------
+# The description of a payload signature's `pattern` gave six literal attack strings as examples. They reach
+# rules in 1-4 of 60 reports per run without being in the report (`count_example_copies.py`, nine runs), e.g.
+# `$(nslookup` in a rule for a deserialization flaw. The list is deleted, not replaced by placeholders
+# (placeholders are copied too, Change 30); the worked examples below still show what a pattern looks like.
+
+from eval.count_example_copies import INLINE_EXAMPLES  # noqa: E402
+
+
+def test_no_inline_example_string_is_left_in_the_prompt():
+    for example in INLINE_EXAMPLES:
+        assert example not in AV.lower(), example
+
+
+def test_the_pattern_field_is_still_described():
+    instructions = AV.split("### Few-shot Examples", 1)[0]
+    line = next(l for l in instructions.splitlines() if l.strip().startswith("- `pattern`"))
+    assert "literal string or simple regex" in line
+
+
+def test_the_worked_examples_still_show_patterns():
+    assert '"pattern": "' in EXAMPLES

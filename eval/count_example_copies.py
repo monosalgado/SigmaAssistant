@@ -44,6 +44,19 @@ VECTOR_FIELDS = ("initial_access_vector", "entry_point", "attacker_controlled_in
                  "payload_signatures")
 
 
+# The attack-vector prompt's inline examples of a `pattern` (lower-cased). Generic patterns of a vulnerability
+# class, which the copy criterion deliberately leaves out (`probe_attack_vector`), so they are counted apart:
+# an example string in the output that the input does not contain came from the prompt, not the report.
+INLINE_EXAMPLES = ("-enc jab", "<parameter>=a[$(", "$(nslookup", "'; drop table", "../../etc/passwd", "ro0ab")
+
+
+def inline_examples(attack_vector: dict, model_input_text: str, rules_text: str = "") -> dict:
+    vector = json.dumps({k: attack_vector.get(k) for k in VECTOR_FIELDS}).lower()
+    rules, source = (rules_text or "").lower(), (model_input_text or "").lower()
+    absent = [e for e in INLINE_EXAMPLES if e not in source]
+    return {"in_vector": [e for e in absent if e in vector], "in_rules": [e for e in absent if e in rules]}
+
+
 def copies(attack_vector: dict, model_input_text: str, rules_text: str = "") -> dict:
     vector_part = {k: attack_vector.get(k) for k in VECTOR_FIELDS}
     return {"anywhere": leaked_markers(json.dumps(attack_vector), model_input_text),
@@ -107,6 +120,9 @@ def summarise(results: list) -> dict:
         "by_example_in_rules": dict(Counter(g for r in results for g in r.get("in_rules", {}))),
         "ungrounded_cases": sum(1 for r in results if r.get("ungrounded")),
         "ungrounded_patterns": sum(len(r.get("ungrounded") or []) for r in results),
+        "inline_in_vector": sum(1 for r in results if (r.get("inline") or {}).get("in_vector")),
+        "inline_in_rules": sum(1 for r in results if (r.get("inline") or {}).get("in_rules")),
+        "by_inline_in_rules": dict(Counter(e for r in results for e in (r.get("inline") or {}).get("in_rules", []))),
     }
 
 
@@ -152,7 +168,8 @@ def main(argv: list) -> int:
         source = model_input(text, github_bodies(text, url_map))
         found = copies(av, source, rules_text(row))
         results.append({"rule_id": row["rule_id"], **found,
-                        "ungrounded": ungrounded_patterns(av, source)})
+                        "ungrounded": ungrounded_patterns(av, source),
+                        "inline": inline_examples(av, source, rules_text(row))})
 
     s = summarise(results)
     print(f"{argv[1]}: {s['n']} recorded attack vectors")
@@ -165,6 +182,8 @@ def main(argv: list) -> int:
     for r in results:
         if r["in_rules"]:
             print(f"    {r['rule_id'][:8]}  {r['in_rules']}")
+    print(f"  the prompt's inline example strings, absent from the input: in the vector {s['inline_in_vector']} "
+          f"cases, in the rules {s['inline_in_rules']} cases {s['by_inline_in_rules']}")
     print(f"  payload patterns absent from the input (upper bound): {s['ungrounded_patterns']} "
           f"patterns in {s['ungrounded_cases']} cases")
     return 0
