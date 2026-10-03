@@ -103,7 +103,8 @@ TEXT = "The actor ran schtasks.exe /create /sc ONSTART."
 def test_a_missed_value_is_traced_to_where_it_was_lost():
     d = case_detection(_traced_row([FIRST_WEAK], AV), GOLD, text=TEXT)
     status = {m["value"]: m["status"] for m in d["missed_available"]}
-    assert status == {"\\schtasks.exe": "given, not used", "create": "given, not used", "onstart": "blacklisted"}
+    assert status == {"\\schtasks.exe": "given as a payload pattern", "create": "given as a payload pattern",
+                      "onstart": "blacklisted"}
 
 
 def test_a_value_no_stage_passed_on_was_never_given():
@@ -114,7 +115,7 @@ def test_a_value_no_stage_passed_on_was_never_given():
 def test_a_value_an_indicator_carries_was_given():
     d = case_detection(_traced_row([FIRST_WEAK], {}, [{"value": "schtasks.exe", "type": "process"}]),
                        GOLD, text=TEXT)
-    assert {m["value"]: m["status"] for m in d["missed_available"]}["\\schtasks.exe"] == "given, not used"
+    assert {m["value"]: m["status"] for m in d["missed_available"]}["\\schtasks.exe"] == "given as an indicator"
 
 
 def test_a_value_a_later_rule_uses_is_marked():
@@ -125,7 +126,7 @@ def test_a_value_a_later_rule_uses_is_marked():
 
 def test_the_summary_counts_where_values_were_lost():
     s = summarise([case_detection(_traced_row([FIRST_WEAK], AV), GOLD, text=TEXT)])
-    assert s["right"]["missed_available"] == {"given, not used": 2, "blacklisted": 1}
+    assert s["right"]["missed_available"] == {"given as a payload pattern": 2, "blacklisted": 1}
 
 
 def test_a_longer_minimum_leaves_short_values_unjudged():
@@ -134,3 +135,34 @@ def test_a_longer_minimum_leaves_short_values_unjudged():
     assert grounded("esta", "a test station", min_chars=6) is None
     d = case_detection(_traced_row([FIRST_WEAK], AV), GOLD, text=TEXT, min_chars=7)
     assert [m["value"] for m in d["missed_available"]] == ["\\schtasks.exe", "onstart"]
+
+
+
+# --- how a value was offered (2026-10-03, user: "look at how the unused values were offered") ----------
+# What the rule writer is given is rebuilt with the pipeline's own formatting: the vector summary
+# (`format_vector_summary`), the first 10 payload signatures (pattern, where, quote), the indicators, the
+# attack summary, the techniques; the incidental list's first 20. Fields it never sees (the vector's
+# `reasoning`, an 11th signature) do not count as given.
+
+def _status(attack_vector, indicators=(), summary=""):
+    row = _traced_row([FIRST_WEAK], attack_vector, indicators)
+    row["pipeline"]["attack_summary"] = summary
+    d = case_detection(row, GOLD, text=TEXT)
+    return {m["value"]: m["status"] for m in d["missed_available"]}
+
+
+def test_a_value_only_in_a_description_is_given_only_in_a_description():
+    got = _status({"initial_access_vector": "x"},
+                  [{"value": "persistence", "context": "runs schtasks.exe at boot"}])
+    assert got["\\schtasks.exe"] == "given only in a description"
+
+
+def test_a_value_only_in_fields_the_rule_writer_never_sees_was_never_given():
+    got = _status({"initial_access_vector": "x", "reasoning": "it uses schtasks.exe /create /sc ONSTART"})
+    assert set(got.values()) == {"never given"}
+
+
+def test_only_the_first_ten_payload_signatures_are_given():
+    sigs = [{"pattern": f"p{i}"} for i in range(10)] + [{"pattern": "schtasks.exe"}]
+    got = _status({"initial_access_vector": "x", "payload_signatures": sigs})
+    assert got["\\schtasks.exe"] == "never given"

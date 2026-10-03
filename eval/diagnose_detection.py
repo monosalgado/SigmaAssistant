@@ -59,15 +59,27 @@ def _strings(node) -> str:
     return node if isinstance(node, str) else ""
 
 
-def _given_to_the_rule_writer(row: dict):
-    """(what the rule writer is given, the incidental list it is told to avoid), from the saved stage
-    outputs: the attack vector, the attack summary, the analysis's indicators and techniques. Retrieved
-    documents are not saved, so a value reaching the rule writer only through them counts as never given."""
+def _rule_writer_inputs(row: dict):
+    """What the rule writer is given, rebuilt with the pipeline's own formatting (`RULE_GENERATION`'s
+    inputs): {payload patterns, indicator values, descriptions}, and the incidental list it is told to avoid.
+    Descriptions: the vector summary (`format_vector_summary`), the payload signatures' quotes, the
+    indicators' other fields, the attack summary, the techniques. Only the first 10 payload signatures and the
+    first 20 incidental strings are passed on. Retrieved documents are not saved, so a value reaching the rule
+    writer only through them counts as never given."""
+    from backend.pipeline.stage_attack_vector import AttackVectorStage
     pipeline = row.get("pipeline") or {}
     vector = pipeline.get("attack_vector") or {}
-    given = [{k: v for k, v in vector.items() if k != "incidental_artifacts"},
-             pipeline.get("attack_summary"), pipeline.get("indicators"), pipeline.get("ttp_mappings")]
-    return _strings(given), _strings(vector.get("incidental_artifacts"))
+    sigs = [x for x in (vector.get("payload_signatures") or [])[:10] if isinstance(x, dict)]
+    indicators = [i for i in pipeline.get("indicators") or [] if isinstance(i, dict)]
+    parts = {
+        "payload pattern": "\n".join(str(x.get("pattern") or "") for x in sigs),
+        "indicator": "\n".join(str(i.get("value") or "") for i in indicators),
+        "description": "\n".join([AttackVectorStage.format_vector_summary(vector),
+                                   _strings([{k: v for k, v in x.items() if k != "pattern"} for x in sigs]),
+                                   _strings([{k: v for k, v in i.items() if k != "value"} for i in indicators]),
+                                   _strings(pipeline.get("attack_summary")), _strings(pipeline.get("ttp_mappings"))]),
+    }
+    return parts, _strings((vector.get("incidental_artifacts") or [])[:20])
 
 
 def _parse(rule_text):
@@ -118,13 +130,15 @@ def case_detection(row: dict, gold_rule: dict, text: Optional[str] = None, min_c
                    gold_grounded=sum(g is True for g in gold_judged.values()),
                    gold_ungrounded=[v for v, g in gold_judged.items() if g is False],
                    gold_grounded_found=sum(g is True and v in values["found"] for v, g in gold_judged.items()))
-        given, blacklist = _given_to_the_rule_writer(row)
+        given, blacklist = _rule_writer_inputs(row)
         later = {v for rule in parsed[1:] if rule for _, v in extract_detection_values(rule.get("detection"))}
         missed = []
         for value, in_report in gold_judged.items():
             if in_report is not True or value in values["found"]:
                 continue
-            status = ("given, not used" if grounded(value, given, min_chars) else
+            status = ("given as a payload pattern" if grounded(value, given["payload pattern"], min_chars) else
+                      "given as an indicator" if grounded(value, given["indicator"], min_chars) else
+                      "given only in a description" if grounded(value, given["description"], min_chars) else
                       "blacklisted" if grounded(value, blacklist, min_chars) else "never given")
             missed.append({"value": value, "status": status,
                            "in_later_rule": any(value_matches(value, p) for p in later)})

@@ -4744,3 +4744,25 @@ left would come from the model's knowledge. Secondary, descriptive — S5v (firs
 all), S3u, S5u paired against `c36_yaml60`: no change expected beyond run-to-run noise (2–4 cases). The run is
 the user's decision (it may share a run with the next change; the primary count is attributable to this change
 alone, the secondary measures would not be).
+
+### Detection, step 2: how the unused values were offered (tuning set, four runs; descriptive)
+User: "look at how the unused values were offered". `diagnose_detection.py` now rebuilds what the rule writer is
+given with the pipeline's own formatting (`AttackVectorStage.format_vector_summary`, the first 10 payload
+signatures, the indicators, the attack summary, the techniques; the incidental list's first 20) instead of every
+saved field (step 1 also searched e.g. the vector's `reasoning`, which the rule writer never sees). Tests
+updated, +3 (6 failed before the change). **Step 1's totals are unchanged** under the exact input (e.g.
+`c36_yaml60`, ≥ 6 characters: given 12, never given 10, incidental 1). Each missed value is put under the
+clearest way it was offered: as a payload pattern, as an indicator's value, only inside a description (a
+signature's quote, an indicator's context, the vector summary, the attack summary, a technique), on the
+incidental list, or never given.
+Cases whose log source is right, values ≥ 6 characters, `c36_yaml60` / `p2g_shared60` / `oracle_ls60_unreviewed` /
+`oracle_ls60_oracle` (misses 23 / 32 / 28 / 43): **as an indicator 8 / 18 / 13 / 18**; never given 10 / 9 / 9 /
+15; only in a description 4 / 3 / 5 / 6; **as a payload pattern 0 / 1 / 1 / 4**; incidental list 1 / 1 / 0 / 0.
+(≥ 3 characters, `c36_yaml60`, 38 misses: indicator 12, never 13, description 8, pattern 4, incidental 1.)
+**Reading:** the rule writer uses the payload signatures — the attack vector's "what rules should match" — but
+mostly not the analysis's indicators: the largest group of report values it had and did not use were offered as
+indicators (e.g. `reg.exe save hklm\sam %temp%\~reg_sam.save`, `\comsvcs.dll minidump`, `\winupd.log full`,
+`\policydefinitions\postgresql.exe`). The never-given group is mostly post-exploitation host activity
+(`wmic /node:`, `invoke-wmimethod win32_process -name create -argumentlist`, `netstat -aon | find`): the
+attack-vector stage is asked about initial access and exploitation ("DURING EXPLOITATION"), and the analysis did
+not list them either. Many human rules in this corpus detect that later host activity.
