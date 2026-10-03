@@ -4566,3 +4566,30 @@ But Triangulation's **first rule was still written on `process_creation`**: the 
 new recommendation (defect 11's pattern). The development run measures both the pick (P) and the rule (S3u).
 **Development run (tuning set):** one full run of the 60 tuning cases with v3, from a frozen checkout of this
 commit, compared with v1's run and the three earlier runs (`compare_arms.py --manifest`; descriptive).
+
+### Change 38 v3, development run (tuning set): the picks get worse
+`c38v3_tuning60.jsonl` (frozen checkout of `efbef51`; 60 of 60, 0 errors, verdict CITABLE). Started 2026-09-30,
+stopped by the user before any row (going offline), restarted 2026-10-02 after preflight passed (Ollama 0.34.1,
+unchanged; 650 tests; smoke CITABLE). **Stopped again at 19 rows by the desktop app's new 2-hour limit on
+background jobs** (first seen this day; a 201-min run on 09-30 had not been stopped); resumed from row 20 in the
+user's own terminal (row 20 checked: a new case, no repeats). Slower than v1 (below); the cause is not measured
+(the extra ranking call is one part; the Spark is shared, 9 users logged in at the time).
+**Against the three earlier runs** (`compare_arms.py --manifest`; one v3 run vs three; tuning set, descriptive):
+**P 22 of 60 (0.367)** vs 23 / 26 / 26 (v1: 25); Pany 0.483 vs mean 0.522 (v1: 0.567); no pick 3 of 60 (vs 10 of
+180). **S3u 19 of 60 (0.317)** vs 22 / 26 / 26 (v1: 24); paired against the three, S3u −0.094 95% CI [−0.183,
+−0.017], S5u −0.074 [−0.150, −0.006]; S1 0.933 vs 0.922. v3 is the lowest of the five runs on P and on S3u.
+(Consistency is not comparable: one v3 run is trivially "the same in every run".)
+**The ranking step itself, on the same answers** (new `eval/ranking_effect.py`, tests first, 5, seen to fail —
+the analysis's own order is in each row's record, so this is free of run-to-run variation): the step ran in 57
+of 60 (3 had no suggestion), failed in 0, added a log source in 2, had an addition refused by code in 13. **It
+changed the top pick in 17 of 57: 3 to the gold, 6 away from it (5 to neither, 1 to another human rule's), 1 from
+another human rule's to neither, 7 between two wrong ones. P before the step 25 of 60, after 22; Pany 32 → 29.**
+8 of the 17 new top picks are `file_event` (exact paths and hashes are "specific"); none of those 8 reports' gold
+rules uses `file_event` (3 use `process_creation`; `ranking_effect.py --list`). Where the top changed, the first
+rule followed the new top in 7, the old top in 7, other in 3 (defect 11's pattern). Time per case (mean
+`elapsed_s`, `compare_arms.py`): v3 463.5 s, v1 200.9 s.
+**Reading:** "fewest false positives" is a defensible criterion, but it is not how SigmaHQ's authors chose the log
+source for these reports; ranking by it moved the picks away from the human rules more often than towards them.
+Together with v1 (no movement) and v2 (evidence judged well, not used), Change 38 does not improve the picks
+after three iterations on the tuning set. Per the plan, the confirmation set is **not run** (it was reserved for
+a version that moved the picks); it stays unused. Decision for the user: remove Change 38, try again, or keep it.
