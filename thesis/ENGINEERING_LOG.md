@@ -4616,3 +4616,24 @@ v2 judged the evidence well but did not rank by it; v3's separate ranking step: 
 S3u 19 of 60, the lowest of five runs). The model's notion of the most specific evidence (an exact file path or
 hash) is not how SigmaHQ's authors chose these reports' log sources. Tuning-set iterations are disclosed as a
 researcher degree of freedom; the confirmation set was never run on any version of Change 38.
+
+---
+
+## 2026-10-03 — P-C self-consistency: tool built, piloted on 2 tuning cases, shelved (user)
+
+User: "lets do option 1" (P-C: the analysis answers the same input k times at a sampling temperature; the log
+source most answers put first is the vote, how many agree is the confidence; disagreeing reports would go to the
+analyst). New `eval/probe_self_consistency.py` (tests first, 11, seen to fail): the stages before the analysis
+run once; the analysis then answers that identical input once at temperature 0 and k = 5 times at 0.7 (the
+server's own default for the model: `ollama show` gives temperature 0.7, top_p 0.8, top_k 20, repeat_penalty
+1.05; the client sets only the temperature). Measures built in: the vote vs the single answer (exact McNemar),
+P by level of agreement, accept-only-m-of-k (coverage vs accuracy), unanimous vs the others (one-sided Fisher).
+The same 60 tuning cases as every tuning run (checked); confirmation set 2 loads (60, no overlap).
+**Pilot (2 tuning cases, `eval/results/pc_pilot2.jsonl`; design, not a result):** all 12 answers readable; the
+sampled answers differ (indicators 23–33, techniques, the lower-ranked log sources) but **both cases' top pick
+was `process_creation` in all 6 answers, and both are wrong** (gold `image_load`, `windows/security`; Pany 1 of
+2). The habitual first pick survives sampling: two cases say nothing about a rate, but they warn that agreement
+may not separate right picks from wrong ones. Time: 84–145 s per analysis answer (September runs: mean 67 s),
+10.5–13.8 min per case → 10–14 h for the 60 tuning cases.
+**Shelved** (user, 2026-10-03: "I don't think we gotta focus on right log source right now, what do we do about
+the detection fields?"). No measurement plan was fixed and no full run made; the tool stays for later.

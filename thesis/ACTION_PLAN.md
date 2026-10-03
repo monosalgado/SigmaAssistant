@@ -87,6 +87,8 @@ Proposed next research (awaiting the user and the professor):
 - **P-C Self-consistency instead of the human**: run the analysis k times and take the majority log
   source; runs that disagree = uncertainty → only those go to the analyst. Measures: S3/S5 vs the
   single run, and how often a human would be needed — against the 5.3 upper bound (+0.14 S5)
+  → **tool built + 2-case pilot 2026-10-03** (`eval/probe_self_consistency.py`; both pilot cases unanimous and wrong);
+  **shelved by the user** the same day for detection fields (log 2026-10-03)
 - **P-D Automated verification** of what analysts corrected most (e.g. the log source's platform
   against the attacked product: sudo → Linux), by code or a second model
 Together: automate by default, measure confidence, escalate only uncertain cases to the human.
