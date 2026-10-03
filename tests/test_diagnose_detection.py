@@ -179,3 +179,22 @@ def test_indicator_use_is_counted_for_all_rules_and_for_the_first():
     assert (d["indicators_given"], d["indicators_used"], d["indicators_used_first"]) == (3, 2, 1)
     s = summarise([d])
     assert s["right"]["indicators"] == {"given": 3, "used_any_rule": 2, "used_first_rule": 1}
+
+
+# --- the evidence step (Change 41's mechanism measure) -----------------------------------------
+
+def test_the_evidence_steps_record_is_summarised_with_its_use_by_the_rules():
+    row = _traced_row([FIRST_WEAK, LATER_GOOD], {})
+    row["pipeline"]["evidence"] = {"proposed": 4, "kept": ["schtasks.exe", "dropper"], "error": None,
+                                   "dropped": [{"string": "x.dll", "reason": "not in the report"},
+                                               {"string": "ab", "reason": "too short"}]}
+    d = case_detection(row, GOLD)
+    assert (d["evidence_proposed"], d["evidence_kept"], d["evidence_used"], d["evidence_used_first"]) == (4, 2, 2, 1)
+    s = summarise([d])["right"]["evidence"]
+    assert s == {"cases": 1, "proposed": 4, "kept": 2, "used_any_rule": 2, "used_first_rule": 1, "failed": 0,
+                 "dropped": {"not in the report": 1, "too short": 1}}
+
+
+def test_a_run_without_the_evidence_step_reports_none():
+    d = case_detection(_traced_row([FIRST_WEAK], {}), GOLD)
+    assert d["evidence_kept"] is None and summarise([d])["right"]["evidence"]["cases"] == 0

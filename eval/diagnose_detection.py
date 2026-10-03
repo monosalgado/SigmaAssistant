@@ -113,6 +113,16 @@ def case_detection(row: dict, gold_rule: dict, text: Optional[str] = None, min_c
     use_all, use_first = indicator_use(indicators, rules), indicator_use(indicators, rules[:1])
     out.update(indicators_given=use_all["given"], indicators_used=len(use_all["used"]),
                indicators_used_first=len(use_first["used"]))
+    evidence = (row.get("pipeline") or {}).get("evidence")       # Change 41's record; absent in earlier runs
+    if isinstance(evidence, dict):
+        kept = [{"value": string} for string in evidence.get("kept") or []]
+        out.update(evidence_proposed=evidence.get("proposed", 0), evidence_kept=len(kept),
+                   evidence_used=len(indicator_use(kept, rules)["used"]),
+                   evidence_used_first=len(indicator_use(kept, rules[:1])["used"]),
+                   evidence_failed=bool(evidence.get("error")),
+                   evidence_dropped=[d.get("reason") for d in evidence.get("dropped") or [] if isinstance(d, dict)])
+    else:
+        out.update(evidence_proposed=None, evidence_kept=None)
     best = {"s5": (out["s5"], 0), "s5v": (out["s5v"], 0)}
     for i, rule in enumerate(parsed[1:], 1):
         if rule is None:
@@ -169,6 +179,14 @@ def _group(rows: list) -> dict:
     g["indicators"] = {"given": sum(r.get("indicators_given", 0) for r in rows),
                        "used_any_rule": sum(r.get("indicators_used", 0) for r in rows),
                        "used_first_rule": sum(r.get("indicators_used_first", 0) for r in rows)}
+    with_evidence = [r for r in rows if r.get("evidence_kept") is not None]
+    g["evidence"] = {"cases": len(with_evidence),
+                     "proposed": sum(r["evidence_proposed"] for r in with_evidence),
+                     "kept": sum(r["evidence_kept"] for r in with_evidence),
+                     "used_any_rule": sum(r["evidence_used"] for r in with_evidence),
+                     "used_first_rule": sum(r["evidence_used_first"] for r in with_evidence),
+                     "failed": sum(r["evidence_failed"] for r in with_evidence),
+                     "dropped": dict(Counter(x for r in with_evidence for x in r["evidence_dropped"]))}
     g["fields_missing"] = dict(Counter(f for r in rows for f in r.get("fields_missing") or []).most_common())
     g["fields_extra"] = dict(Counter(f for r in rows for f in r.get("fields_extra") or []).most_common())
     if any("ours_judged" in r for r in rows):
@@ -223,6 +241,11 @@ def print_summary(name: str, s: dict) -> None:
         i = g["indicators"]
         print(f"    the analysis's indicators: {i['given']}; used by some rule {i['used_any_rule']}, "
               f"by the first rule {i['used_first_rule']}")
+        e = g["evidence"]
+        if e["cases"]:
+            print(f"    evidence step ({e['cases']} cases): proposed {e['proposed']}, kept {e['kept']}, used by some rule "
+                  f"{e['used_any_rule']}, by the first rule {e['used_first_rule']}; failed {e['failed']}; "
+                  f"dropped {e['dropped']}")
         print(f"    human fields missed: {dict(list(g['fields_missing'].items())[:8])}")
         print(f"    fields added:        {dict(list(g['fields_extra'].items())[:8])}")
         if "ours_grounded" in g:
