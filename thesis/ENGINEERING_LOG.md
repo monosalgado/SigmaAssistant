@@ -4692,3 +4692,27 @@ Where the log source is wrong (32 / 31 / 31 / 9), S5 0.04–0.09 and S5v 0.03: a
 **Reading:** the detection's weakness is the values, not the field names: right place, wrong strings. Two parts:
 the report's own specific strings mostly do not reach the rule (fixable from the text), and much of what the
 human rule matches is not in the report at all (knowledge the human brought: a bound on any report-only method).
+
+### Detection, step 1: where the report's own values are lost (tuning set, four runs; descriptive)
+User: "push it and do step 1". The rule writer does not see the report (`RULE_GENERATION`'s inputs: the attack
+vector summary, payload signatures, incidental list, attack summary, indicators, techniques, retrieved documents,
+the URLs). So a human value that is in the report but not in our first rule was either **given** to the rule
+writer (in a saved stage output it receives: the attack vector without its incidental list, the attack summary,
+the analysis's indicators and techniques) and not used; given only on the **incidental list** (which tells the
+rule writer to avoid it); or **never given**. `diagnose_detection.py` (+5 tests, seen to fail; +1 for
+`--min-value-chars`, seen to fail). Retrieved documents are not saved, nor the PoC stage's output, so a value
+reaching the rule writer only through them counts as never given.
+Cases whose log source is right, `c36_yaml60` / `p2g_shared60` / `oracle_ls60_unreviewed` / `oracle_ls60_oracle`:
+- **all values (≥ 3 characters):** missed by the first rule 38 / 48 / 41 / 60 — given, not used **24 / 33 / 28 /
+  40**; never given 13 / 14 / 13 / 20; incidental list 1 / 1 / 0 / 0; a later rule of the case uses 6 / 8 / 7 / 9.
+- **sensitivity, values ≥ 6 characters** (short values such as `add`, `esta` occur in a report by chance;
+  `--min-value-chars 6`, post-hoc): the human's values in the report 30 of 102 / 37 of 86 / 35 of 107 / 52 of 173;
+  the first rule uses **7 of 30 / 5 of 37 / 7 of 35 / 9 of 52**; of the misses, given, not used **12 / 22 / 19 /
+  28**, never given 10 / 9 / 9 / 15, incidental list 1 / 1 / 0 / 0.
+**Reading:** the loss happens at both points. The larger part (52–69% of the misses with ≥ 6 characters) is at
+the rule writer: the string was in what it was given and the first rule does not use it — e.g. `reg.exe save
+hklm\sam %temp%\~reg_sam.save`, `\comsvcs.dll minidump`, `\report.wer`. The rest (30–43%) never left the report:
+`wmic /node:`, `invoke-wmimethod win32_process -name create -argumentlist`, `netstat -aon | find` — command lines
+no earlier stage carried forward, which the rule writer cannot see. The incidental list almost never removed a
+human value (≤ 1 per run). "Given" is a literal match anywhere in the inputs, including inside an indicator's
+context sentence, so it is an upper bound on how clearly the value was offered.

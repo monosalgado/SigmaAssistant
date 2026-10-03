@@ -34,20 +34,40 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from eval.scorers import (extract_detection_values, score_detection_fields,  # noqa: E402
-                          score_detection_values)
+                          score_detection_values, value_matches)
 
 
 def _norm_text(text: str) -> str:
     return (text or "").lower().replace("\\\\", "\\")
 
 
-def grounded(value: str, text: str) -> Optional[bool]:
+def grounded(value: str, text: str, min_chars: int = 3) -> Optional[bool]:
     """Does the report contain the value? A leading path separator is not required (a rule writes
-    `\\schtasks.exe`, a report `schtasks.exe`); under 3 characters it is not judged (None)."""
+    `\\schtasks.exe`, a report `schtasks.exe`); under min_chars characters it is not judged (None)."""
     v = value.lstrip("\\/")
-    if len(v) < 3:
+    if len(v) < min_chars:
         return None
     return v in _norm_text(text)
+
+
+def _strings(node) -> str:
+    """Every string in a stage's saved output, one per line."""
+    if isinstance(node, dict):
+        return "\n".join(_strings(v) for v in node.values())
+    if isinstance(node, list):
+        return "\n".join(_strings(v) for v in node)
+    return node if isinstance(node, str) else ""
+
+
+def _given_to_the_rule_writer(row: dict):
+    """(what the rule writer is given, the incidental list it is told to avoid), from the saved stage
+    outputs: the attack vector, the attack summary, the analysis's indicators and techniques. Retrieved
+    documents are not saved, so a value reaching the rule writer only through them counts as never given."""
+    pipeline = row.get("pipeline") or {}
+    vector = pipeline.get("attack_vector") or {}
+    given = [{k: v for k, v in vector.items() if k != "incidental_artifacts"},
+             pipeline.get("attack_summary"), pipeline.get("indicators"), pipeline.get("ttp_mappings")]
+    return _strings(given), _strings(vector.get("incidental_artifacts"))
 
 
 def _parse(rule_text):
@@ -58,7 +78,7 @@ def _parse(rule_text):
     return rule if isinstance(rule, dict) else None
 
 
-def case_detection(row: dict, gold_rule: dict, text: Optional[str] = None) -> dict:
+def case_detection(row: dict, gold_rule: dict, text: Optional[str] = None, min_chars: int = 3) -> dict:
     rules = row.get("rules_yaml") or []
     parsed = [_parse(r) for r in rules]
     first = parsed[0] if parsed else None
@@ -89,8 +109,8 @@ def case_detection(row: dict, gold_rule: dict, text: Optional[str] = None) -> di
     if text is not None:
         ours = sorted({v for _, v in extract_detection_values(first.get("detection"))})
         theirs = sorted({v for _, v in extract_detection_values(gold_detection)})
-        ours_judged = {v: grounded(v, text) for v in ours}
-        gold_judged = {v: grounded(v, text) for v in theirs}
+        ours_judged = {v: grounded(v, text, min_chars) for v in ours}
+        gold_judged = {v: grounded(v, text, min_chars) for v in theirs}
         out.update(ours_judged=sum(g is not None for g in ours_judged.values()),
                    ours_grounded=sum(g is True for g in ours_judged.values()),
                    ours_ungrounded=[v for v, g in ours_judged.items() if g is False],
@@ -98,6 +118,17 @@ def case_detection(row: dict, gold_rule: dict, text: Optional[str] = None) -> di
                    gold_grounded=sum(g is True for g in gold_judged.values()),
                    gold_ungrounded=[v for v, g in gold_judged.items() if g is False],
                    gold_grounded_found=sum(g is True and v in values["found"] for v, g in gold_judged.items()))
+        given, blacklist = _given_to_the_rule_writer(row)
+        later = {v for rule in parsed[1:] if rule for _, v in extract_detection_values(rule.get("detection"))}
+        missed = []
+        for value, in_report in gold_judged.items():
+            if in_report is not True or value in values["found"]:
+                continue
+            status = ("given, not used" if grounded(value, given, min_chars) else
+                      "blacklisted" if grounded(value, blacklist, min_chars) else "never given")
+            missed.append({"value": value, "status": status,
+                           "in_later_rule": any(value_matches(value, p) for p in later)})
+        out["missed_available"] = missed
     return out
 
 
@@ -125,6 +156,10 @@ def _group(rows: list) -> dict:
         g["ours_ungrounded"] = dict(Counter(v for r in rows for v in r.get("ours_ungrounded") or []).most_common())
         g["gold_grounded_found"] = (sum(r.get("gold_grounded_found", 0) for r in rows),
                                     sum(r.get("gold_grounded", 0) for r in rows))
+        g["missed_available"] = dict(Counter(m["status"] for r in rows for m in r.get("missed_available") or []))
+        g["missed_examples"] = {status: [m["value"] for r in rows for m in r.get("missed_available") or []
+                                         if m["status"] == status][:8] for status in g["missed_available"]}
+        g["missed_in_later_rule"] = sum(m["in_later_rule"] for r in rows for m in r.get("missed_available") or [])
         g["gold_none_grounded"] = sum(r.get("gold_judged", 0) > 0 and r.get("gold_grounded") == 0 for r in rows)
     return g
 
@@ -171,6 +206,10 @@ def print_summary(name: str, s: dict) -> None:
                   f"(cases with none of the human's: {g['gold_none_grounded']})")
             print(f"    of the human's values in the report, ours found {g['gold_grounded_found'][0]} of "
                   f"{g['gold_grounded_found'][1]}")
+            print(f"    of those the first rule missed: {g['missed_available']}; "
+                  f"a later rule of the case uses {g['missed_in_later_rule']}")
+            for status, examples in g["missed_examples"].items():
+                print(f"      {status}: {examples}")
             print(f"    our values not in the report, most common: {dict(list(g['ours_ungrounded'].items())[:10])}")
 
 
@@ -179,6 +218,8 @@ def main() -> int:
     parser.add_argument("runs", nargs="+")
     parser.add_argument("--grounding", action="store_true", help="also check values against the report's text")
     parser.add_argument("--list", action="store_true", help="one line per case")
+    parser.add_argument("--min-value-chars", type=int, default=3,
+                        help="judge only values at least this long against the report (sensitivity check)")
     args = parser.parse_args()
     cases, url_map = {}, {}
     if args.grounding:
@@ -196,7 +237,7 @@ def main() -> int:
                 if row["rule_id"] not in texts:
                     texts[row["rule_id"]] = _case_text(cases[row["rule_id"]], url_map)
                 text = texts[row["rule_id"]]
-            results.append(case_detection(row, gold, text))
+            results.append(case_detection(row, gold, text, args.min_value_chars))
         print_summary(Path(run).stem, summarise(results))
         if args.list:
             for r in results:

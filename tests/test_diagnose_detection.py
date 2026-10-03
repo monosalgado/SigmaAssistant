@@ -79,3 +79,58 @@ def test_of_the_humans_values_in_the_report_the_ones_we_used_are_counted():
     assert case_detection(_row([LATER_GOOD]), GOLD, text=text)["gold_grounded_found"] == 2
     s = summarise([case_detection(_row([LATER_GOOD]), GOLD, text=text)])
     assert s["right"]["gold_grounded_found"] == (2, 3)
+
+
+# --- where a value the report gives is lost (step 1, user 2026-10-03: "do step 1") -------------
+# The rule writer does not see the report: only the attack vector, the attack summary, the analysis's
+# indicators and techniques (and retrieved documents). A human value that is in the report but not in our
+# first rule is either given to the rule writer and not used, given only on the incidental list (which tells
+# the rule writer to avoid it), or never given.
+
+def _traced_row(rules, attack_vector, indicators=()):
+    row = _row(rules)
+    row["pipeline"] = {"attack_vector": attack_vector, "attack_summary": "", "indicators": list(indicators),
+                       "ttp_mappings": []}
+    return row
+
+
+AV = {"initial_access_vector": "scheduled task at boot",
+      "payload_signatures": [{"pattern": "schtasks.exe /create", "where": "command_line"}],
+      "incidental_artifacts": ["ONSTART"]}
+TEXT = "The actor ran schtasks.exe /create /sc ONSTART."
+
+
+def test_a_missed_value_is_traced_to_where_it_was_lost():
+    d = case_detection(_traced_row([FIRST_WEAK], AV), GOLD, text=TEXT)
+    status = {m["value"]: m["status"] for m in d["missed_available"]}
+    assert status == {"\\schtasks.exe": "given, not used", "create": "given, not used", "onstart": "blacklisted"}
+
+
+def test_a_value_no_stage_passed_on_was_never_given():
+    d = case_detection(_traced_row([FIRST_WEAK], {"initial_access_vector": "x"}), GOLD, text=TEXT)
+    assert {m["status"] for m in d["missed_available"]} == {"never given"}
+
+
+def test_a_value_an_indicator_carries_was_given():
+    d = case_detection(_traced_row([FIRST_WEAK], {}, [{"value": "schtasks.exe", "type": "process"}]),
+                       GOLD, text=TEXT)
+    assert {m["value"]: m["status"] for m in d["missed_available"]}["\\schtasks.exe"] == "given, not used"
+
+
+def test_a_value_a_later_rule_uses_is_marked():
+    d = case_detection(_traced_row([FIRST_WEAK, LATER_GOOD], AV), GOLD, text=TEXT)
+    later = {m["value"]: m["in_later_rule"] for m in d["missed_available"]}
+    assert later == {"\\schtasks.exe": True, "create": True, "onstart": False}
+
+
+def test_the_summary_counts_where_values_were_lost():
+    s = summarise([case_detection(_traced_row([FIRST_WEAK], AV), GOLD, text=TEXT)])
+    assert s["right"]["missed_available"] == {"given, not used": 2, "blacklisted": 1}
+
+
+def test_a_longer_minimum_leaves_short_values_unjudged():
+    # Short values ("add", "esta") can occur in a report by chance; a sensitivity check judges only longer ones.
+    assert grounded("create", TEXT, min_chars=6) is True
+    assert grounded("esta", "a test station", min_chars=6) is None
+    d = case_detection(_traced_row([FIRST_WEAK], AV), GOLD, text=TEXT, min_chars=7)
+    assert [m["value"] for m in d["missed_available"]] == ["\\schtasks.exe", "onstart"]
