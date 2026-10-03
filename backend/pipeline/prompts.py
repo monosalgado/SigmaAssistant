@@ -770,6 +770,33 @@ Respond with JSON only:
 }}"""
 
 
+# --- Evidence Extraction (Change 41) --- (copies the report's own detectable strings, verbatim)
+# Runs after the attack vector, before the analysis. Code keeps only strings the report contains and adds
+# them to the payload signatures the rule writer follows (stage_evidence.py).
+
+EVIDENCE_EXTRACTION = """You copy detection evidence out of a threat report. Your only task: find the strings in the report below that a detection rule could match on, and copy each one exactly as the report writes it.
+
+### The attack (from the previous step)
+{attack_vector_summary}
+
+### Strings to leave out (the researcher's or the vendor's, not the attacker's)
+{incidental}
+
+### Report
+{text}
+
+### What to copy
+- Strings the report shows the attacker, the malware or the exploit using: command lines and their arguments, file paths and file names, registry keys and values, process, service and scheduled-task names, URLs and URL paths, domains, user agents, named pipes and mutexes.
+- Copy each string exactly as the report writes it, character for character. Do not complete, shorten, generalise or invent a string; if the report does not show it, leave it out.
+- Leave out hashes, CVE identifiers, and the names of products, vendors and threat actors.
+- At most 8 strings; if the report shows more, choose those most specific to this attack.
+
+### Output
+JSON only:
+{{"evidence": [{{"string": "<the string, exactly as in the report>", "quote": "<the sentence of the report it is in>", "kind": "<command_line | file_path | registry | process | network | url | other>", "activity": "<what the attacker does with it, in a few words>"}}]}}
+If the report shows no such string, return {{"evidence": []}}."""
+
+
 # --- Combined Review (Validation + Optimization) ---
 # Single call replaces 2 separate stages to reduce API usage.
 

@@ -4845,3 +4845,46 @@ rules (orchestrator, metadata, `DIAGNOSIS_FIELDS`) — measurement only. `backen
 checked after the push — both are strings inside generated detection rules (`…&apikey=` in a public exploit's
 URL, a router's `httoken=` parameter), not credentials. From now on a push runs only after a clean scan or after
 every hit has been read.
+
+---
+
+## 2026-10-03 — Change 41: a separate evidence step (the analysis split, first piece); and the run's plan
+
+User: "design the split" → chose **"Like payload patterns"** (the checked strings join the payload signatures:
+same framing, same coverage check, same single retry) and **"Leave it as is"** (the analysis keeps its indicators;
+one change at a time). Why (log above): the rule writer uses the payload signatures (a short list, checked by
+code with one retry: 76% used) but not the analysis's long, mixed indicator list (median 20 per case; Change 40's
+reframing gave nothing), and about a third of the report's values the human rules use are never passed on.
+**Change 41** (tests first: 14 new, seen to fail; the review-checkpoint stand-in pipeline and its expected event
+sequence gain the step; 711 → 713 pass with the measure): new `EvidenceStage` (`stage_evidence.py`, stage name
+`evidence`), after the attack vector and before the analysis, in both pipeline paths (`run_sync`,
+`_analysis_events` + the app's step list). One job (`EVIDENCE_EXTRACTION`, placeholders only, no value, no log
+source named): copy up to 8 strings a detection rule could match on — command lines, file paths, registry keys and
+values, process/service/task names, URLs, domains, user agents, pipes, mutexes — **exactly as the report writes
+them**, with the sentence each is in, its kind and the activity; leave out hashes, CVE identifiers and product,
+vendor and actor names; it gets the report text (the analysis's window), the attack-vector summary and the
+incidental list. **Code checks, never repairs:** a string is kept only if the report text the step was given
+contains it (case, runs of whitespace and a doubled backslash ignored), it has ≥ 3 characters, it is not on the
+incidental list, and it is no existing payload signature or repeat; at most 8. Kept strings are appended to
+`attack_vector.payload_signatures` (`source: evidence`, `where` = kind, `derived_from` = the sentence); the
+generation prompt now shows up to 16 payload signatures (was 10). Everything is recorded (`evidence`: proposed,
+kept, dropped with reasons, error) in the metadata and `DIAGNOSIS_FIELDS`; a failed call adds nothing.
+Side effects, disclosed: the coverage check's retry (≥ 50% of the signatures unused) now also counts the
+evidence strings, so it may fire more often; one more model call per case.
+**Measure built** (`diagnose_detection.py`, tests first, 2): the evidence step's record and the kept strings'
+use by some rule / the first rule.
+
+### Run plan — fixed before the run
+**Arms** (60 tuning cases, seed 0, `--no-web-enrich`, `run_resilient`, one run each, started together in the
+user's terminal): **A** — frozen checkout of `cde43ed` (main: Change 39, no Change 40 prompt) →
+`c41A_tuning60.jsonl`; **B** — frozen checkout of the Change 41 commit → `c41B_tuning60.jsonl`.
+**Primary:** S5vu, B − A, paired (`compare_arms.py`, bootstrap 95% CI, 10,000, seed 0). Descriptive (tuning set).
+**Mechanism:** (1) of the human rules' values that occur in the report (≥ 6 characters, `diagnose_detection.py
+--grounding --min-value-chars 6`), the share the first rule uses, summed over all parsed cases, A vs B; (2) the
+evidence step in B: strings proposed, kept, dropped by reason ("not in the report" = how often the model's
+"verbatim" strings are not verbatim), kept strings used by some rule and by the first rule.
+**Guards:** S5v precision (first rule, log source right); S3u, S5u, S1, rules per case; time per case; cases
+whose generation ran twice.
+**Gate to the confirmation set:** S5vu B − A > 0, mechanism (1) higher in B, and neither S3u nor S1 lower in B
+with a 95% CI entirely below 0. If it passes: confirmation set 2 (60 fresh cases, never run), k = 3 runs per arm
+of the same two commits, its plan fixed here first.

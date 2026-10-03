@@ -106,6 +106,8 @@ def _orchestrator(first_review_valid=True, rules_cover_from=1, rule_after_analys
         "entry_point": "sudo", "attacker_controlled_input": "user id",
         "payload_signatures": [{"pattern": "sudo -u#-1", "where": "command line", "derived_from": "x"}],
         "incidental_artifacts": [], "confidence": 0.9}))
+    orch.evidence = stage("evidence", lambda c: c.update(evidence={  # Change 41: adds nothing here
+        "proposed": 0, "kept": [], "dropped": [], "error": None}))
     orch.analysis = stage("analysis", analysis)
     orch.generate = stage("generate", generate)
     orch.review = stage("review", review)
@@ -129,6 +131,8 @@ ANALYSIS_STEPS = [
     ("stage", "attack_vector", "running", "Identifying the primary attack vector..."),
     ("stage", "attack_vector", "complete",
      "auth_bypass via local · 1 payload signatures · 0 incidental strings blacklisted · confidence 90%"),
+    ("stage", "evidence", "running", "Copying the report's detectable strings..."),     # Change 41
+    ("stage", "evidence", "complete", "0 strings kept, 0 dropped"),
     ("stage", "analysis", "running", "Extracting indicators, mapping TTPs, analyzing log sources..."),
     ("stage", "analysis", "complete", "2 indicators, 2 TTPs, logsource: process_creation/windows"),
 ]
@@ -140,7 +144,7 @@ GENERATION_STEPS = [
     ("stage", "coverage_check", "complete", "No gaps detected"),
 ]
 FEEDBACK_STEP = [("stage", "feedback", "complete", "No corrections needed")]
-ANALYSIS_CALLS = ["preprocess", "web_enrich", "poc_analysis", "attack_vector", "analysis"]
+ANALYSIS_CALLS = ["preprocess", "web_enrich", "poc_analysis", "attack_vector", "evidence", "analysis"]
 
 
 # --- the one-pass stream is unchanged -----------------------------------------------
