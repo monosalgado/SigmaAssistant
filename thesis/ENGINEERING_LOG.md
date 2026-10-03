@@ -4807,3 +4807,26 @@ right, ≥ 6 characters, `--grounding --min-value-chars 6`), A vs B.
 **Gate to the confirmation set:** S5vu B − A > 0, the first rule's indicator share higher in B, and neither S3u
 nor S1 lower in B with a 95% CI entirely below 0. If it passes, confirmation set 2 (`eval/manifest_confirm2.jsonl`,
 60 fresh cases, never run) with k = 3 runs per arm of the same two commits; that plan is fixed in this log first.
+
+### Two-arm run (Changes 39 + 40 vs before, tuning set): Change 40 fails its gate; Change 39 works
+`c40A_tuning60.jsonl` (A, `5d8eae2`) and `c40B_tuning60.jsonl` (B, `6a3fcf4`): both 60 of 60, 0 errors, verdict
+CITABLE; started together 2026-10-03 ~02:45 in the user's terminal, finished ~13:55. Both stopped once at the
+same case (`e710a880`, 37/60: one request timed out — A in review, B in analysis — about the same time, so
+likely the server); `run_resilient` relaunched each (1/5) and the case was redone (saved once in each arm).
+**Primary (as planned, `compare_arms.py`): S5vu A 0.105, B 0.075, B − A −0.030, 95% CI [−0.065, +0.003].**
+Guards: S3u 0.433 → 0.383 (−0.050 [−0.117, +0.017]); S5u 0.339 → 0.286 (−0.053 [−0.116, +0.002]); S1 0.933 →
+0.933; rules per case 4.217 → 3.983 (−0.233 [−0.567, +0.067]); S5v 0.099 → 0.087. P 27 → 26 of 60. No difference
+excludes 0, but every content measure is lower in B. Time per case 633 s in both.
+**Mechanism (`diagnose_detection.py`):** indicators used by the first rule, all parsed cases, **A 116 of 1,698
+(6.8%), B 127 of 1,544 (8.2%)**; by some rule A 466 (27.4%), B 417 (27.0%). Log source right (A 26, B 23 cases):
+first rule 46 of 846 vs 42 of 653; S5v precision 0.282 → 0.226 (guard, lower); of the human's values in the
+report (≥ 6 characters) the first rule uses 11 of 44 vs 7 of 30, misses offered as an indicator 17 vs 8 (not
+comparable: different cases have the right log source in each arm).
+**Change 39 (primary, as planned):** reports with an inline example string, absent from the input — **in the
+rules A 2 (`ro0ab`) → B 0; in the vector A 3 → B 0.** Its secondary measures cannot be separated from Change 40's.
+**Gate** (S5vu B − A > 0, indicator share up, no S3u/S1 drop with a CI below 0): **not passed** — S5vu is lower.
+The confirmation set is not run. **Reading:** presenting the indicators as "the strings the report gives", next
+to the payload signatures, barely changed how many the first rule uses (6.8% → 8.2%) and did not raise S5v; the
+rule writer still uses mostly the payload signatures (a short list, checked by code with a retry) and not the
+long, mixed indicator list (median 20 per case). Framing and position were not the obstacle. Decision for the
+user: keep or remove Change 40; keep Change 39 (it removed what it targeted).
