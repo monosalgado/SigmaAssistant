@@ -196,14 +196,14 @@ RULE_GENERATION = """You are an expert Sigma rule author. Generate detection rul
 ### Payload Signatures (strings/patterns a real attacker MUST produce — prefer these in detection)
 {payload_signatures}
 
-### Strings the Report Gives (found by the analysis — build the detection from the ones specific to this attack)
-{indicators}
-
 ### Strings that must NOT drive detection (researcher/patch workflow artifacts)
 {incidental_blacklist}
 
 ### Attack Summary
 {attack_summary}
+
+### Extracted Threat Indicators
+{indicators}
 
 ### MITRE ATT&CK Mappings (analyst-suggested; validate against the MITRE context below)
 {ttp_mappings}
@@ -251,7 +251,7 @@ RULE_GENERATION = """You are an expert Sigma rule author. Generate detection rul
 9. The "references" field MUST be a YAML list of URLs. Include ALL relevant URLs from the Reference URLs section above, plus the MITRE ATT&CK technique URL for each rule's target TTP.
 10. Author MUST be "Sigma Assistant". Date MUST be "{current_date}".
 11. Tags MUST use `attack.tXXXX` for MITRE techniques (lowercase technique id) and, for tactics, SigmaHQ's hyphenated tactic names (e.g. `attack.credential-access`: words joined with hyphens) — pick only techniques you can justify from the MITRE context above.
-12. Build the detection from the strings the report gives: the payload signatures, and the strings above that are specific to this attack (commands, file paths, registry keys, process names, network destinations); small details improve specificity.
+12. Include specific detection criteria based on the extracted indicators; small details improve specificity.
 
 ### Output Format
 Write each rule under its own heading, as a Sigma file inside a ```yaml block:

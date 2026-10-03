@@ -107,22 +107,6 @@ def normalize_rule_id(yaml_content: str):
     return f"id: {uuid.uuid4()}\n{yaml_content}", True
 
 
-def format_indicators(indicators: list) -> str:
-    """The analysis's indicators as the strings the report gives, one per line (Change 40): value, type,
-    and the analysis's context, as the payload signatures are listed."""
-    lines = []
-    for indicator in indicators or []:
-        if not isinstance(indicator, dict) or indicator.get("value") in (None, ""):
-            continue
-        line = f"- `{indicator['value']}`"
-        if indicator.get("type"):
-            line += f" ({indicator['type']})"
-        if indicator.get("context"):
-            line += f" — {indicator['context']}"
-        lines.append(line)
-    return "\n".join(lines) or "None found."
-
-
 class GenerateStage(PipelineStage):
     name = "generation"
     description = "Generating Sigma detection rules"
@@ -269,7 +253,7 @@ class GenerateStage(PipelineStage):
                 history_text += f"{role}: {msg.get('content', '')}\n\n"
 
         # --- Format indicators and TTPs ---
-        indicators_text = format_indicators(indicators)
+        indicators_text = json.dumps(indicators, indent=2) if indicators else "None"
         ttps_text = json.dumps(ttp_mappings, indent=2) if ttp_mappings else "None"
 
         # --- Reference URLs ---

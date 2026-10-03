@@ -4830,3 +4830,18 @@ to the payload signatures, barely changed how many the first rule uses (6.8% →
 rule writer still uses mostly the payload signatures (a short list, checked by code with a retry) and not the
 long, mixed indicator list (median 20 per case). Framing and position were not the obstacle. Decision for the
 user: keep or remove Change 40; keep Change 39 (it removed what it targeted).
+
+---
+
+## 2026-10-03 — Change 40's prompt change removed; Change 39 kept; the record of indicator use kept
+
+User: "remove change 40, keep 39". `prompts.py` and `stage_generate.py` restored from `a22a0a4` (before Change 40;
+Change 39 and the author's comments included): the indicators are again a JSON dump under the attack summary,
+instruction 12 is the earlier one, `format_indicators` is gone. **Kept:** `indicator_use` recorded on the final
+rules (orchestrator, metadata, `DIAGNOSIS_FIELDS`) — measurement only. `backend/` and `run_eval.py` differ from
+`a22a0a4` only by that record. Tests first (`test_change40_removed.py`, 5: 3 seen to fail, 2 hold what must stay
+— Change 39 and the record); `test_report_strings.py` (Change 40's tests) deleted; 697 pass.
+**Process note:** the push of `4feca00` ran in the same command as its secret scan, which reported 2 pattern hits;
+checked after the push — both are strings inside generated detection rules (`…&apikey=` in a public exploit's
+URL, a router's `httoken=` parameter), not credentials. From now on a push runs only after a clean scan or after
+every hit has been read.
