@@ -30,21 +30,55 @@ from __future__ import annotations
 
 import argparse
 import sys
+from functools import lru_cache
 from itertools import combinations
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import yaml
+
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO))
 
 from eval.compare_runs import bootstrap_ci, load, mcnemar, metric_value  # noqa: E402
 from eval.list_disagreements import first_logsource, stage_differences  # noqa: E402
 
-PRIMARY = ("S3u", "S5u")
-SECONDARY = ("S1", "S3", "S4", "S5", "rules", "seconds", "tokens")
+PRIMARY = ("S3u", "S5u", "S5vu")
+SECONDARY = ("S1", "S3", "S4", "S5", "S5v", "rules", "seconds", "tokens")
 STAGES = ("attack vector", "analysis", "first rule's log source")
 
 
 def _parses(row: dict) -> bool:
     return bool(((row.get("scores") or {}).get("validity") or {}).get("parses"))
+
+
+@lru_cache(maxsize=None)
+def _gold_detection(rule_path: str):
+    path = Path(rule_path)
+    path = path if path.is_absolute() else REPO / path
+    return (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("detection")
+
+
+def _first_detection(row: dict):
+    rules = row.get("rules_yaml") or []
+    try:
+        rule = yaml.safe_load(rules[0]) if rules else None
+    except yaml.YAMLError:
+        return None
+    return rule.get("detection") if isinstance(rule, dict) else None
+
+
+def _s5v(row: dict, as_the_user_gets_it: bool):
+    """S5v (`scorers.score_detection_values`) of the first rule against the human rule (`rule_path`):
+    undefined when the human rule has no values; as the user gets it, a rule that does not parse, or that
+    has no values, scores 0."""
+    from eval.scorers import extract_detection_values, score_detection_values
+    gold = _gold_detection(row["rule_path"])
+    if not extract_detection_values(gold):
+        return None
+    if not _parses(row):
+        return 0.0 if as_the_user_gets_it else None
+    f1 = score_detection_values(_first_detection(row), gold)["f1"]
+    return (f1 or 0.0) if as_the_user_gets_it else f1
 
 
 def run_value(row: dict, metric: str, gold_has_fields: bool = None, pick: tuple = None):
@@ -60,6 +94,8 @@ def run_value(row: dict, metric: str, gold_has_fields: bool = None, pick: tuple 
         if not _parses(row):
             return 0.0
         return 1.0 if ((row["scores"].get("logsource") or {}).get("exact_match")) else 0.0
+    if metric in ("S5vu", "S5v"):
+        return _s5v(row, metric == "S5vu")
     if metric == "S5u":
         if not gold_has_fields:
             return None

@@ -108,6 +108,11 @@ def case_detection(row: dict, gold_rule: dict, text: Optional[str] = None, min_c
                s5v=values["f1"], s5v_recall=values["recall"], s5v_recall_same_field=values["recall_same_field"],
                s5v_precision=values["precision"], values_found=values["found"], values_missing=values["missing"],
                values_unmatched=values["unmatched"])
+    from backend.pipeline.indicator_use import indicator_use
+    indicators = [i for i in (row.get("pipeline") or {}).get("indicators") or [] if isinstance(i, dict)]
+    use_all, use_first = indicator_use(indicators, rules), indicator_use(indicators, rules[:1])
+    out.update(indicators_given=use_all["given"], indicators_used=len(use_all["used"]),
+               indicators_used_first=len(use_first["used"]))
     best = {"s5": (out["s5"], 0), "s5v": (out["s5v"], 0)}
     for i, rule in enumerate(parsed[1:], 1):
         if rule is None:
@@ -161,6 +166,9 @@ def _group(rows: list) -> dict:
     g["added_a_field"] = sum(bool(r.get("fields_extra")) for r in rows)
     g["right_fields_no_value"] = sum((r.get("s5") or 0) >= 0.5 and r.get("s5v_recall") == 0 for r in rows)
     g["later_rule_better_s5v"] = sum(r.get("best_s5v_rule", 0) > 0 for r in rows)
+    g["indicators"] = {"given": sum(r.get("indicators_given", 0) for r in rows),
+                       "used_any_rule": sum(r.get("indicators_used", 0) for r in rows),
+                       "used_first_rule": sum(r.get("indicators_used_first", 0) for r in rows)}
     g["fields_missing"] = dict(Counter(f for r in rows for f in r.get("fields_missing") or []).most_common())
     g["fields_extra"] = dict(Counter(f for r in rows for f in r.get("fields_extra") or []).most_common())
     if any("ours_judged" in r for r in rows):
@@ -212,6 +220,9 @@ def print_summary(name: str, s: dict) -> None:
         print(f"    S5 >= 0.5 but no human value found: {g['right_fields_no_value']} cases")
         print(f"    best rule of the case: S5 {_fmt(g['best_s5'])}, S5v {_fmt(g['best_s5v'])}; "
               f"a later rule has a better S5v in {g['later_rule_better_s5v']}")
+        i = g["indicators"]
+        print(f"    the analysis's indicators: {i['given']}; used by some rule {i['used_any_rule']}, "
+              f"by the first rule {i['used_first_rule']}")
         print(f"    human fields missed: {dict(list(g['fields_missing'].items())[:8])}")
         print(f"    fields added:        {dict(list(g['fields_extra'].items())[:8])}")
         if "ours_grounded" in g:

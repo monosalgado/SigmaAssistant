@@ -166,3 +166,16 @@ def test_only_the_first_ten_payload_signatures_are_given():
     sigs = [{"pattern": f"p{i}"} for i in range(10)] + [{"pattern": "schtasks.exe"}]
     got = _status({"initial_access_vector": "x", "payload_signatures": sigs})
     assert got["\\schtasks.exe"] == "never given"
+
+
+# --- indicator use (Change 40's mechanism measure; the pipeline's own `indicator_use`, so runs of earlier
+# --- code are measured the same way from their saved rows) -------------------------------------------
+
+def test_indicator_use_is_counted_for_all_rules_and_for_the_first():
+    row = _traced_row([FIRST_WEAK, LATER_GOOD], {}, [{"value": "schtasks.exe", "type": "process"},
+                                                      {"value": "dropper", "type": "other"},
+                                                      {"value": "CVE-2024-1", "type": "cve"}])
+    d = case_detection(row, GOLD)
+    assert (d["indicators_given"], d["indicators_used"], d["indicators_used_first"]) == (3, 2, 1)
+    s = summarise([d])
+    assert s["right"]["indicators"] == {"given": 3, "used_any_rule": 2, "used_first_rule": 1}

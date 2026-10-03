@@ -137,3 +137,47 @@ def test_arms_are_compared_on_the_pick():
     b = [{"x": _pick_row("x", {"category": "proxy"}), "y": _pick_row("y", {"category": "dns"})}]
     out = compare(a, b, "P", picks=picks)
     assert out["n"] == 2 and out["mean_a"] == 0.5 and out["mean_b"] == 1.0 and out["diff"] == 0.5
+
+
+# --- S5v, the value-level detection score (Change 40's run, fixed before it; user 2026-10-03) ----------
+# As S5: S5vu as the user gets it (a first rule that does not parse scores 0; undefined when the human rule
+# has no values), S5v as the harness's convention (only rules that parse). The human rule is read from the
+# row's `rule_path`; scored by `scorers.score_detection_values`.
+
+def _valued_row(tmp_path, rid, ours, parses=True, gold_detection=None):
+    gold = tmp_path / f"{rid}.yml"
+    import yaml
+    gold.write_text(yaml.safe_dump({"title": "g", "detection": gold_detection or
+                                    {"selection": {"Image|endswith": "\\schtasks.exe",
+                                                   "CommandLine|contains": "/create"},
+                                     "condition": "selection"}}))
+    rule = yaml.safe_dump({"title": "r", "logsource": {"category": "process_creation"},
+                           "detection": {"selection": ours, "condition": "selection"}})
+    return {"rule_id": rid, "rule_path": str(gold), "rules_yaml": [rule if parses else "title: [unclosed"],
+            "scores": {"validity": {"parses": parses}}}
+
+
+def test_s5v_scores_the_first_rules_values_against_the_human_rule(tmp_path):
+    row = _valued_row(tmp_path, "a", {"Image|endswith": "\\schtasks.exe"})
+    assert run_value(row, "S5vu") == pytest.approx(2 / 3)      # precision 1, recall 1/2
+    assert run_value(row, "S5v") == pytest.approx(2 / 3)
+
+
+def test_as_the_user_gets_it_an_unparsed_rule_scores_zero_on_values(tmp_path):
+    row = _valued_row(tmp_path, "b", {}, parses=False)
+    assert run_value(row, "S5vu") == 0.0 and run_value(row, "S5v") is None
+
+
+def test_s5v_is_undefined_when_the_human_rule_has_no_values(tmp_path):
+    row = _valued_row(tmp_path, "c", {"Image": "x.exe"}, gold_detection={"condition": "selection"})
+    assert run_value(row, "S5vu") is None
+
+
+def test_a_rule_with_no_values_scores_zero_as_the_user_gets_it(tmp_path):
+    row = _valued_row(tmp_path, "d", {})
+    assert run_value(row, "S5vu") == 0.0
+
+
+def test_s5vu_is_a_primary_measure():
+    from eval.compare_arms import PRIMARY, SECONDARY
+    assert "S5vu" in PRIMARY and "S5v" in SECONDARY
