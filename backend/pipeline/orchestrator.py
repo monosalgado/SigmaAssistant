@@ -21,6 +21,7 @@ from backend.pipeline.stage_preprocess import PreprocessStage
 from backend.pipeline.stage_web_enrich import WebEnrichStage
 from backend.pipeline.stage_poc_analysis import PoCAnalysisStage
 from backend.pipeline.stage_attack_vector import AttackVectorStage
+from backend.pipeline.indicator_use import indicator_use
 from backend.pipeline.stage_analysis import AnalysisStage
 from backend.pipeline.stage_generate import GenerateStage
 from backend.pipeline.stage_review import ReviewStage
@@ -601,6 +602,10 @@ class PipelineOrchestrator:
                 "warnings": [],
             }
         context["coverage_check"] = coverage
+        # Which of the analysis's indicators the rules use - recorded, never enforced (Change 40).
+        context["indicator_use"] = indicator_use(
+            (context.get("extraction") or {}).get("indicators") or [],
+            [r.get("yaml_content", "") for r in rules_to_check if isinstance(r, dict)])
         if coverage.get("warnings"):
             print(f"[orchestrator] Coverage warnings: {coverage['warnings']}")
 
@@ -750,6 +755,7 @@ class PipelineOrchestrator:
             "logsource_primary": logsource_suggestion.get("primary_source", ""),
             "attack_vector": attack_vector,
             "coverage_check": coverage,
+            "indicator_use": context.get("indicator_use"),
             "generations": context.get("generation_log", []),
             "generation_retried": bool(context.get("generation_retried")),
         }

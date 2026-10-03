@@ -70,7 +70,7 @@ _YAML_BLOCK_RE = re.compile(r"```ya?ml\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
 DIAGNOSIS_FIELDS = (
     "attack_vector", "attack_summary", "indicators", "ttp_mappings", "ttp_dropped_ids",
     "logsource_suggestions", "logsource_primary", "suggested_log_sources",
-    "coverage_check", "validation_issues", "poc_snippets_found",
+    "coverage_check", "indicator_use", "validation_issues", "poc_snippets_found",
     "generations", "generation_retried",
     # Only in the simulated-analyst run's oracle rows (plan 5.3): the review and its check.
     "analyst_review", "analyst_check",

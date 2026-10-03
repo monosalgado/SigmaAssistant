@@ -4766,3 +4766,44 @@ indicators (e.g. `reg.exe save hklm\sam %temp%\~reg_sam.save`, `\comsvcs.dll min
 (`wmic /node:`, `invoke-wmimethod win32_process -name create -argumentlist`, `netstat -aon | find`): the
 attack-vector stage is asked about initial access and exploitation ("DURING EXPLOITATION"), and the analysis did
 not list them either. Many human rules in this corpus detect that later host activity.
+
+---
+
+## 2026-10-03 — Change 40: the strings the report gives, for the rule writer; and the two-arm run's plan
+
+User: "push it and design the run" → chose **"Prompt + record"** (no new retry) and **"Two arms, same night"**.
+**Measures built first** (`a22a0a4`; tests first, seen to fail): `compare_arms.py` gains **S5vu** (primary: the
+first rule's S5v as the user gets it — a rule that does not parse, or has no values, scores 0; undefined when
+the human rule has no values) and **S5v** (secondary: rules that parse). `backend/pipeline/indicator_use.py`:
+an indicator is *used* when a rule's detection value contains it, or is contained in it and is at least half as
+long (S5v's matching); under 3 characters not judged; `filter…` selections skipped. `diagnose_detection.py`
+reports it for any saved run (the same function), so the earlier code is measured the same way. Baseline,
+`c36_yaml60`, log source right: **609 indicators, 155 used by some rule (25%), 35 by the first rule (6%)**; S5vu
+over all 60 cases 0.102.
+**Change 40** (tests first, 6, seen to fail; 698 pass): in `RULE_GENERATION` the indicators move from a JSON
+dump under the attack summary to right after the payload signatures, as **"Strings the Report Gives (found by
+the analysis — build the detection from the ones specific to this attack)"**, one line each (`format_indicators`:
+`` `value` (type) — context``). Instruction 12 ("Include specific detection criteria based on the extracted
+indicators") becomes "Build the detection from the strings the report gives: the payload signatures, and the
+strings above that are specific to this attack (commands, file paths, registry keys, process names, network
+destinations)". The model decides which strings fit (no type is filtered by code; kinds of evidence named, no
+value). The pipeline records `indicator_use` {given, used, unused} on the final rules (with the coverage
+check), in the metadata and `DIAGNOSIS_FIELDS`. Not enforced: no retry.
+
+### Run plan — fixed before the run
+**Arms** (60 tuning cases, seed 0, `--no-web-enrich`, `run_resilient`, one run each, **started together** in
+the user's terminal so both see the same server conditions — P-B: answers differ between sessions, not within
+one):
+- **A, before** — frozen checkout of `5d8eae2` (the pipeline before Changes 39 and 40) → `c40A_tuning60.jsonl`
+- **B, after** — frozen checkout of the Change 40 commit (Changes 39 + 40) → `c40B_tuning60.jsonl`
+**Primary:** S5vu, B − A, paired over the cases both have (`compare_arms.py`, bootstrap 95% CI, 10,000, seed 0).
+Descriptive (tuning set; one run per arm).
+**Mechanism:** the share of indicators used by the first rule (`diagnose_detection.py`, all parsed cases and log
+source right), A vs B; the report's values offered as indicators that the first rule does not use (log source
+right, ≥ 6 characters, `--grounding --min-value-chars 6`), A vs B.
+**Guards:** S5v precision (first rule, log source right); S3u, S5u, S1, rules per case (`compare_arms.py`).
+**Change 39:** reports with an inline example string in their rules, absent from the input
+(`count_example_copies.py`): A expected 2–4, B 0.
+**Gate to the confirmation set:** S5vu B − A > 0, the first rule's indicator share higher in B, and neither S3u
+nor S1 lower in B with a 95% CI entirely below 0. If it passes, confirmation set 2 (`eval/manifest_confirm2.jsonl`,
+60 fresh cases, never run) with k = 3 runs per arm of the same two commits; that plan is fixed in this log first.
