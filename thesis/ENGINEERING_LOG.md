@@ -4888,3 +4888,38 @@ whose generation ran twice.
 **Gate to the confirmation set:** S5vu B − A > 0, mechanism (1) higher in B, and neither S3u nor S1 lower in B
 with a 95% CI entirely below 0. If it passes: confirmation set 2 (60 fresh cases, never run), k = 3 runs per arm
 of the same two commits, its plan fixed here first.
+
+### Change 41, two-arm run (tuning set): the gate passes
+`c41A_tuning60.jsonl` (A, `cde43ed`) and `c41B_tuning60.jsonl` (B, `4def19d`): both 60 of 60, 0 errors, no stop,
+verdict CITABLE; started together 2026-10-03 16:11, finished ~21:20 / ~21:53 (the server was faster: 5.2 and 5.7
+min per case).
+**Primary (`compare_arms.py`): S5vu A 0.080, B 0.105, B − A +0.026, 95% CI [−0.013, +0.069].** (Run-to-run
+variation of this size is possible: arm A of the Change 40 run, earlier code, scored 0.105.)
+Guards: S3u 0.400 → 0.383 (−0.017 [−0.083, +0.033]); S1 0.950 → 0.967 (+0.017 [−0.050, +0.083]); S5u 0.316 →
+0.299 (−0.017 [−0.068, +0.032]); rules per case 3.850 → 4.067; time 310 → 342 s (+32 [−16, +88]); tokens +11,597
+[+8,260, +14,901]; P 26 → 25 of 60; generation ran twice in 34 → 42 of 60 (the coverage retry fires more, as
+disclosed). S5v precision, log source right: 0.232 → 0.291.
+**Mechanism (`diagnose_detection.py --grounding --min-value-chars 6`):** (1) of the human rules' values in the
+report, the first rule uses — log source right 7 of 30 → 10 of 34, wrong 4 of 58 → 5 of 50; **all parsed cases
+11 of 88 (12.5%) → 15 of 84 (17.9%)**. (2) The evidence step (B, parsed cases): proposed 423, **kept 285**,
+dropped 86 duplicate, 35 incidental, **15 not in the report (3.5% of proposed)**, 2 too short; failed 0; kept
+strings used by some rule 165 (58%), by the first rule 53 (19%). Misses are now more often "given as a payload
+pattern" (8 / 22 vs 3 / 5): the strings reach the rule writer's checked list, and the first rule still skips some.
+**Gate** (S5vu B − A > 0; mechanism (1) higher in B; neither S3u nor S1 lower with a 95% CI below 0): **passed**.
+Observation, quick count (not a committed tool): 30 of the 299 kept strings are defanged (`[.]`), e.g.
+`trustsecpro[.]com` — verbatim, but not as they would appear in a log. Left as is: the confirmation tests this
+commit unchanged; refanging would be its own change.
+
+### Confirmation plan (confirmation set 2) — fixed before any confirmation run
+**Cases:** `eval/manifest_confirm2.jsonl`, 60 cases never run by any arm (drawn 2026-09-29; no overlap with the
+tuning or the first held-out set; only their categories were looked at). Flags as every run: `--manifest
+eval/manifest_confirm2.jsonl`, no `--sample`, `--no-web-enrich`, `run_resilient`.
+**Arms, k = 3 runs each:** A = frozen `cde43ed` → `c41A_confirm_r1/r2/r3.jsonl`; B = frozen `4def19d` →
+`c41B_confirm_r1/r2/r3.jsonl`. The two arms run at the same time (one terminal tab each, its 3 runs one after
+another), so both see the same server conditions. **Nobody reads any confirmation row or score until all six runs
+are finished.**
+**Primary:** S5vu, B − A, each case's value the mean of its 3 runs, paired over the cases every run has
+(`compare_arms.py --a r1 r2 r3 --b r1 r2 r3`, bootstrap 95% CI, 10,000, seed 0). **Confirmed if the CI's lower
+bound is above 0**; otherwise not confirmed (reported as is).
+**Secondary, descriptive:** mechanism (1) pooled over the 3 runs per arm; the evidence step's record (B); guards
+S3u, S5u, S1, rules per case, time, tokens, second generations; P/Pany; consistency across the 3 runs.
