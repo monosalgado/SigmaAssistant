@@ -385,7 +385,11 @@ directly: run the rule over the events of the attack (and, for R10, over normal 
       `99a49a9`.
 - [>] **R9.2 Synthetic replay — design written 2026-10-05 (log: "R9.2 synthetic replay: design and validation
       plan"), FIXED 2026-10-05 (user: any rule of the case; lenient log-source applicability; thresholds as
-      proposed). Validation V1–V5 on known answers comes before any of our rules is scored; if it
+      proposed).
+      **Amended 2026-10-05 before building** (user: our rule may catch the attack without the human's evidence):
+      events from **every** human rule for the report (primary), misses sorted into "report-grounded,
+      plausible different detection, unverified" vs ungrounded, and the replay read as a **lower bound**
+      (V2's related-pair hit rate = the size of that bias). Lab detonation picks report-grounded misses. Validation V1–V5 on known answers comes before any of our rules is scored; if it
       fails, the replay is not used.** Original note (user, 2026-10-04: "put it in our action plan"):
       for each report, build the events the human rule is written to catch (from its own detection: values,
       modifiers, condition; one event per way the rule can fire), give them the human rule's log source, and
@@ -399,7 +403,8 @@ directly: run the rule over the events of the attack (and, for R10, over normal 
       fire on the real recorded attack? A sanity check of R9.2, not a score.
 - [ ] **R10 False positives:** our rules over logs of normal activity. Needs a benign log set — recorded in the
       user's lab, or a public dataset (a download needs the user's approval).
-- [ ] **5.6 Lab detonation** for 2–3 showcase reports (the user runs the lab; never operated by Claude).
+- [ ] **5.6 Lab detonation** for 2–3 showcase reports (the user runs the lab; never operated by Claude) —
+      chosen among R9.2's report-grounded misses (our rule differs from the human's), reproducible in the lab.
 
 ---
 

@@ -5092,3 +5092,29 @@ context. No builder or measure change after our scores are seen.
 fields the human rule's log source leaves unnamed** (log-source-ignored firing also reported); (3) validation
 thresholds **as proposed**: V1 ≥ 95%, V2 synthetic false fires on real non-pairs ≤ 1% (related-pair hit reported),
 V3 ≤ 2%, V4 today − May 95% CI above 0, V5 null hit ≤ 5% and far below the real hit.
+
+### R9.2 amendment (user, 2026-10-05, before anything is built): our rule may catch the attack another way
+User: "a lot of the attack vectors written by the human were not even present on the PoC, so do you think is really
+that bad that we don't have exactly what the human have? maybe it will trigger even without what the human wrote"
+→ "yes, add them to the design". The point holds: two valid rules can catch one attack through different evidence,
+and in real logs both would be present. Events built from a human rule hold only that rule's evidence, so **a replay
+hit means "catches what the human targeted"; a miss is ambiguous** — the replay is a **lower bound**, conservative
+against our rules (as S3, S5 and S5v are). The size of this bias on known data is V2's related-pair hit rate (of the
+45 real "different rule, same recorded attack" pairs, the share synthetic events also catch) — reported as such.
+Added to the fixed design:
+1. **Events from every human rule for the report.** Besides the gold rule, the other human-written SigmaHQ rules for
+   the same report, by the definition already used for Pany (`alternative_logsources.py`: an emerging-threats rule
+   citing one of the case's input URLs, a URL cited by more than 5 rules linking nothing). **Primary hit: our rules
+   fire on the events of any human rule for the report**; hit on the gold rule's events alone is reported as well
+   (the measure first fixed). Coverage and breadth use the same union; V3 stays on gold rules; V4 and V5 are applied
+   to the primary hit.
+2. **Misses sorted.** A missed case is a **"report-grounded miss — plausible different detection, unverified"** when
+   one of the case's rules parses and every one of its detection values that can be judged (≥ 3 characters) occurs in
+   the report's text (`diagnose_detection.grounded`, the pages + fetched PoC code), at least one value judged; other
+   misses are "ungrounded". Reported apart; never counted as a hit.
+3. **Real logs for the question itself.** Whether a rule fires without the human's evidence is settled only by real
+   attack logs. Lab detonation (5.6) chooses 2–3 reports that are **report-grounded misses**, reproducible in the
+   user's lab, preferably held-out or fresh reports; the user runs the lab (never operated by Claude); the recorded
+   logs are scored with the validated evaluator for both our rules and the human rules.
+**Not done, on purpose:** no events are built from the report text — our rules are written from that same report,
+so they would fire almost by construction.
