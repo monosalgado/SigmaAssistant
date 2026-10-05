@@ -5005,3 +5005,23 @@ reported as is.** Any later fix to the matcher gets its own test first, and the 
 first; the matcher scores our rules only once every evaluable recording agrees or each disagreement is explained.
 Also, descriptive: every rule against the other recordings' events (off-target matches; each one listed, since some
 may be genuine).
+
+### The evaluator's validation on SigmaHQ's recordings: first pass 132 of 136
+Committed before the first pass (`e8fa0fb`; tests first — `test_rule_matcher.py` 16, `test_validate_matcher.py` 6;
+4 planted bugs: 3 caught at once, the 4th — a missing field read as empty — caught after one test was added, `Field:
+'*'` needs the field). `eval/validate_matcher.py` → `eval/results/matcher_validation.jsonl`:
+**138 recordings: agree 132, disagree 4, no JSON 2 → 132 of 136 evaluable (97.1%), first pass, no fix.** No rule
+missing, none "cannot evaluate".
+**The 4 disagreements, examined — all the evaluator matching more events than `match_count` (1), and each extra event
+satisfies the rule as written:** `0b9ad457` AnyDesk Temporary Artefact — 3 events whose `TargetFilename` contains
+`\AppData\Roaming\AnyDesk\user.conf` (`user.conf.new` ×2, `user.conf~RF…TMP`); `8fbf3271` Cred Dump Tools Dropped
+Files — `procdump64.exe`, `procdump64a.exe`, `procdump.exe`, each a listed `endswith` (the `:Zone.Identifier` copies
+correctly not matched); `45e112d0` IE Change Domain Zone — three `ZoneMap\Domains\bad-domain.com\…` values, all
+`DWORD (0x00000002)`, which the filter does not exclude; `c7dcacd0` Disable Administrative Share Creation —
+`AutoShareServer` and `AutoShareWks` both `DWORD (0x00000000)`, both listed. So the recordings' `match_count`
+undercounts these four (SigmaHQ's external checker may count differently); no matcher change.
+**Off-target (descriptive):** 28 rules match events of other recordings, 45 pairs — related rules overlapping by
+design (e.g. the generic "File Download Via Bitsadmin" fires on the four specific Bitsadmin rules' recordings).
+**Verdict under the plan:** every evaluable recording agrees or its disagreement is explained → the evaluator may
+score rules. Its known limits: the 2 recordings without JSON (EVTX only; reading EVTX would need a new dependency),
+and the value types it raises "cannot evaluate" for (none occurred here).
