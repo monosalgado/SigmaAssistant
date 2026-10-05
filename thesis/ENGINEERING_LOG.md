@@ -4923,3 +4923,33 @@ are finished.**
 bound is above 0**; otherwise not confirmed (reported as is).
 **Secondary, descriptive:** mechanism (1) pooled over the 3 runs per arm; the evidence step's record (B); guards
 S3u, S5u, S1, rules per case, time, tokens, second generations; P/Pany; consistency across the 3 runs.
+
+### Change 41, confirmation (confirmation set 2, k = 3 per arm): not confirmed
+`c41A_confirm_r1/r2/r3.jsonl` (A, `cde43ed`) and `c41B_confirm_r1/r2/r3.jsonl` (B, `4def19d`): all six 60 of 60,
+0 errors, verdict CITABLE; started 2026-10-03 ~23:10, finished 2026-10-04 ~22:20; every run used exactly the
+manifest's 60 cases (no overlap with the tuning or the first held-out set — checked by full rule id: tuning
+`e710a880-…3023` and confirmation `e710a880-…33da` are two rules). No row or score was read before all six ended.
+**Disclosed, run conditions:** run 1 of each arm — one connection error each, relaunched by `run_resilient`, the
+case redone. 2026-10-04 ~13:20 the connection was lost for > 10 minutes and both arms gave up at 13:33 (A run 3 at
+18/60, B run 2 at 54/60; B's run 3 gave up at 13:44 with no row); **the Spark itself had been restarted** (uptime
+3 h 35 min at 18:24 → booted ~14:50; Ollama still 0.34.1, same model and context). Resumed ~15:20 (same commands;
+resume per file). ~18:50 a VPN drop shorter than the 10-minute window; both rebuilt the tunnel and resumed. The arms
+straddle the restart unequally (after it: A ~42 cases of run 3; B 6 of run 2 and all of run 3) — answers depend on
+the server's state (P-B), so this is a slight imbalance, not a reason to discard.
+**Primary (as planned): S5vu A 0.149, B 0.144, B − A −0.005, 95% CI [−0.039, +0.025] — the lower bound is below
+0: not confirmed.** The tuning set's +0.026 [−0.013, +0.069] did not replicate.
+Secondary (`compare_arms.py`, case = mean of 3 runs): S3u 0.428 → 0.444 (+0.017 [−0.011, +0.050]); S5u 0.313 →
+0.331 (+0.018 [−0.017, +0.055]); S1 0.956 → 0.961; S4 0.182 → 0.147 (−0.036 [−0.077, +0.002]); S5v 0.159 → 0.145;
+rules 3.950 → 4.044; time 368 → 399 s (+31 [−12, +73]); tokens +11,142 [+8,528, +13,971]; P 0.483 → 0.494; Pany
+0.644 → 0.644; same first-rule log source in all 3 runs 47 → 49 of 60 (McNemar p = 0.73); generation ran twice in
+109 → 131 of 180.
+**Mechanism (pooled over the 3 runs, `diagnose_detection.py --grounding --min-value-chars 6`):** of the human rules'
+values in the report, the first rule uses **A 99 of 591 (16.8%), B 118 of 591 (20.0%)**. The evidence step (B):
+proposed 1,295, kept 862, dropped 208 duplicate, 171 incidental, **53 not in the report (4.1%)**, 1 too short; 1
+failed call of 180. So the mechanism moved as designed, but not enough to change S5v: the report's own values are a
+minority of what the human rules match (with ≥ 6 characters, 591 of the human values over 3 runs; most are not in
+the report at all), and the added strings come with others the human rule does not use.
+**Reading:** giving the rule writer the report's own strings, checked and verbatim, makes it use more of them, but
+the value score against the human rule does not rise. Detection values that agree with the human rule mostly come
+from knowledge the report does not hold. Decision for the user: keep Change 41 (an analyst-facing, verified
+evidence list, R2; no measured benefit on S5v; costs time and retries) or remove it.
