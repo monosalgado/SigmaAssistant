@@ -178,7 +178,7 @@ from eval.count_example_copies import REVIEW_EXAMPLES, review_copies  # noqa: E4
 
 
 def test_the_review_examples_marker_is_counted_in_the_rules():
-    assert REVIEW_EXAMPLES == ("samlidp",)
+    assert REVIEW_EXAMPLES == ("samlidp", "<app path>", "<random token>")
     assert review_copies("cs-uri-stem|startswith: '/metadata/samlidp/'", "a Citrix ADC report") == ["samlidp"]
     assert review_copies("cs-uri-stem|startswith: '/vpn/'", "a Citrix ADC report") == []
     assert review_copies("x samlidp", "the page mentions /metadata/samlidp/") == []         # in the input: not a copy

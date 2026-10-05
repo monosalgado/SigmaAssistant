@@ -57,9 +57,10 @@ def inline_examples(attack_vector: dict, model_input_text: str, rules_text: str 
     return {"in_vector": [e for e in absent if e in vector], "in_rules": [e for e in absent if e in rules]}
 
 
-# The review prompt's real-case example (`COMBINED_REVIEW` item 8: `/metadata/samlidp/asdf`, the Citrix demo report).
+# The review prompt's real-case example (`COMBINED_REVIEW` item 8: `/metadata/samlidp/asdf`, the Citrix demo report;
+# replaced by placeholders in Change 44, which are counted too: a placeholder in a rule is a copy).
 # `samlidp` occurs in no retrieval collection, saved page, PoC file or gold rule (checked 2026-10-05).
-REVIEW_EXAMPLES = ("samlidp",)
+REVIEW_EXAMPLES = ("samlidp", "<app path>", "<random token>")      # + Change 44's placeholders
 
 
 def review_copies(rules_text: str, model_input_text: str) -> list:

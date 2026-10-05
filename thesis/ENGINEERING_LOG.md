@@ -5255,3 +5255,12 @@ placeholder-looking path with its stable prefix using a value from the Citrix de
 **Reading:** unlike the attack-vector prompt's examples (copied 1–6 times per 60 before Changes 27/30/39), this one
 has never leaked; a run could not measure a fix (0 → 0). Decision for the user: replace it on principle (placeholders,
 not real-case values) together with the next review-prompt change, or leave it. Pipeline-quality #3 is measured.
+
+## 2026-10-05 — Change 44 (#3): the review prompt's illustration uses placeholders
+
+User: "bundle the fix". `COMBINED_REVIEW` item 8: `/metadata/samlidp/asdf` → `|startswith: '/metadata/samlidp/'` becomes
+`/<app path>/<random token>` → `|startswith: '/<app path>/'`; the point it illustrates (a placeholder path → its stable
+prefix) is kept. Done on principle (never copied: 0 of 2,540). As in Change 30 the placeholders are counted markers
+(`REVIEW_EXAMPLES` = `samlidp`, `<app path>`, `<random token>`), so a copied placeholder would show. Tests first (3: 2
+seen to fail; the third holds the markers). 763 pass. **Measure:** with the next review-prompt change's run — copies in
+rules (expected 0 → 0) and that run's guards. The Change 42/43 arms are frozen checkouts without it (no confound).
