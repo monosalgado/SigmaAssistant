@@ -41,12 +41,16 @@ class AnalysisStage(PipelineStage):
         preprocessed = context["preprocessed"]
         combined_text = preprocessed["combined_text"]
 
-        # 1. RAG: Retrieve MITRE ATT&CK context for better TTP mapping
+        # 1. RAG: Retrieve MITRE ATT&CK context for better TTP mapping. The query is the attack-vector
+        # summary, then the start of the text: the text alone often opens with the input URLs and a site
+        # menu (a gold technique in the top 5 in 3 of 42 tuning cases, vs 14 of 42 this way; #1, 2026-10-05).
         mitre_context = "No MITRE context available."
         mitre_docs = []
+        mitre_query = (AttackVectorStage.format_vector_summary(context.get("attack_vector") or {})
+                       + "\n" + combined_text[:500])
         try:
             results = self.vector_store.search(
-                combined_text[:500], collections=["mitre"], n_results=5
+                mitre_query, collections=["mitre"], n_results=5
             )
             mitre_docs = results.get("mitre", {}).get("documents", [[]])[0]
             if mitre_docs:

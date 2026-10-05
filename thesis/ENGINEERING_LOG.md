@@ -5167,3 +5167,20 @@ to fail).
 (the pre-combined analysis), `RULE_VALIDATION`, `RULE_OPTIMIZATION` (the pre-combined review), `WEB_SEARCH_QUERIES`.
 Checked: the 8 prompts in use are identical to before; the author's section comments are kept. Tests first (1, seen to
 fail). 750 pass.
+
+---
+
+## 2026-10-05 — Change 42 (#1): the analysis searches ATT&CK with the attack-vector summary, then the text
+
+**Diagnosis first** (new `eval/probe_mitre_query.py`, tests first, 5, seen to fail; offline — the local index and the
+saved pages, no model call). The analysis stage's ATT&CK search (5 results, given to the model as "MITRE context") used
+`combined_text[:500]`. On the tuning cases those 500 characters are mostly the input URLs, a page header and, e.g. on
+Securelist, the whole site menu ("Dark mode off / Securelist menu / English Russian Spanish…"). The embedding model
+reads at most 256 word pieces (~1,000 characters). Three queries, fixed before looking, on `c41A_tuning60`'s 42 cases
+whose gold rule names techniques — a gold technique among the 5 results:
+**current 3 of 42** (parent 6; mean recall 0.071) · **attack-vector summary 12 of 42** (14; 0.226) · **summary then the
+current text 14 of 42** (14; 0.239).
+**Change 42** (tests first, 2: 1 seen to fail, 1 holds the fallback): the query is `format_vector_summary(attack
+vector)` followed by `combined_text[:500]`. Chosen over the summary alone because when the attack-vector stage finds
+nothing its summary is a fixed sentence, and the text keeps the search informed. 757 pass. Measured in a run with #2
+(plan below, fixed before the run).
