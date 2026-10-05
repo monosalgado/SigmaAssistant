@@ -5118,3 +5118,10 @@ Added to the fixed design:
    logs are scored with the validated evaluator for both our rules and the human rules.
 **Not done, on purpose:** no events are built from the report text — our rules are written from that same report,
 so they would fire almost by construction.
+
+### R9.2 build: two precisions fixed before the validation runs (2026-10-05)
+Written while building `eval/validate_replay.py`, before it has run: (a) V5's "far below the real hit" means **the
+null hit is at most half the real hit** (as well as ≤ 5%); (b) V1 is checked on both rule sets — SigmaHQ's recording
+rules and the corpus's gold rules — and **must reach 95% in each** (the stricter reading). V2 compares logic only
+(the recordings carry no log-source label to apply), as the evaluator's validation did. V4 and V5 necessarily compute
+today's held-out replay hit; it is reported as the primary result only after all five tests pass.
