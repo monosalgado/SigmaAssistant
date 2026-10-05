@@ -5025,3 +5025,70 @@ design (e.g. the generic "File Download Via Bitsadmin" fires on the four specifi
 **Verdict under the plan:** every evaluable recording agrees or its disagreement is explained → the evaluator may
 score rules. Its known limits: the 2 recordings without JSON (EVTX only; reading EVTX would need a new dependency),
 and the value types it raises "cannot evaluate" for (none occurred here).
+
+---
+
+## 2026-10-05 — R9.2 synthetic replay: design and validation plan (PROPOSED; fixed once the user settles the open points)
+
+User: "I want to understand more about the synthetic replay, like how do you know it should work and we are not
+making this to have good results" → "yes, write that first". **Nothing is built and nothing is scored until the
+open points below are decided; after that, the builder and the measures are frozen before they touch our rules.**
+
+**What it measures — and what it does not.** "If the behaviour the human rule targets happened, would our rule
+fire?" The events are built from the human rule, so it is still agreement with the human's view — at the level of
+detection logic (fields, modifiers, conditions, log source), not strings. It does **not** show that a rule catches
+the real attack; only real logs do (lab detonation, 5.6). This is stated with every result.
+
+**How it could flatter us, and how it could punish us.** (1) Building an event means filling text around the
+human's fragments; any context we invent (e.g. a realistic command line around `-enc`) could make our rule fire for
+our words, not its logic. (2) A very broad rule of ours would fire on almost any built event. (3) Minimal events
+hold only the fields the human rule uses, so a rule of ours that also requires another field (e.g. the parent
+process) cannot fire — this punishes specificity. Each is either removed by the construction rule or measured.
+
+**The event builder (frozen before use).** For each rule (pySigma-parsed, as the evaluator): the condition tree is
+put in disjunctive normal form with NOT pushed down to the atoms; **each conjunction is one way the rule can fire →
+one event** (at most 20 per rule, in a fixed order; the cap is reported). Values are **minimal, nothing invented**:
+a wildcard string becomes its literal parts (`*` → nothing, `?` → `x`); several string atoms on one field are joined
+by one space, starts-with parts first and ends-with parts last; a number is itself; `|gt N` → N+1, `|lt N` → N−1;
+`|cidr` → the network's first host; `|exists: true` → the field with `x`, `false`/null → field absent; booleans as
+written; `|fieldref` → both fields `x`; an expansion → its first alternative; a keyword → the field `Message`.
+Negated atoms are satisfied by leaving their field out (a missing field matches no pattern); when the same field is
+set by a positive atom, the evaluator checks the negation holds. A regex atom, a contradiction (e.g. one field equal
+to two values), or an event the evaluator says the source rule does not fire on → **"cannot build"**, listed with
+the reason, never patched. Events carry only the fields their conjunction needs, plus the source rule's log source.
+
+**Log-source applicability (OPEN POINT 2).** Proposed: our rule sees an event when every log-source field our rule
+names (category, product, service) equals the event's, or the event's leaves it unnamed. Also reported: firing with
+log source ignored (logic only), so log-source misses (already S3) and logic misses are told apart.
+
+**Measures for our rules (OPEN POINT 1 on the unit).** Per case: **hit** — the case's rules fire on at least one of
+the human rule's events (proposed primary: **any rule of the case**, as deployed; first rule secondary); **coverage**
+— the share of the human rule's events caught; **breadth** — the share of the *other* cases' event sets our rules
+fire on (an early warning of false alarms: a broad rule cannot look good on hit without showing here); **miss
+reasons** — rule does not parse / log source / a field our rule requires is absent from the event / value mismatch.
+
+**Validation — on cases whose answer is known, before scoring any of our rules (thresholds: OPEN POINT 3).**
+- **V1 Builder self-check:** each rule fires on its own built events (SigmaHQ's 136 recordings' rules and the
+  corpus's 303 gold rules). Proposed pass: **≥ 95% of buildable rules**; every failure listed.
+- **V2 Real vs synthetic, SigmaHQ's recordings (the strongest test):** for every pair (rule X, recording of rule Y)
+  among the 136, *real* = X fires on Y's recorded events (the validated evaluator: 136 self-pairs + the 45 related
+  pairs found 2026-10-04), *synthetic* = X fires on events built from Y's rule. Proposed pass: **synthetic false
+  fires on real non-pairs ≤ 1%**; the synthetic hit rate on the 45 related pairs is **reported, not thresholded** —
+  it measures how much minimal events under-detect compared with real logs (the size of bias 3).
+- **V3 Unrelated rules stay quiet:** each corpus gold rule against the other gold rules' events. Proposed pass:
+  **≤ 2% of pairs fire**, each listed (related campaigns may overlap genuinely).
+- **V4 A known ordering:** the May code is worse than today's (held-out, k = 3: log source 0.072 vs 0.439). Proposed
+  pass: replay hit, today − May, **95% CI above 0** (paired by case, mean of 3 runs).
+- **V5 Null baseline:** each case scored with *another* case's generated rules (a fixed derangement, seed 0) on
+  today's held-out runs. Proposed pass: **null hit ≤ 5%** and far below the real hit.
+**If any of V1, V2, V3, V4, V5 fails, the replay is not used for our rules, and that is reported.** A builder bug found
+during validation gets a test first; the first-pass and final validation numbers are both reported.
+
+**Then, and only then, our rules:** today's held-out runs (`main_heldout_r1–r3`, never tuned on) and the fresh-report
+runs of today's pipeline (`c41A_confirm_r1–r3`) as primary, k = 3 each; the tuning runs descriptive; the May runs for
+context. No builder or measure change after our scores are seen.
+**Open points settled by the user (2026-10-05), before anything is built — the design above is now FIXED:**
+(1) unit: **any rule of the case** is primary (first rule secondary); (2) log-source applicability: **lenient on
+fields the human rule's log source leaves unnamed** (log-source-ignored firing also reported); (3) validation
+thresholds **as proposed**: V1 ≥ 95%, V2 synthetic false fires on real non-pairs ≤ 1% (related-pair hit reported),
+V3 ≤ 2%, V4 today − May 95% CI above 0, V5 null hit ≤ 5% and far below the real hit.
