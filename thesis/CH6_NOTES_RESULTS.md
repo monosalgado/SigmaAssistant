@@ -345,6 +345,11 @@ contamination finding) are in Chapter 5 §5.9; this section is about the **pipel
     Status: reduced; the remaining S3 limit is the analysis suggestion (plan 2.6).
 
 ### 6.4.4 A correct suggestion overridden — generation ignores the logsource suggestion (defect 11), open, measured 2026-09-24
+
+> **Update 2026-10-05 — fixed (Changes 26, 29), measured on eight runs of today's pipeline:** the first rule uses the
+> top suggestion exactly in 81–93% of scored cases (47–54 of 55–59); a correct suggestion is overridden in 0–3 per run
+> (was 14 of 29 in baseline v2). The remaining log-source error is the analysis's pick: followed while wrong (10–20 per
+> run) or right but ranked 2nd–3rd (6–14). (log 2026-10-05, #5)
 - `[MEASURED]` Observed live (Bumblebee report, 2026-09-13): the analysis stage suggested
   `process_creation / windows / sysmon` at 0.95 confidence; the generated rule used
   `webserver_access_log` and described an attack the report does not contain. Seen again

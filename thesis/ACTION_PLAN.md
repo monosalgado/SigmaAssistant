@@ -584,6 +584,7 @@ From Change 34's live test (2026-09-27) — awaiting triage:
 - remove the unused `feedback_data` / `_apply_user_feedback` path (superseded by Change 34)
 - the Analysis panel (and so the review) is hidden under 900 px wide
 - (5.3) the one rewrite fixes 3 of 12 log-source departures — a stronger rewrite, or the analyst's choice earlier in the prompt?
+- **(2026-10-05) defect 11 FIXED** (Changes 26, 29): first rule = top suggestion in 81–93% (8 runs), overrides 0–3 per run — pipeline-quality #5 closed without a change
 - (5.3) a service-form choice (`windows/security`, `linux/auditd`, `firewall`) gets a category added, although the block says "no `category`" (3 cases + live sudo)
 - (5.3) stage order: the first rule stays the initial-access rule when the analyst's log source is a later stage (4 of 9 departures use it in a later rule)
 - ~~M2 A/A run~~ — **done as 5.3's by-product** (CH6 §6.0b)

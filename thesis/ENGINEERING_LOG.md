@@ -5217,3 +5217,25 @@ the three arms run in **sessions of 20 cases** (`--sample 60 --seed 0 --limit 20
 60`; `--limit` applies after the sample, and resume skips the cases done). In every session all three arms run
 together, so each case's three versions see the same server state — the comparison is paired within case, as before;
 sessions may be on different days. Everything else in the plan is unchanged.
+
+---
+
+## 2026-10-05 — #5, defect 11 diagnosed on today's pipeline: effectively fixed; no change
+
+User: "do the defect 11 diagnosis first" (offline; the committed `diagnose_logsource.py`, definitions fixed
+2026-09-24). Eight runs of today's pipeline — tuning `c41A_tuning60`, `c40A_tuning60`; confirmation set 2
+`c41A_confirm_r1–r3`; held-out `main_heldout_r1–r3`:
+- **First rule = the analysis's top suggestion, exactly (Change 26's measure): 49/57, 53/56, 54/59, 51/56, 52/57,
+  48/58, 47/58, 49/55** (81–93%); a product added to it 0 in all eight, a service 1 (`main_heldout_r2`).
+- **Overridden** (top suggestion's category right, rule's wrong — defect 11 as defined in 2.1): **1, 1, 3, 2, 3, 0, 0, 0**
+  (baseline v2: 14 of 29 right suggestions were overridden).
+- Where the wrong rules come from: **followed_wrong** (a wrong top suggestion, followed) 17, 20, 16, 15, 16, 10, 12, 12;
+  **ranked_low** (the gold category offered as suggestion 2 or 3) 10, 6, 11, 14, 14, 13, 12, 13; wrong_elsewhere 0–8.
+- The gold category is in **some** rule of the response in 30/57, 34/56, 39/59, 31/56, 34/57, 35/58, 36/58, 34/55 —
+  4–10 more than in the first rule.
+- Typical confusions (gold → top suggestion → rule, `c41A_confirm_r1`): file_event → process_creation (5),
+  process_creation → webserver (4), registry_set → process_creation (3).
+**Reading:** defect 11 is fixed by Changes 26 and 29 (status FIXED, measured); the rule writer follows the
+recommendation. The remaining log-source error is the analysis's pick — wrong (followed) or right but not first —
+which is R7 (Change 38's attempt failed). For the assistant, the analyst's choice among the suggestions (Change 34)
+is the measured lever (5.3: S5 +0.144 when the analyst is right). Pipeline-quality item #5 closes without a change.
