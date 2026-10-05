@@ -3,12 +3,13 @@
 Created 2026-09-23. **This file decides what gets worked on.** Anything not in the
 current phase goes to the Inbox or the Parking lot, not into the code.
 
-**Current phase: 2 — Fix the logsource failure.** Phase 1 complete 2026-09-24
-(its Inbox triaged with the user 2026-09-25). Phase 0 runs in parallel (it needs the
-professor, not the code).
-**Update 2026-09-27:** Phase 2 is complete (held-out confirmation). Active: the first slice of
-Phases 3/4 — the analyst confirms or corrects the analysis before generation (Change 34, branch
-`analyst-review`), started before the professor's sign-off by the user's decision.
+**Current state (reviewed 2026-10-04):** Phases 1 and 2 complete (held-out S3 0.455). The analyst
+review (Change 34) is merged into `main` (2026-09-28). Since then: the professor's questions (P-B, the May
+rerun), better log-source picks (R7: Change 38 tried and removed), detection values (R8: S5v, the detection
+diagnosis; Changes 39 kept, 40 and 41 removed — 41 not confirmed on 60 fresh cases). **Now: R9, the replay
+test** — the rule evaluator is built and validated (132 of 136 SigmaHQ recordings); **next: synthetic replay**
+(section "Current work" below). Phase 0 (contributions, outline) is still the user's and the professor's.
+History: Phase 2 was the active phase until 2026-09-27; the first slice of Phases 3/4 (Change 34) followed.
 
 ---
 
@@ -243,7 +244,7 @@ and report it as a finding rather than keep tuning.
       written from specific past cases (Example A is a real saved Citrix rule), and the stage
       still copies example text into answers (`/saml/login` on a rootkit report) — count that
       before and after, with a committed script.
-- [ ] **Defect 15 at its cause — decided 2026-09-26: (a) + (b) as one change, in the shared run
+- [x] **Defect 15 at its cause — decided 2026-09-26: (a) + (b) as one change, in the shared run
       with 2.7 and 2.8; (c) in Phase 3.** Before that run: ~~extend the copy counter to the
       generated rules~~ **done 2026-09-26** (`in_rules`; v2 4, step c 4, step d 2 — every vector
       copy reached the rules); add the placeholders as markers (with the change). The model
@@ -255,6 +256,7 @@ and report it as a finding rather than keep tuning.
       string in an answer that is absent from the input, shown in the assistant's report
       (Phase 3). (a)/(b) change prompts → one run each. S3 does not see these copies (both
       cases were right), so they do not block the Phase 2 exit.
+      **Done 2026-09-26 as Change 30** (shared run: example copies 1/1/6 → 0/0/0); (c) stays in Phase 3 (3.3).
 - [x] **2.6** Change 28 (runs alone) vs
       `p2d_web_bias60.jsonl`: generated table (35 categories, 75 service sources, from
       `data/sigma/rules`); primary = top suggestion = gold over all 60 rows
@@ -280,14 +282,17 @@ and report it as a finding rather than keep tuning.
       about the recommended source's absent fields (generated from the table, not written per
       case), and one sentence on what Sigma's `product` means (the platform that writes the
       log, not the attacked application). S3-relevant → its own run, before the shared run.
-- [ ] **2.7** (user, was 2.2e) ATT&CK ID check: drop technique IDs that do not exist in
+- [x] **2.7** (user, was 2.2e) ATT&CK ID check: drop technique IDs that do not exist in
       ATT&CK (the `mitre` collection), like the rule-id check (Change 9). Changes finished
       answers → its own run. Measure S4 and invented-ID counts.
-- [ ] **2.8** (user, was 2.2f) The analysis lists **the 10 most relevant techniques** at most.
+      **Done 2026-09-26 as Change 31** (shared run): 1 invented ID dropped; S4 no change.
+- [x] **2.8** (user, was 2.2f) The analysis lists **the 10 most relevant techniques** at most.
       Data (Change 25 run): gold rules use 1 technique (28 of 40), at most 5; the analysis lists
       a median of 6, more than 10 in 14 of 58 cases, 108 in one; of the gold techniques it
       finds (24), 21 are in its first 10 but only 15 in its first 5. All 6 looping answers
       were in the analysis stage. Prompt change → its own run. Measure S4 and answers cut.
+      **Done 2026-09-26 as Change 32** (shared run): lists over 10: 12 → 0, but the cap became a quota
+      (median 5 → 10) — rewording is in the Inbox.
 - [x] **2.9 Held-out confirmation** (user, 2026-09-26) — last Phase 2 step, after the shared
       run. Phase 2 frozen at `a6e9157`; `eval/manifest_heldout.jsonl` (60 of the 242 never-run cases).
       **Done 2026-09-27** (both runs CITABLE): **exit test met — S3 25/55 = 0.455, one-sided exact
@@ -368,6 +373,33 @@ spent and the result is written up as a finding.
         loses 0–3 cases per run, so the gain is the failure mode gone, not a significant S1 rise.
         **Kept (user, 2026-09-28).** Merged with the review work into `main` after the demo.
 
+## Current work — R9: do the rules fire? (2026-10-04)
+
+Why (log 2026-10-03/04): S5v showed that most of what the human rules match is not in the report, so agreement
+with one human rule has a low ceiling and cannot say whether a rule **detects the attack**. Replay asks that
+directly: run the rule over the events of the attack (and, for R10, over normal activity).
+- [x] **R9.1 The rule evaluator** (`eval/rule_matcher.py`): pySigma parses, our matcher evaluates; no new
+      dependency (user chose to design it, 2026-10-04). Definition fixed in the log first; 22 tests, 4 planted
+      bugs caught. **Validated** (`eval/validate_matcher.py`): SigmaHQ's recordings, **first pass 132 of 136
+      agree**, the 4 disagreements are genuine extra matches (explained), 2 recordings have no JSON. `e8fa0fb`,
+      `99a49a9`.
+- [ ] **R9.2 Synthetic replay — next, to design with the user** (user, 2026-10-04: "put it in our action plan"):
+      for each report, build the events the human rule is written to catch (from its own detection: values,
+      modifiers, condition; one event per way the rule can fire), give them the human rule's log source, and
+      ask whether **our** rule fires on them — counting only a rule whose log source would see those events.
+      Questions to settle in the design (fixed in the log before it scores anything): how events are built for
+      `not`/filters, keywords, regex and numeric conditions (what cannot be built → listed apart, never guessed);
+      first rule vs any rule of the case; the log-source applicability rule. **Offline on saved runs** — no new
+      pipeline run is needed: it can score `main_heldout_r1–r3`, the confirmation runs and the tuning runs as they
+      are. Caveat to keep: it is still built from the human rule ("would ours catch what the human targeted?").
+- [ ] **R9.3** The 2 corpus reports with a SigmaHQ recording (React2Shell CVE-2025-55182, Grixba): does our rule
+      fire on the real recorded attack? A sanity check of R9.2, not a score.
+- [ ] **R10 False positives:** our rules over logs of normal activity. Needs a benign log set — recorded in the
+      user's lab, or a public dataset (a download needs the user's approval).
+- [ ] **5.6 Lab detonation** for 2–3 showcase reports (the user runs the lab; never operated by Claude).
+
+---
+
 ## Phase 3 — Assistant backend (after Phase 0 approves it)
 
 Design: `thesis/ASSISTANT_DESIGN.md` — **reviewed with the user 2026-09-26**; decisions in its §9
@@ -386,13 +418,15 @@ later; SIEM/EDR conversion pending Phase 0).
 - [ ] **3.1** Report builder: a pure function from pipeline context to the report *(offline)*
       Include (user, 2026-09-25): suggestions marked `service_to_confirm` (Change 25) are
       shown for the analyst to confirm, with `service_dropped` explained.
-- [ ] **3.2** Split the orchestrator into analyse → checkpoint → generate, with the
-      automated path unchanged *(offline)*
+- [x] **3.2** Split the orchestrator into analyse → checkpoint → generate, with the
+      automated path unchanged *(offline)* — **done by Change 34** (`analyse_for_review`,
+      `generate_after_review`; `run_sync` unchanged), merged 2026-09-28
 - [ ] **3.3** Evidence quotes, with code checking that each quote is on the page. Measure.
       User (2026-09-25): paraphrase is fine if it is faithful to the page. So evidence is
       shown either way; code marks the pieces found word for word on the page as
       "verified". Only ~26% of quotes are verbatim today.
-- [ ] **3.4** API endpoints and saved state for the checkpoint
+- [ ] **3.4** API endpoints and saved state for the checkpoint — first slice done (Change 34: the
+      analysis waits in the session); still open: editing values (R1), the revise button (R4)
 - [ ] **3.5** Validate edited rules (new endpoint; `PUT /rules/{id}` validates too)
       Includes former 2.5 (user: important): flag a logsource category that does not exist in
       Sigma (`email`, `security`, `network`: 4 of 237 rules in the step (c) run, none first) and
@@ -463,7 +497,8 @@ Which of these run depends on the contributions agreed in Phase 0.
       packets are too large once nested in GlobalProtect (TLS and larger Spark
       responses stall). **Not a blocker:** the steps separate — generate rules
       on the Spark (GlobalProtect only), detonate and export EVTX in the lab
-      (OpenVPN only), score with Zircolite locally (no VPN). Both VPNs at once
+      (OpenVPN only), score locally (no VPN) — with `eval/rule_matcher.py` (built and validated
+      2026-10-04, see "Current work"; Zircolite no longer needed). Both VPNs at once
       only if rules were generated live during an attack
       Note (Inbox 2026-09-25): SigmaHQ's `regression_data` has 138 EVTX files, but for only
       2 of our 437 emerging-threat rules and 0 of the 60-case sample — detonation needs the lab.
@@ -491,6 +526,16 @@ is a decision, not a default.
   since May, in use) still carries an example from the Citrix demo report (`/metadata/samlidp/asdf`).
   Replace it with a placeholder example, as Change 27 did for the attack-vector prompt — after the
   May rerun, one change, measured.
+
+- **(2026-10-04, confirmation runs)** `run_resilient` waits only 10 × 60 s for the tunnel; a VPN drop or a Spark
+  restart longer than that ends the run (it resumes per file). Longer wait for overnight runs — a harness change,
+  never during a run.
+- **(2026-10-04)** S5v is computed post-hoc (`compare_arms.py`, `diagnose_detection.py`), not by the harness's
+  `summarise.py` — wire it in if it becomes a reported metric.
+- **(2026-10-03, Change 41 run)** 10% of strings copied "verbatim" from reports are defanged (`trustsecpro[.]com`);
+  relevant if a checked evidence list returns (R2).
+- **(2026-10-02)** The desktop app stops background jobs after 2 h: runs longer than that start in the user's
+  Terminal panel (recipe in memory; no change to the code).
 
 *(one line each; triaged at the end of the current phase)*
 
@@ -535,7 +580,9 @@ From Change 34's live test (2026-09-27) — awaiting triage:
 
 Assistant roadmap (proposed 2026-09-28, user: "add them to the plan") — awaiting triage:
 - R1 the analyst can **add and edit** techniques, indicators, patterns — not only reject (T1190 was missing once)
-- R2 **evidence "found in the report"**: code checks each quoted basis against the page; verified-quote rate (= plan 3.3)
+- R2 **evidence "found in the report"**: code checks each quoted basis against the page; verified-quote rate (= plan 3.3).
+  Tried 2026-10-03/04 as a rule-quality change (Change 41, a checked evidence step): not confirmed on 60 fresh cases, removed;
+  stays here as an analyst-facing feature (`4def19d` in history)
 - R3 **rule editor with live pySigma validation**, incl. log-source categories that do not exist in Sigma (= plan 3.5)
 - R4 **"ask the assistant to revise this rule"** from a plain-words instruction, then validated (design decision 3)
 - R5 **a stronger rewrite**: 3 of 12 departures fixed (5.3) — the analyst's decisions earlier in the prompt; service form; rule order
@@ -546,8 +593,9 @@ Assistant roadmap (proposed 2026-09-28, user: "add them to the plan") — awaiti
   rule for the report; the product + service form is never picked; confirmation set 2 (`eval/manifest_confirm2.jsonl`) unused
 - R8 **a value-level detection score**: S5 compares field names only (sudo: S5 = 1.0, the human's match broader)
   → **built 2026-10-03 (S5v, `scorers.score_detection_values`)**; detection diagnosis, Changes 39 (kept), 40 (removed),
-  41 (not confirmed on 60 fresh cases, k = 3; keep/remove pending the user) — CH6 §6.5c, CH7 55
-- R9 **do the rules fire?** replay with Zircolite over SigmaHQ's 138 regression EVTX files; detonation in the lab (= 5.6, Phase 0)
+  41 (not confirmed on 60 fresh cases, k = 3; **removed** 2026-10-04, `5c149a2`) — CH6 §6.5c, CH7 55
+- R9 **do the rules fire?** → **in progress, see "Current work — R9"** (evaluator built and validated 2026-10-04;
+  SigmaHQ's 138 recordings cover only 2 of the corpus's 303 gold rules, so they validate the evaluator, not our rules)
 - R10 **false positives**: the rules over benign logs
 - R11 **"a rule already exists"**: search SigmaHQ for the same CVE/behaviour before generating (prior art: SIGMERGE)
 - R12 **a realistic simulated analyst**: wrong 10–30% of the time — what a wrong confirmation costs (extends 5.3)
@@ -679,3 +727,14 @@ so removing one is reversible; untracked and ignored files have no such safety n
 | 2026-09-25 | No hardcoding to get results: the LLM stages decide; code validates against a spec and records. Step (c) is a prompt change with no enforcement | user |
 | 2026-09-25 | Step (b): a log source with a category carries no service; without a category the service stays, unknown ones go to the analyst to confirm | user |
 | 2026-09-24 | Defect 19: bound every answer (Change 24), treat a cut answer as a model failure; restart the 2.2a run from scratch; add ATT&CK ID check (2.2e) and ≤ 10 techniques (2.2f) as their own steps | user |
+| 2026-09-28 | Rerun the May code on the saved pages, several runs each (held-out 60, k = 3); presentations stay local, never in git | user |
+| 2026-09-29 | P-B (where the non-determinism comes from) chosen and probed, then its follow-up; keep every worktree, result file and deck ("keep all of what we did") | user |
+| 2026-09-29 | Work on better log-source picks (R7): Change 37 (JSON escape repair) kept; Change 38 v1–v3 on the tuning set, v3 = a separate ranking step | user |
+| 2026-10-03 | Change 38 removed (v3 made the picks worse); confirmation set 2 left unused for a later change | user |
+| 2026-10-03 | P-C (self-consistency) chosen, tool built and piloted on 2 cases, then shelved: "focus on the detection fields" | user |
+| 2026-10-03 | Detection: diagnose where the log source is right + a value-level score (S5v); remove the attack-vector prompt's inline examples (Change 39, kept) | user |
+| 2026-10-03 | Change 40 = "prompt + record" (indicators shown as the report's strings), measured by "two arms, same night"; failed its gate → prompt part removed, the indicator-use record kept | user |
+| 2026-10-03 | Change 41 = the analysis split's first piece (a checked evidence step), its strings "like payload patterns", the analysis left as is; passed the tuning gate → confirmation on set 2, k = 3 | user |
+| 2026-10-04 | Change 41 not confirmed (S5vu −0.005 [−0.039, +0.025]) → removed | user |
+| 2026-10-04 | R9 replay: a rule evaluator from pySigma's parsing + our own matcher (no new dependency) rather than pySigma's SQLite backend; validated on SigmaHQ's recordings; synthetic replay next, in the plan | user |
+| 2026-10-04 | Process: a push runs only after a clean secret scan, or after every hit is read (after a push ran with 2 unread, benign hits) | Claude, logged |
