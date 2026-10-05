@@ -5264,3 +5264,27 @@ prefix) is kept. Done on principle (never copied: 0 of 2,540). As in Change 30 t
 (`REVIEW_EXAMPLES` = `samlidp`, `<app path>`, `<random token>`), so a copied placeholder would show. Tests first (3: 2
 seen to fail; the third holds the markers). 763 pass. **Measure:** with the next review-prompt change's run — copies in
 rules (expected 0 → 0) and that run's guards. The Change 42/43 arms are frozen checkouts without it (no confound).
+
+---
+
+## 2026-10-05 — #7, the analysis answer's length: measured; the cut answers' ends now recorded
+
+User: "continue with #7". New `eval/analysis_length.py` (tests first, 3, seen to fail; offline, from the rows' call
+records). Ten runs of today's pipeline and before (`c36_yaml60`, `c40A_tuning60`, `c41A_tuning60`, `c41A_confirm_r1–r3`,
+`main_heldout_r1–r3`, `p2f_product60`):
+- **Finished analysis answers: median 2,106–2,409 tokens, p90 3,734–5,021, max 5,781–12,658** — far below the 16,384
+  limit; median 44–134 s per answer.
+- **Cases whose every analysis attempt was cut (no analysis at all): 0–2 per run of 60**, and **the same cases recur**:
+  `5de632bc` (REvil/Kaseya) in 3 of 10 runs (all three confirmation runs), `9a2d8b3e` and `54e57ce3` (Emotet) in 2,
+  `6f6afac3`, `965fff6c` in 1. Cases with any cut attempt: 0–4 per run.
+- **What fills the saved analysis (JSON characters): indicators 56%**, techniques 26%, log-source suggestions 13%, attack
+  summary 5% (median indicators 3,272 characters). The techniques are capped at 10; **the indicators have no limit**.
+- The recurring cases are long (40,000–62,000 characters; median of the other tuning cases 19,963), several
+  indicator-heavy (a quick count, not a committed tool: REvil/Kaseya ~723 domain-like strings, Emotet ~219 hashes and
+  ~217 domains, CSharp Streamer ~62 hashes) — but `9a2d8b3e` (29 hashes) and `965fff6c` (none) are not lists.
+**Hypothesis, not yet measured:** the model copies out long indicator lists until it runs out. Answers are not saved,
+so: **the call record now keeps the last 2,000 characters of an answer cut at the limit** (`cut_tail`, telemetry +
+`OllamaLLMClient`; None for finished answers; no answer, retry or rule changes). Tests first (3, seen to fail). 769 pass.
+The Change 42/43 arms are frozen checkouts from before this, so their sessions will not record tails; the first run from
+`main` after them will. A change (e.g. a limit on indicators, worded as a limit, not a target — Change 43's lesson — or
+the indicator list as its own call) waits for what the tails show.

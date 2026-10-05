@@ -33,6 +33,8 @@ from backend.telemetry import TELEMETRY, extract_gemini_usage, extract_openai_us
 OUTPUT_TOKEN_LIMIT = 16384
 # A cut answer is retried as often as the OpenAI client retries a timeout (2).
 OUTPUT_LIMIT_RETRIES = 2
+# A cut answer's last characters are kept in its call record (#7, 2026-10-05): what it was writing when it ran out.
+CUT_TAIL_CHARS = 2000
 
 
 class OutputLimitReached(Exception):
@@ -352,6 +354,7 @@ class OllamaLLMClient(LLMClient):
                 operation="generate", latency_s=time.monotonic() - started,
                 prompt_chars=len(prompt), response_chars=len(content or ""),
                 usage=extract_openai_usage(response), output_limited=cut,
+                cut_tail=(content or "")[-CUT_TAIL_CHARS:] if cut else None,
             )
             if not cut:
                 return content

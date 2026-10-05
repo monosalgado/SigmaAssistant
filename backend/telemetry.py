@@ -95,6 +95,9 @@ class LLMCall:
     # `ok` stays True - but the model did not finish: a model failure, not an
     # infrastructure one.
     output_limited: bool = False
+    # The last characters of an answer cut at the output limit (#7, 2026-10-05): what the model was writing when
+    # it ran out. None for every finished answer; answers themselves are not kept.
+    cut_tail: Optional[str] = None
 
 
 def extract_gemini_usage(response: Any) -> dict:
@@ -151,6 +154,7 @@ class LLMTelemetry:
         ok: bool = True,
         error: Optional[str] = None,
         output_limited: bool = False,
+        cut_tail: Optional[str] = None,
     ) -> None:
         usage = usage or {}
         call = LLMCall(
@@ -169,6 +173,7 @@ class LLMTelemetry:
             error=error,
             stage=_current_stage.get(),
             output_limited=output_limited,
+            cut_tail=cut_tail if output_limited else None,
         )
         with self._lock:
             self._calls.append(call)
