@@ -567,6 +567,83 @@ From 2.6 on (user, 2026-09-26): 2.6 and 2.6b still run alone; defect 15's fix, 2
 the rule writer's example fix (Change 33) then share one run. Each keeps a mechanism measure counted by code (example copies, invented technique
 IDs, list length and cut answers); their effect on S3–S5 is reported as joint.
 
+## 5.6b Methods added 2026-09-29 to 2026-10-05 `[DESIGN]` (added 2026-10-05)
+
+### The research protocol, as practised — what answers "did you tune until it looked good?"
+- **Three sets, three roles.** The 60 **tuning** cases (seed 0) are where failures are read and changes designed;
+  the 60 **held-out** cases (`manifest_heldout.jsonl`, drawn 2026-09-26) confirmed Phase 2; **confirmation set 2**
+  (`manifest_confirm2.jsonl`, 60 cases never run, drawn 2026-09-29, only categories looked at) is spent on one
+  change at a time, only after it passes a gate on the tuning set. Case-level reading of held-out or fresh cases is
+  avoided, so they stay usable.
+- **Plans before runs.** Every run's measures, primary metric and pass/fail gate are written into the engineering
+  log before the run starts (append-only, dated); later precisions are logged before the numbers they affect exist.
+- **Gate, then confirm.** A change passes to the confirmation set only if its primary moves the right way on the
+  tuning set, its mechanism measure moves, and no guard drops with a 95% CI entirely below 0. Confirmation: k = 3
+  runs per arm, each case's value the mean of its runs, **confirmed only if the paired 95% CI's lower bound is
+  above 0**. No row is read until every run has finished.
+- **Negative results are kept and the change is removed.** Changes 38 (three iterations), 40 and 41 were removed
+  after failing their gate or their confirmation; their code stays in git history, their results in the log and in
+  CH6 (§6.5b, §6.5c). Iterations on the tuning set are counted and disclosed (a researcher degree of freedom).
+- **Frozen code for every arm.** Each arm runs from a separate checkout of a named commit with the data linked in;
+  the main working tree may change, the run's code cannot.
+- **Tests first, and tests that are shown to catch errors.** Every tool is written test-first and the tests are
+  seen to fail; for measuring tools, deliberate bugs are planted one at a time and each must be caught (e.g. the
+  evaluator: 4, the replay builder: 4, the replay scoring: 5). This caught a real bug (a variable that hid the report
+  text, so every rule looked "grounded").
+- **Every cited number comes from committed code**, run on committed result files; quick checks are labelled as such
+  and not cited.
+
+### Two arms on the same night `[DESIGN]` (added 2026-10-03)
+P-B (CH6 §6.0c) showed the model's answers depend on the server's state: identical prompts repeat within a session
+but can differ a day apart. So a change is compared against the code before it **run at the same time** (two arms
+started together in two terminals), not against a run from another day. Used for Changes 40 and 41 and for the
+confirmation runs. `[DISCLOSE]` Runs straddling a server restart or a connection drop are resumed per file and the
+conditions are logged (2026-10-04: the shared Spark restarted mid-confirmation; the arms straddle it unequally).
+
+### P / Pany — the analysis stage's top log-source pick `[DESIGN]` (added 2026-09-29)
+**P** = the top pick equals the gold rule's log source (S3's exact match); **Pany** = it equals the gold's *or another
+human-written SigmaHQ rule's for the same report* (`alternative_logsources.py`: an emerging-threats rule citing one
+of the case's input URLs; a URL cited by more than 5 rules links nothing). Answers "wrong, or just different?": about
+25 of 60 tuning picks match no human rule for the report. No pick = wrong. In `compare_arms.py --manifest`.
+`ranking_effect.py` measured Change 38 v3's ranking step **within one run** (each row keeps the order before the
+step), free of run-to-run variation.
+
+### S5v — the value-level detection score `[DESIGN]` (added 2026-10-03; definition fixed before it scored a run)
+S5 compares field names only; S5v compares the **values** a detection looks for (`scorers.score_detection_values`).
+Values: every string or number, lower-cased, `*` at the ends removed, a doubled backslash read as one; field = the
+name before `|`; `filter…` selections, `condition`, `timeframe` skipped. A human value is **found** when one of ours
+contains it, or is contained in it and is at least half as long (under 3 characters: only when equal). Recall (any
+field / same field), precision, F1. In `compare_arms.py`: **S5vu** (as the user gets it: an unparsed or valueless
+rule scores 0) and S5v (parsed rules). Not a harness metric; computed post-hoc from saved rules.
+**Detection diagnosis** (`diagnose_detection.py`): per case, fields missed/added, values found/missed, the best of the
+case's rules; with `--grounding`, which values occur in the report's own text (pages + fetched PoC code; a leading
+path separator not required; `--min-value-chars` for a sensitivity check, used at 6); for each human value in the
+report that the first rule misses, how it reached the rule writer — rebuilt with the pipeline's own formatting:
+as a payload pattern, as an indicator, only inside a description, on the incidental list, or never given.
+`indicator_use` (`backend/pipeline/indicator_use.py`, recorded since Change 40) counts indicators the rules use;
+`count_example_copies.py` counts the attack-vector prompt's inline example strings absent from the input.
+
+### A rule evaluator, validated on real recordings `[DESIGN]` `[MEASURED]` (added 2026-10-04)
+`rule_matcher.py`: pySigma parses the rule (modifiers, wildcards, `1 of`/`all of`); our matcher walks the parsed
+condition per event — strings case-insensitive (`|cased` sensitive), numbers, null, `|re` with its flags, exists,
+cidr, comparisons, field references, expansions, keywords anywhere; anything else "cannot evaluate", never a guess.
+No new dependency (pySigma's SQLite backend was the alternative: a new dependency and more steps between rule and
+verdict). **Validation** on SigmaHQ's 138 regression recordings (`validate_matcher.py`): **132 of 136 evaluable agree
+on the first pass**; the 4 disagreements were checked and are recordings with more qualifying events than their
+stated count; 2 have no JSON copy. Only 2 of the corpus's 303 gold rules have a recording, so the recordings
+validate the evaluator but cannot score our rules.
+
+### Synthetic replay — designed, validated, and not used `[DESIGN]` `[MEASURED]` (added 2026-10-05)
+Events built from the human rules (`event_builder.py`: DNF, one event per way the rule can fire, minimal values,
+nothing invented; regex or contradiction = "cannot build"), our rules scored on them (`replay.py`: hit over every
+human rule for the report, any of the case's rules, lenient log-source applicability; coverage, breadth, miss
+reasons, report-grounded misses). Read as a **lower bound** (a different valid rule can catch the attack through
+other evidence). **Validated before use** (`validate_replay.py`, thresholds fixed first): V1 builder, V2 synthetic vs
+real recordings, V3 unrelated rules quiet, V4 a known ordering (today vs the May code), V5 shuffled-rule null.
+**V4 failed** (CH6 §6.5d) → by the plan, not used to score our rules. Methodological point for the chapter: **a test
+built from the reference answers inherits the reference's blind spot** — here it was specific (0.17% false fires vs
+real logs) but caught only 15 of 44 real "different rule, same attack" pairs.
+
 ## 5.7 Status — what exists vs. what is claimed (2026-09-24)
 
 | Component | State |
@@ -578,6 +655,10 @@ IDs, list length and cut answers); their effect on S3–S5 is reported as joint.
 | **Results** | **baseline v2** (n=60, 2026-09-24, **CITABLE**) = the reference; baseline v1 (citable with 2 caveats) kept for comparison — see `CH6_NOTES_RESULTS.md` |
 | Paired comparison of two runs | `eval/compare_runs.py` (Change 23) |
 | Logsource diagnosis | `eval/diagnose_logsource.py` (plan 2.1) |
+| Two code versions, k runs each | `eval/compare_arms.py` (S3u, S5u, S5vu, P/Pany, consistency) — 2026-09-29 / 10-03 |
+| Pick and detection diagnosis | `alternative_logsources.py`, `ranking_effect.py`, `diagnose_detection.py`, `count_example_copies.py` |
+| Rule evaluator | `eval/rule_matcher.py`, validated 132 of 136 (`validate_matcher.py`) — 2026-10-04 |
+| Synthetic replay | `event_builder.py`, `replay.py`, `validate_replay.py` — failed V4, not used (2026-10-05) |
 
 `[MEASURED] 2026-09-24` Full suite **253 passed**, fully offline.
 
@@ -599,7 +680,8 @@ Write them as defects identified by code audit, not as improvements.
       per arm is a real time budget — decide it, don't default to it.
 - [ ] Ablations A1–A7 not wired (`--arm` is only a label); likely core: A1 (no RAG),
       A5 (single prompt vs pipeline).
-- [ ] R1/R2 detonation — depends on the contributions agreed with the professor.
+- [ ] R1/R2 detonation — depends on the contributions agreed with the professor. The evaluator for it is built and
+      validated (2026-10-04); the synthetic substitute failed validation (2026-10-05), so real logs are the route.
 - [ ] S6 backend compilability — cheap, not built.
 - [ ] **Simulated analyst (plan 5.3)** `[DESIGN]` (added 2026-09-27) — Change 34 made it
       implementable without new pipeline code: `generate_after_review(saved analysis, review)`

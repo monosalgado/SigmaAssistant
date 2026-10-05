@@ -102,6 +102,28 @@ Moved into the repository from the assistant's private notes on 2026-09-23.
 DGX Spark: 128 GB LPDDR5X unified memory, **273 GB/s** bandwidth — capacity is generous,
 decode throughput is the limit.
 
+## Added 2026-10-05 — literature the work since 2026-09-28 leans on (TO FIND / VERIFY before citing)
+
+Not yet searched: every entry below is a lead, not a verified citation. Verify authors, venue and year (as the
+2026-08 entries were) before any of it reaches the thesis.
+- **Self-consistency** (P-C, shelved): sampling several answers and voting — usually cited as Wang et al.,
+  "Self-Consistency Improves Chain of Thought Reasoning in Language Models" (ICLR 2023). *Verify.* Our pilot (2 cases)
+  showed the habitual pick survives sampling; nothing measured beyond that.
+- **Non-determinism of LLM serving at temperature 0** (P-B, CH6 §6.0c): find work on output variation from batching /
+  server state in "deterministic" settings, to place our measurement (identical within a session, different across
+  days). *To find.*
+- **Selective prediction / abstention** (the idea behind "escalate only uncertain cases to the analyst"): *to find* —
+  relevant if P-C or P-D returns.
+- **Tuning on the test set / researcher degrees of freedom / pre-registration** (CH5 §5.6b): the methodological
+  literature behind held-out sets, gates fixed in advance and reporting negative results. *To find.*
+- **Testing detection rules on logs:** SigmaHQ's own regression data and its runner (`data/sigma/regression_data`,
+  `tests/regression_tests_runner.py`, using the external `evtx-sigma-checker`) — primary sources, local; Zircolite
+  (Sigma on EVTX via SQLite) and replay datasets such as Atomic Red Team / OTRF Security-Datasets — *verify* names,
+  URLs and licences before citing; relevant to 5.6 (lab) and R10 (benign logs).
+- **Reference-based metrics and their blind spot** (CH6 §6.5c–d): agreement with one human reference under-credits
+  valid alternatives — the same issue reference-based text metrics have. *Find a methodological source* for the
+  general point; our evidence for Sigma is our own (S5v, the replay's V2: 15 of 44).
+
 ## The leakage trap for any Sigma dataset
 
 SigmaHQ rules are not paired with their source CTI. Reverse-generating a "report" from a
