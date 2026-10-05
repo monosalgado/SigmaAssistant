@@ -5212,3 +5212,8 @@ S4 precision. **Gate:** S4 C − B > 0, fewer cases with exactly 10, and the sam
 **If a change passes its gate:** a **confirmation set 3** — 60 of the 121 corpus cases never run (`draw_heldout.py
 --exclude` every result file), drawn and committed before any run on it — k = 3 per arm, confirmed if the paired
 95% CI's lower bound is above 0 (as Change 41's). Confirmation set 2 is spent (Change 41).
+**Run plan amendment (user, 2026-10-05: "I won't be able to do the run of 10-20 hours right now"), before any run:**
+the three arms run in **sessions of 20 cases** (`--sample 60 --seed 0 --limit 20`, then `--limit 40`, then `--limit
+60`; `--limit` applies after the sample, and resume skips the cases done). In every session all three arms run
+together, so each case's three versions see the same server state — the comparison is paired within case, as before;
+sessions may be on different days. Everything else in the plan is unchanged.
