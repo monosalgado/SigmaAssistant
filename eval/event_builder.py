@@ -162,10 +162,19 @@ def _build_term(term: list):
         event.setdefault(field, shared)
         event.setdefault(other, shared)
     if keywords:
-        text, reason = _strings([k.values[0] if isinstance(k, t.SigmaExpansion) else k for k in keywords])
-        if reason:
-            return None, reason
-        event["Message"] = text
+        parts = []
+        for keyword in keywords:
+            keyword = keyword.values[0] if isinstance(keyword, t.SigmaExpansion) and keyword.values else keyword
+            if isinstance(keyword, t.SigmaNumber):            # a numeric keyword: its text
+                parts.append(str(keyword.number))
+                continue
+            if not isinstance(keyword, t.SigmaString):
+                return None, f"keyword type {type(keyword).__name__}"
+            lit = _literal(keyword)
+            if lit is None:
+                return None, "placeholder"
+            parts.append(lit[0])
+        event["Message"] = " ".join(parts)
     lowered = {k.lower() for k in event}
     for field, value in negatives:                # a negated null / `exists: false` needs the field present
         if field.lower() not in lowered and (isinstance(value, t.SigmaNull)

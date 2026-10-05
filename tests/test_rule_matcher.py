@@ -137,3 +137,10 @@ def test_events_load_from_one_object_or_several_written_back_to_back(tmp_path):
     many.write_text(json.dumps({"Image": "a"}, indent=2) + "\n" + json.dumps({"Image": "b"}, indent=2))
     assert [e["Image"] for e in load_events(one)] == ["a"]
     assert [e["Image"] for e in load_events(many)] == ["a", "b"]
+
+
+def test_a_numeric_keyword_matches_its_text_anywhere():
+    # Found by the replay's first validation pass: a keyword may be a number.
+    rule = "title: t\nlogsource: {product: windows}\ndetection:\n  keywords:\n    - 4698\n  condition: keywords\n"
+    assert rule_matches(parse_rule(rule), {"Message": "event 4698 logged"})
+    assert not rule_matches(parse_rule(rule), {"Message": "event 4699"})

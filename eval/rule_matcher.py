@@ -104,6 +104,8 @@ def _keyword_matches(value, event: dict) -> bool:
     from sigma import types as t
     if isinstance(value, t.SigmaExpansion):
         return any(_keyword_matches(v, event) for v in value.values)
+    if isinstance(value, t.SigmaNumber):                      # a numeric keyword: its text, anywhere
+        return any(str(value.number) in str(v) for v in event.values() if v is not None)
     if not isinstance(value, t.SigmaString):
         raise CannotEvaluate(f"keyword type {type(value).__name__}")
     flags = re.DOTALL if isinstance(value, t.SigmaCasedString) else re.IGNORECASE | re.DOTALL

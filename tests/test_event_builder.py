@@ -99,3 +99,9 @@ def test_verified_events_are_those_the_source_rule_fires_on():
     assert verified_events(parsed, built["events"]) == []
     good = parse_rule(_rule("  sel:\n    Image|endswith: '\\\\x.exe'\n  condition: sel\n"))
     assert all(rule_matches(good, e) for e in verified_events(good, build_events(good)["events"]))
+
+
+def test_a_numeric_keyword_is_built_as_its_text():
+    # Found by the first validation pass (it crashed on a corpus gold rule whose keywords include a number).
+    events, cannot = _events("  keywords:\n    - 4698\n  condition: keywords\n")
+    assert events == [{"Message": "4698"}] and cannot == []
