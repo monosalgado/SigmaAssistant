@@ -182,7 +182,7 @@ class AttackVectorStage(PipelineStage):
         if not sigs:
             return "No explicit payload signatures identified."
         lines = []
-        for s in sigs[:16]:     # the attack vector's own (<= 8) and the report's checked evidence (<= 8, Change 41)
+        for s in sigs[:10]:
             pattern = s.get("pattern", "")
             where = s.get("where", "")
             derived = s.get("derived_from", "")

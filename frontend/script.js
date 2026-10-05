@@ -56,7 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 'web_enrichment', label: 'Web Enrichment' },
         { id: 'poc_analysis', label: 'PoC Analysis' },
         { id: 'attack_vector', label: 'Attack Vector Extraction' },
-        { id: 'evidence', label: 'Evidence Extraction' },
         { id: 'analysis', label: 'Threat Analysis' },
     ];
     const GENERATION_STAGES = [

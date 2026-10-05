@@ -21,7 +21,6 @@ from backend.pipeline.stage_preprocess import PreprocessStage
 from backend.pipeline.stage_web_enrich import WebEnrichStage
 from backend.pipeline.stage_poc_analysis import PoCAnalysisStage
 from backend.pipeline.stage_attack_vector import AttackVectorStage
-from backend.pipeline.stage_evidence import EvidenceStage
 from backend.pipeline.indicator_use import indicator_use
 from backend.pipeline.stage_analysis import AnalysisStage
 from backend.pipeline.stage_generate import GenerateStage
@@ -92,7 +91,6 @@ class PipelineOrchestrator:
         self.web_enrich = WebEnrichStage(client, model_name)
         self.poc_analysis = PoCAnalysisStage(client, model_name)
         self.attack_vector = AttackVectorStage(client, model_name)
-        self.evidence = EvidenceStage(client, model_name)
         self.analysis = AnalysisStage(client, model_name, vector_store)
         self.generate = GenerateStage(client, model_name, vector_store)
         self.review = ReviewStage(client, model_name, vector_store)
@@ -215,9 +213,6 @@ class PipelineOrchestrator:
 
         # Stage 3b: Attack Vector Extraction (PRIMARY) - anchors downstream stages
         context = self.attack_vector.run(context)
-
-        # Stage 3c: Evidence - the report's own detectable strings, checked, join the payload signatures (Change 41)
-        context = self.evidence.run(context)
 
         # Stage 4: Combined Analysis - extraction + TTP + logsource (PRIMARY)
         context = self.analysis.run(context)
@@ -397,13 +392,6 @@ class PipelineOrchestrator:
         else:
             detail = "No clear attack vector identified"
         yield {"event": "stage", "data": {"stage": "attack_vector", "status": "complete", "detail": detail}}
-
-        # Stage 3c: Evidence (Change 41) - the report's own detectable strings, checked against the report
-        yield {"event": "stage", "data": {"stage": "evidence", "status": "running", "detail": "Copying the report's detectable strings..."}}
-        context = self.evidence.run(context)
-        ev = context.get("evidence", {})
-        yield {"event": "stage", "data": {"stage": "evidence", "status": "complete",
-                                          "detail": f"{len(ev.get('kept', []))} strings kept, {len(ev.get('dropped', []))} dropped"}}
 
         # Stage 4: Combined Analysis (PRIMARY model)
         yield {"event": "stage", "data": {"stage": "analysis", "status": "running", "detail": "Extracting indicators, mapping TTPs, analyzing log sources..."}}
@@ -768,7 +756,6 @@ class PipelineOrchestrator:
             "attack_vector": attack_vector,
             "coverage_check": coverage,
             "indicator_use": context.get("indicator_use"),
-            "evidence": context.get("evidence"),
             "generations": context.get("generation_log", []),
             "generation_retried": bool(context.get("generation_retried")),
         }

@@ -4953,3 +4953,15 @@ the report at all), and the added strings come with others the human rule does n
 the value score against the human rule does not rise. Detection values that agree with the human rule mostly come
 from knowledge the report does not hold. Decision for the user: keep Change 41 (an analyst-facing, verified
 evidence list, R2; no measured benefit on S5v; costs time and retries) or remove it.
+
+---
+
+## 2026-10-04 — Change 41 removed
+
+User: "remove change 41" (after the confirmation: not confirmed). `orchestrator.py`, `prompts.py`,
+`stage_attack_vector.py`, `run_eval.py`, `frontend/script.js` and the review-checkpoint test restored from `cde43ed`;
+`stage_evidence.py` and its tests deleted (in history at `4def19d`). `backend/`, `frontend/` and `run_eval.py` are
+now identical to `cde43ed`: Change 39 and the record of indicator use stay; the payload signatures are shown up to
+10 again. The diagnosis tool keeps reading the evidence record of saved runs. Tests first
+(`test_change41_removed.py`, 4: 3 seen to fail, 1 holds Change 39); 703 pass. The idea (a checked evidence list)
+stays on the roadmap as an analyst-facing feature (R2), not as a rule-quality change.
