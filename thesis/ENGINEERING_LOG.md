@@ -4965,3 +4965,43 @@ now identical to `cde43ed`: Change 39 and the record of indicator use stay; the 
 10 again. The diagnosis tool keeps reading the evidence record of saved runs. Tests first
 (`test_change41_removed.py`, 4: 3 seen to fail, 1 holds Change 39); 703 pass. The idea (a checked evidence list)
 stays on the roadmap as an analyst-facing feature (R2), not as a rule-quality change.
+
+---
+
+## 2026-10-04 — A rule evaluator for replay tests (R9): definition, fixed before any code
+
+User: "what is the replay test?" → "which one do you think is better, to write our own evaluator or the one from
+pySigma?" → "design the evaluator". Chosen (my recommendation, the user asked to design it): **pySigma (installed,
+0.11.23; used by the review stage) parses the rule; a small matcher of ours evaluates pySigma's parsed condition
+against events.** No new dependency. Why not pySigma's SQLite backend: a new dependency with a version risk
+(Python 3.9, pySigma 0.11), and more steps between rule and verdict (rule → SQL, event → table, SQLite's ASCII-only
+case folding, regex as an add-on). Why not fully our own: Sigma's modifiers, wildcards and condition grammar are
+where the errors would be; pySigma resolves them (checked: `endswith` → `*\\x`, `contains|all` → AND, `all of
+sel_*` / `1 of filter_*` expanded; `SigmaString.to_regex()`).
+**What exists to validate it:** SigmaHQ's `regression_data/` — 138 recordings, each for one rule (by id): an
+`info.yml` with the expected `match_count` (1 in 114 tests; absent in 24 → read as "at least 1"), the `.evtx`, and
+a `.json` copy of the events (136 of 138; 128 hold one event, 8 several written back to back). SigmaHQ's own runner
+uses an external binary (`evtx-sigma-checker`), which we do not have; the JSON copies hold the same events.
+**Only 2 of the corpus's 303 gold rules have a recording** (React2Shell CVE-2025-55182, Grixba), so the recordings
+validate the evaluator; they cannot score our rules.
+**Definition (`eval/rule_matcher.py`):**
+- A rule is parsed by `SigmaRule.from_yaml`; its condition by pySigma (`parsed_condition[0].parse()`). A parse error,
+  more than one condition, or an aggregation/correlation → "cannot evaluate", never a guess.
+- The tree is evaluated per event: AND / OR / NOT as written; a field-equals-value node looks the field up by its
+  exact name, else case-insensitively; a missing field does not match (except a null value, below).
+- Values: a string (`SigmaString`, modifiers already applied by pySigma) matches when its `to_regex()` pattern
+  matches the whole field value, **case-insensitively** (Sigma's default; case-sensitive for `|cased`); a number
+  equals the field's number (a numeric string counts); a null matches a missing, null or empty field; `|re` is
+  searched with its own flags (case-sensitive by default, as in Sigma); `|exists`, `|cidr`, `|lt/lte/gt/gte`,
+  booleans and `|fieldref` as named. Any other value type → "cannot evaluate".
+- A keyword (field-less value) matches when its pattern is found anywhere in any field value of the event.
+- An event from a Windows event JSON is flattened: `EventData` (or `UserData`'s inner map) fields, plus `EventID`,
+  `Channel`, `Provider_Name`, `Computer` from `System`. An already-flat map (e.g. a synthetic event) is used as is.
+- Log-source applicability is **not** part of the matcher; the replay step decides which events a rule sees.
+**Validation, fixed now:** each recording's rule (found by id under `data/sigma/rules*`) is run over its JSON
+events; **agree** = the number of matching events equals `match_count` (≥ 1 when absent); otherwise disagree; no
+JSON, rule not found or "cannot evaluate" → listed apart with the reason. **The first pass's agreement rate is
+reported as is.** Any later fix to the matcher gets its own test first, and the final rate is reported next to the
+first; the matcher scores our rules only once every evaluable recording agrees or each disagreement is explained.
+Also, descriptive: every rule against the other recordings' events (off-target matches; each one listed, since some
+may be genuine).
