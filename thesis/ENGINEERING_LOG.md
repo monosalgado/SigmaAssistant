@@ -5150,3 +5150,20 @@ own values rarely catch a different rule (34% on real pairs), and our rules — 
 (4.6%, 8.6%), so it cannot rank two versions of the code known to differ (log source 0.072 vs 0.439; S5 +0.158).
 This agrees with S5v: our rules seldom share the human rules' values. **It leaves "does the rule fire?" to real logs**
 (5.6 lab detonation; R10 benign logs). The tools stay (validated evaluator; builder; scoring) for real-log replay.
+
+---
+
+## 2026-10-05 — Pipeline quality, part A (no behaviour change): M1 and H8
+
+User: "write the chapter 4 notes first, and then lets work on the pipeline quality" → order agreed: A (M1, H8), then
+#1 ATT&CK retrieval query, #2 the technique cap, #3 the review prompt's Citrix example, #4 temperature 0, #5 defect 11,
+#6 labels/imperatives, #7 a shorter analysis answer.
+**M1** (prompt review §5): every row now records the rules **as the rule writer wrote them, before review**
+(`pre_review_rules`: the last generation the final review processed) and the review's list of changes
+(`review_changes`), in the metadata and `DIAGNOSIS_FIELDS`. The rules a user gets are unchanged. Why: only reviewed
+rules were saved, so review's effect (it once merged three rules into one) could not be measured. Tests first (3, seen
+to fail).
+**H8** (prompt review §5 item 8): the five prompts nothing calls are deleted — `ENTITY_EXTRACTION`, `TTP_MAPPING`
+(the pre-combined analysis), `RULE_VALIDATION`, `RULE_OPTIMIZATION` (the pre-combined review), `WEB_SEARCH_QUERIES`.
+Checked: the 8 prompts in use are identical to before; the author's section comments are kept. Tests first (1, seen to
+fail). 750 pass.

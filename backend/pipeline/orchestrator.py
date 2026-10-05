@@ -756,6 +756,10 @@ class PipelineOrchestrator:
             "attack_vector": attack_vector,
             "coverage_check": coverage,
             "indicator_use": context.get("indicator_use"),
+            # M1: the rules as the rule writer wrote them, before review, and what review changed - measurement only
+            "pre_review_rules": [r.get("yaml_content", "") for r in (context.get("generation") or {}).get("rules") or []
+                                 if isinstance(r, dict)],
+            "review_changes": list(optimization.get("all_changes") or []),
             "generations": context.get("generation_log", []),
             "generation_retried": bool(context.get("generation_retried")),
         }

@@ -561,13 +561,13 @@ web-search entry). Scheduled: 2.3, 2.5, 2.6, 2.8, 3.3, 5.6 notes, H7.)*
 *(Everything below: next phase — Phase 2 is frozen, 2026-09-26.)*
 
 From the prompt review (2026-09-26, `thesis/PROMPT_REVIEW.md` §5) — awaiting the user:
-- M1 record the first rule before review in each row · M2 an A/A run (noise floor for S3)
+- ~~M1 record the first rule before review~~ — **done 2026-10-05** (`pre_review_rules`, `review_changes`) · M2 an A/A run (noise floor for S3)
 - ~~1 generation example~~ → **scheduled as Change 33 in the shared run** (user, 2026-09-26)
 - 2 honest labels for model-made inputs ("MUST produce", "MUST literally contain", REQUIRED patterns)
 - 3 temperature 0 for generation (0.3) and review (0.2)
 - 4 fewer, ordered imperatives in generation · 5 review told the log-source decision (after M1)
 - 6 rules as YAML blocks, not JSON strings · 7 shorter analysis answer (after Change 32)
-- H8 delete the five unused prompts
+- ~~H8 delete the five unused prompts~~ — **done 2026-10-05**
 - (shared run) "at most the 10 most relevant techniques" became a quota: median 5 → 10 — reword?
 - (shared run) defect 5 cluster: 6 generation JSON escape failures (1 in the run before), 3 cases with no rules
 
