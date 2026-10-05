@@ -5184,3 +5184,31 @@ current text 14 of 42** (14; 0.239).
 vector)` followed by `combined_text[:500]`. Chosen over the summary alone because when the attack-vector stage finds
 nothing its summary is a fixed sentence, and the text keeps the search informed. 757 pass. Measured in a run with #2
 (plan below, fixed before the run).
+
+---
+
+## 2026-10-05 — Change 43 (#2): the technique limit is a limit, not a target; and the three-arm run's plan
+
+**Why:** Change 32's "List at most the 10 most relevant techniques" became a quota. Techniques listed per case (the
+analysis's `ttp_mappings`): `p2f_product60` (before Change 32) median 5, exactly 10 in 5 of 60, over 10 in 12;
+`p2g_shared60`, `c36_yaml60`, `c41A_tuning60` (after) median 10, **exactly 10 in 42 / 41 / 44 of 60**. Gold rules tag 1
+technique in 28 of 40 (Change 25 run). (Counted from the rows' saved `ttp_mappings`.)
+**Change 43** (tests first, 2, seen to fail; Change 32's test now checks the ceiling in the new wording): instruction 5
+of the analysis's ATT&CK part becomes "List the techniques most relevant first, as many as the text gives evidence for
+and never more than 10; 10 is a limit, not a target". No typical number is suggested; the model decides. 759 pass.
+
+### Run plan — fixed before the run (Changes 42 and 43, tuning set)
+**Arms**, started together in the user's terminal (60 tuning cases, seed 0, `--no-web-enrich`, `run_resilient`, one run
+each, frozen checkouts): **A** `1b90c44` (before 42 and 43; M1 records pre-review rules) → `c42A_tuning60.jsonl`;
+**B** `ef6d118` (+ Change 42) → `c42B_tuning60.jsonl`; **C** the Change 43 commit (+ 42 + 43) → `c42C_tuning60.jsonl`.
+B − A attributes Change 42, C − B Change 43; all three see the same server conditions.
+**Change 42 — primary:** S4 (exact-technique F1, rules that parse; `compare_arms.py`), B − A, paired, bootstrap 95%
+CI; parent-technique S4 reported too. **Mechanism:** cases whose analysis lists a gold technique (exact / parent),
+A vs B (the offline retrieval check: 3 → 14 of 42). **Gate:** S4 B − A > 0, the mechanism higher in B, and neither S3u
+nor S1 lower with a 95% CI entirely below 0.
+**Change 43 — primary:** S4, C − B. **Mechanism:** techniques listed per case (median; cases with exactly 10), B vs C;
+S4 precision. **Gate:** S4 C − B > 0, fewer cases with exactly 10, and the same guards.
+**Guards (both):** S3u, S5u, S5vu, S1, rules per case, time; cut answers.
+**If a change passes its gate:** a **confirmation set 3** — 60 of the 121 corpus cases never run (`draw_heldout.py
+--exclude` every result file), drawn and committed before any run on it — k = 3 per arm, confirmed if the paired
+95% CI's lower bound is above 0 (as Change 41's). Confirmation set 2 is spent (Change 41).

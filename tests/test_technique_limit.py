@@ -16,7 +16,8 @@ PART2 = prompts.COMBINED_ANALYSIS.split("## PART 2")[1].split("## PART 3")[0]
 
 
 def test_the_list_has_an_end():
-    assert "at most the 10 most relevant techniques" in PART2
+    # Change 43 (2026-10-05) reworded the limit so it is not read as a quota; the ceiling of 10 stays.
+    assert "never more than 10" in PART2
 
 
 def test_the_most_relevant_come_first():
