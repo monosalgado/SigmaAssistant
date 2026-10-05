@@ -383,13 +383,16 @@ directly: run the rule over the events of the attack (and, for R10, over normal 
       bugs caught. **Validated** (`eval/validate_matcher.py`): SigmaHQ's recordings, **first pass 132 of 136
       agree**, the 4 disagreements are genuine extra matches (explained), 2 recordings have no JSON. `e8fa0fb`,
       `99a49a9`.
-- [>] **R9.2 Synthetic replay — design written 2026-10-05 (log: "R9.2 synthetic replay: design and validation
+- [x] **R9.2 Synthetic replay — design written 2026-10-05 (log: "R9.2 synthetic replay: design and validation
       plan"), FIXED 2026-10-05 (user: any rule of the case; lenient log-source applicability; thresholds as
       proposed).
       **Amended 2026-10-05 before building** (user: our rule may catch the attack without the human's evidence):
       events from **every** human rule for the report (primary), misses sorted into "report-grounded,
       plausible different detection, unverified" vs ungrounded, and the replay read as a **lower bound**
-      (V2's related-pair hit rate = the size of that bias). Lab detonation picks report-grounded misses. Validation V1–V5 on known answers comes before any of our rules is scored; if it
+      (V2's related-pair hit rate = the size of that bias). Lab detonation picks report-grounded misses.
+      **Built and validated 2026-10-05: NOT PASSED** (V1, V2, V3, V5 pass; **V4 fails**: today − May +0.040,
+      CI [−0.017, +0.098]). Specific but insensitive (related real pairs caught 15 of 44; our rules hit 8.6%) →
+      **not used to score our rules** (log; CH6 §6.5d). "Does it fire?" goes to real logs (5.6, R10). Validation V1–V5 on known answers comes before any of our rules is scored; if it
       fails, the replay is not used.** Original note (user, 2026-10-04: "put it in our action plan"):
       for each report, build the events the human rule is written to catch (from its own detection: values,
       modifiers, condition; one event per way the rule can fire), give them the human rule's log source, and

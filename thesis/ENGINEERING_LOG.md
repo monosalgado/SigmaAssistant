@@ -5125,3 +5125,28 @@ null hit is at most half the real hit** (as well as ≤ 5%); (b) V1 is checked o
 rules and the corpus's gold rules — and **must reach 95% in each** (the stricter reading). V2 compares logic only
 (the recordings carry no log-source label to apply), as the evaluator's validation did. V4 and V5 necessarily compute
 today's held-out replay hit; it is reported as the primary result only after all five tests pass.
+
+### R9.2 validation: the replay does not pass (V4 fails) — it is not used to score our rules
+Code committed before running (`39c20c8`). **First pass crashed** (a corpus gold rule has a number among its
+keywords: the builder crashed, the matcher would have said "cannot evaluate"); fixed with tests first (`1a9dba3`;
+the matcher's own validation re-run: unchanged, 132 of 136). Second pass (`eval/validate_replay.py` →
+`eval/results/replay_validation.json`), no other change:
+- **V1 pass** — recordings' rules 134 of 134 buildable (2 unbuildable: regex), gold 419 of 420 (17 of 437 unbuildable;
+  cannot-build: regex 33 / 41 conjunctions). The 1 failure, `10ac0730` (nsswitch.conf, CVE-2025-32463): `endswith:
+  /etc/nsswitch.conf` and not exactly `/etc/nsswitch.conf` — the minimal value is the excluded path; "nothing
+  invented" cannot add a prefix. Explained, a limit of the construction.
+- **V2 pass** — synthetic false fires on real non-pairs **31 of 18,046 (0.17%)**, mostly related rules (e.g. "Renamed
+  AdFind Execution" on "PUA - AdFind.EXE Execution": minimal events lack the fields a real event has, so some NOT
+  conditions hold). **Related real pairs caught: 15 of 44 (34%)** — the measured size of the under-detection bias:
+  minimal events miss about two thirds of the cases where a different rule fires on the same recorded attack.
+- **V3 pass** — unrelated gold rules: 9 of 182,378 pairs fire.
+- **V4 FAIL** — replay hit on held-out, k = 3: May 0.046, today 0.086, **+0.040, 95% CI [−0.017, +0.098]** (n = 58);
+  the CI is not above 0.
+- **V5 pass** — shuffled rules 0.006 vs real 0.086.
+**Verdict under the plan: not all pass → the synthetic replay is not used to score our rules.** No design change is
+made to rescue it (that would be choosing the measure after seeing it). **Reading:** the replay is **specific but
+insensitive** — when it fires it means something (V2, V3, V5), but minimal events built only from a human rule's
+own values rarely catch a different rule (34% on real pairs), and our rules — May's or today's — rarely fire on them
+(4.6%, 8.6%), so it cannot rank two versions of the code known to differ (log source 0.072 vs 0.439; S5 +0.158).
+This agrees with S5v: our rules seldom share the human rules' values. **It leaves "does the rule fire?" to real logs**
+(5.6 lab detonation; R10 benign logs). The tools stay (validated evaluator; builder; scoring) for real-log replay.

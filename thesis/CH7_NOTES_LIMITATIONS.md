@@ -266,6 +266,12 @@ limitation in the log belongs here too.
     60 fresh cases with 3 runs per arm. Whether generated rules detect the attack is not measured (R9, R10). Runs of
     2026-10-04 straddled a restart of the shared server (disclosed in the log). (log 2026-10-03/04)
 
+56. **No validated measure of whether our rules detect the attack** `[DISCLOSE]` (CH6 §6.5d). Every score is agreement
+    with human rules (S3, S5, S5v); a synthetic replay built from the human rules was specific but too insensitive to
+    pass its own pre-registered validation (V4), and only 2 of the 303 corpus reports have a real SigmaHQ recording.
+    Real attack logs (lab detonation) are the remaining route; a validated evaluator exists for them (132 of 136 on
+    SigmaHQ's recordings). (log 2026-10-05)
+
 ---
 
 ## Future work (collected, not prioritised)

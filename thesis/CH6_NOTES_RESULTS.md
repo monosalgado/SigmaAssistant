@@ -629,6 +629,23 @@ the pipeline: most of what the human rules match is not in the report, and passi
 reliably does not move agreement with the human rule. `[DISCLOSE]` S5v was defined during this work (before it scored
 any compared run); it measures agreement with one human rule, not whether a rule detects the attack (R9/R10).
 
+
+## 6.5d Do the rules fire? A rule evaluator, and a synthetic replay that did not pass validation `[MEASURED]` 2026-10-04/05
+
+**The evaluator** (`rule_matcher.py`: pySigma parses, our matcher evaluates; no new dependency) agrees with SigmaHQ's
+own regression recordings on **132 of 136** on the first pass; the 4 disagreements are recordings with more matching
+events than their stated count (each checked). It is the tool for scoring rules on real logs (lab detonation).
+**Synthetic replay** (events built from the human rules, minimal, nothing invented; design and pass thresholds fixed
+before building; amended so a miss is read as "not what the human targeted", not "fails"): V1 builder 419/420 and
+134/134, V2 false fires 0.17%, V3 9 of 182,378, V5 null 0.006 — but **V4 failed** (today − May +0.040, CI [−0.017,
++0.098]), so by the plan it is **not used to score our rules**. It is specific but insensitive: on SigmaHQ's real
+recordings, minimal events catch only **15 of 44** cases where a different rule fires on the same attack; our rules
+fire on the human rules' events in 8.6% of held-out reports (May 4.6%).
+**What is claimed:** a replay built only from the human rules' own values cannot tell whether our rules detect the
+attack — it inherits the agreement measures' blind spot (CH6 §6.5c); only real attack logs can. `[DISCLOSE]` The
+first validation pass crashed on a numeric keyword (fixed with tests, then re-run); two precisions (V5 "far below" =
+at most half; V1 in both rule sets) were fixed during the build, before any validation ran. (log 2026-10-04/05)
+
 ---
 
 ## 6.6 Smaller observations worth a sentence each
