@@ -545,6 +545,8 @@ Assistant roadmap (proposed 2026-09-28, user: "add them to the plan") — awaiti
   (user, 2026-10-03; CH6 §6.5b, CH7 54). Change 37 (JSON escape repair) kept. Still open: about 25 of 60 picks match no human
   rule for the report; the product + service form is never picked; confirmation set 2 (`eval/manifest_confirm2.jsonl`) unused
 - R8 **a value-level detection score**: S5 compares field names only (sudo: S5 = 1.0, the human's match broader)
+  → **built 2026-10-03 (S5v, `scorers.score_detection_values`)**; detection diagnosis, Changes 39 (kept), 40 (removed),
+  41 (not confirmed on 60 fresh cases, k = 3; keep/remove pending the user) — CH6 §6.5c, CH7 55
 - R9 **do the rules fire?** replay with Zircolite over SigmaHQ's 138 regression EVTX files; detonation in the lab (= 5.6, Phase 0)
 - R10 **false positives**: the rules over benign logs
 - R11 **"a rule already exists"**: search SigmaHQ for the same CVE/behaviour before generating (prior art: SIGMERGE)

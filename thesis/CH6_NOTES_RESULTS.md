@@ -601,6 +601,34 @@ confirmed on unseen reports, and the v3 comparison is one run against three. Tha
 right answer is the benchmark's assumption, not a fact: a rule on the specific file could be the better
 rule. The benchmark cannot tell (R10 false positives, R9 replay). (log 2026-09-29 to 2026-10-03)
 
+
+## 6.5c Detection values — what limits them, and two changes that did not raise them `[MEASURED]` 2026-10-03/04
+
+**S5 is mostly the log source again.** Within each held-out run of today's code, first-rule S5 is 0.63–0.69 when
+the log source is right and 0.04–0.12 when it is wrong (`s5_by_logsource.py`): each log source has its own fields.
+**S5v** (new, value-level; definition fixed before use; `scorers.score_detection_values`) compares the values a
+detection looks for. Tuning set, log source right: fields mostly right (S5 0.64–0.72), **values mostly wrong (S5v
+0.14–0.22)**; 10–24 cases per run use the right fields and none of the human's values (e.g. a Sitecore rule looks
+for `cmd=`, `$(nslookup` while the human rule matches the vulnerable page). (`diagnose_detection.py`, post-hoc.)
+**Where the human's values come from:** only 29–43% of the human rules' values (≥ 6 characters) occur in the report
+itself — the rest is knowledge the human brought. Of those in the report, the first rule uses about a quarter. The
+rule writer never sees the report: of the misses, 52–69% were given to it (mostly in the analysis's long indicator
+list) and not used, 30–43% were never passed on by any stage (often post-exploitation commands).
+**Change 39 (kept):** the attack-vector prompt's six inline example patterns reached rules in 1–4 of 60 reports per
+run without being in the report; deleted → 0 in the next run.
+**Change 40 (removed):** the indicators shown as "the strings the report gives", next to the payload signatures —
+two-arm run, tuning set: S5vu 0.105 → 0.075 (−0.030 [−0.065, +0.003]); the first rule's indicator share 6.8% →
+8.2%. Framing was not the obstacle.
+**Change 41 (evidence step):** a separate call copies up to 8 strings verbatim; code keeps those the report contains
+and adds them to the payload signatures (the short, checked list the rule writer does use). Tuning set: S5vu +0.026
+[−0.013, +0.069], gate passed. **Confirmation set 2, 60 fresh cases, k = 3 per arm: S5vu 0.149 vs 0.144, −0.005
+[−0.039, +0.025] — not confirmed.** The mechanism moved (the first rule uses 20.0% vs 16.8% of the human's values in
+the report; only 4.1% of the "verbatim" strings were not), but the value score against the human rule did not.
+**What is claimed:** the value-level gap between generated and human rules is not mainly a hand-off problem inside
+the pipeline: most of what the human rules match is not in the report, and passing the report's own strings on more
+reliably does not move agreement with the human rule. `[DISCLOSE]` S5v was defined during this work (before it scored
+any compared run); it measures agreement with one human rule, not whether a rule detects the attack (R9/R10).
+
 ---
 
 ## 6.6 Smaller observations worth a sentence each

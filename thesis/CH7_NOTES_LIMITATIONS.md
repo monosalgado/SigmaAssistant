@@ -258,6 +258,14 @@ limitation in the log belongs here too.
     (future work: R10). Confirmation set 2 (`eval/manifest_confirm2.jsonl`, 60 cases) is still unused.
     (log 2026-10-03)
 
+55. **The value score measures agreement, and most of the agreement is out of the report's reach** `[DISCLOSE]`
+    (CH6 §6.5c). S5v was defined during the detection work (fixed in the log before it scored a compared run), as
+    a post-hoc complement to S5's field names. Only 29–43% of the human rules' values occur in the report, so a
+    method that reads only the report has a low ceiling against this benchmark; a rule on other, valid values of the
+    same attack counts as wrong. Two changes aimed at the hand-off (40, 41) did not raise it, the second checked on
+    60 fresh cases with 3 runs per arm. Whether generated rules detect the attack is not measured (R9, R10). Runs of
+    2026-10-04 straddled a restart of the shared server (disclosed in the log). (log 2026-10-03/04)
+
 ---
 
 ## Future work (collected, not prioritised)
