@@ -167,3 +167,18 @@ def test_an_inline_example_absent_from_the_input_is_counted_in_the_vector_and_th
 def test_an_inline_example_the_report_contains_is_not_counted():
     av = _av(payload_signatures=[{"pattern": "../../etc/passwd"}])
     assert inline_examples(av, "GET /files?name=../../etc/passwd HTTP/1.1", "") == {"in_vector": [], "in_rules": []}
+
+
+# --- the review prompt's real-case example (#3, 2026-10-05, before its change) ---------------------------
+# `COMBINED_REVIEW` item 8 illustrates a placeholder path with `/metadata/samlidp/asdf` from the Citrix demo report.
+# `samlidp` occurs in no retrieval collection, no saved page or PoC file and no gold rule (checked 2026-10-05), so in
+# a rule it can only come from the review prompt.
+
+from eval.count_example_copies import REVIEW_EXAMPLES, review_copies  # noqa: E402
+
+
+def test_the_review_examples_marker_is_counted_in_the_rules():
+    assert REVIEW_EXAMPLES == ("samlidp",)
+    assert review_copies("cs-uri-stem|startswith: '/metadata/samlidp/'", "a Citrix ADC report") == ["samlidp"]
+    assert review_copies("cs-uri-stem|startswith: '/vpn/'", "a Citrix ADC report") == []
+    assert review_copies("x samlidp", "the page mentions /metadata/samlidp/") == []         # in the input: not a copy

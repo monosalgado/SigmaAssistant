@@ -57,6 +57,16 @@ def inline_examples(attack_vector: dict, model_input_text: str, rules_text: str 
     return {"in_vector": [e for e in absent if e in vector], "in_rules": [e for e in absent if e in rules]}
 
 
+# The review prompt's real-case example (`COMBINED_REVIEW` item 8: `/metadata/samlidp/asdf`, the Citrix demo report).
+# `samlidp` occurs in no retrieval collection, saved page, PoC file or gold rule (checked 2026-10-05).
+REVIEW_EXAMPLES = ("samlidp",)
+
+
+def review_copies(rules_text: str, model_input_text: str) -> list:
+    rules, source = (rules_text or "").lower(), (model_input_text or "").lower()
+    return [e for e in REVIEW_EXAMPLES if e in rules and e not in source]
+
+
 def copies(attack_vector: dict, model_input_text: str, rules_text: str = "") -> dict:
     vector_part = {k: attack_vector.get(k) for k in VECTOR_FIELDS}
     return {"anywhere": leaked_markers(json.dumps(attack_vector), model_input_text),
@@ -123,6 +133,7 @@ def summarise(results: list) -> dict:
         "inline_in_vector": sum(1 for r in results if (r.get("inline") or {}).get("in_vector")),
         "inline_in_rules": sum(1 for r in results if (r.get("inline") or {}).get("in_rules")),
         "by_inline_in_rules": dict(Counter(e for r in results for e in (r.get("inline") or {}).get("in_rules", []))),
+        "review_in_rules": sum(1 for r in results if r.get("review")),
     }
 
 
@@ -169,7 +180,8 @@ def main(argv: list) -> int:
         found = copies(av, source, rules_text(row))
         results.append({"rule_id": row["rule_id"], **found,
                         "ungrounded": ungrounded_patterns(av, source),
-                        "inline": inline_examples(av, source, rules_text(row))})
+                        "inline": inline_examples(av, source, rules_text(row)),
+                        "review": review_copies(rules_text(row), source)})
 
     s = summarise(results)
     print(f"{argv[1]}: {s['n']} recorded attack vectors")
@@ -184,6 +196,7 @@ def main(argv: list) -> int:
             print(f"    {r['rule_id'][:8]}  {r['in_rules']}")
     print(f"  the prompt's inline example strings, absent from the input: in the vector {s['inline_in_vector']} "
           f"cases, in the rules {s['inline_in_rules']} cases {s['by_inline_in_rules']}")
+    print(f"  the review prompt's example (samlidp) in the rules: {s['review_in_rules']} cases")
     print(f"  payload patterns absent from the input (upper bound): {s['ungrounded_patterns']} "
           f"patterns in {s['ungrounded_cases']} cases")
     return 0

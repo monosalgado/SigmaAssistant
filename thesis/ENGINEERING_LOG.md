@@ -5239,3 +5239,19 @@ User: "do the defect 11 diagnosis first" (offline; the committed `diagnose_logso
 recommendation. The remaining log-source error is the analysis's pick — wrong (followed) or right but not first —
 which is R7 (Change 38's attempt failed). For the assistant, the analyst's choice among the suggestions (Change 34)
 is the measured lever (5.3: S5 +0.144 when the analyst is right). Pipeline-quality item #5 closes without a change.
+
+---
+
+## 2026-10-05 — #3, the review prompt's Citrix example: never copied (0 of 2,540 saved reports)
+
+User: "continue with #3". `COMBINED_REVIEW` item 8 ("PoC placeholder leakage") illustrates replacing a
+placeholder-looking path with its stable prefix using a value from the Citrix demo report: `/metadata/samlidp/asdf` →
+`|startswith: '/metadata/samlidp/'` (Inbox 2026-09-28). Measured before any change:
+- `samlidp` occurs in **no retrieval collection** (all five), **no saved page or PoC file**, and **no gold rule** — so in a
+  rule it could only come from this prompt.
+- `count_example_copies.py` gains the count (`REVIEW_EXAMPLES`, `review_copies`; test first, seen to fail).
+- **Every result file (45 files, 2,540 case rows, all code versions since September): `samlidp` appears 0 times** — in
+  no rule and in no other saved field.
+**Reading:** unlike the attack-vector prompt's examples (copied 1–6 times per 60 before Changes 27/30/39), this one
+has never leaked; a run could not measure a fix (0 → 0). Decision for the user: replace it on principle (placeholders,
+not real-case values) together with the next review-prompt change, or leave it. Pipeline-quality #3 is measured.
