@@ -528,7 +528,8 @@ is a decision, not a default.
       stopped at 2026-09-09); `CH6_NOTES_RESULTS.md` and `CH7_NOTES_LIMITATIONS.md` started;
       `LITERATURE_NOTES.md` and `DEFENSE_NOTES.md` moved into `thesis/`. Keeping them current
       is now part of the definition of done (rule 3).
-- [ ] Chapter 4 notes (system design) once Phase 3 has settled the architecture
+- [x] Chapter 4 notes (system design) — **started 2026-10-05** (`thesis/CH4_NOTES_SYSTEM.md`, the system as in `main` at
+      `c81c989`, read from the code); to extend as Phase 3 settles the assistant
 
 ---
 
