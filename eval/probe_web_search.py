@@ -39,6 +39,9 @@ from eval.diagnose_detection import grounded  # noqa: E402
 ENDPOINT = "https://ollama.com/api/web_search"
 MAX_RESULTS = 5
 MIN_VALUE_CHARS = 6
+# The free account's hourly limit (first run: 25 searches, then HTTP 429): wait and ask again, at most 4 hours per stop.
+LIMIT_WAIT_S = 600
+LIMIT_WAIT_MAX_S = 4 * 3600
 RAW_PATH = REPO / "eval/web_snapshots/probe_tuning60.jsonl"
 OUT_PATH = REPO / "eval/results/web_probe_tuning60.json"
 # Detection-rule publishers (host, path prefix), fixed before any query.
@@ -141,6 +144,15 @@ def search(query: str, key: str, session=None, max_results: int = MAX_RESULTS, t
             "error": error.replace(key, "<key>") if error and key else error}
 
 
+def needs_query(saved: Optional[dict]) -> bool:
+    """A query is sent unless an answer is saved; a saved error (e.g. the hourly limit) is asked again."""
+    return saved is None or bool(saved.get("error"))
+
+
+def is_hourly_limit(record: dict) -> bool:
+    return record.get("status") == 429 and "hourly request limit" in str(record.get("error") or "")
+
+
 # --- the run ----------------------------------------------------------------------------------------------------------
 
 def _preprocess(case: dict, url_map: dict) -> tuple:
@@ -234,12 +246,19 @@ def main() -> int:
             if not query:
                 continue
             record = saved.get((case["rule_id"], variant))
-            if record is None:
+            if needs_query(record):
                 if errors_in_a_row >= 3:
                     continue
                 time.sleep(1)
                 record = search(query, key)
-                if record["error"]:
+                waited = 0
+                while is_hourly_limit(record) and waited < LIMIT_WAIT_MAX_S:
+                    print(f"  hourly search limit reached; waiting {LIMIT_WAIT_S // 60} min "
+                          f"({waited // 60} min waited so far)")
+                    time.sleep(LIMIT_WAIT_S)
+                    waited += LIMIT_WAIT_S
+                    record = search(query, key)
+                if record["error"] and not is_hourly_limit(record):
                     time.sleep(10)
                     record = search(query, key)
                 errors_in_a_row = errors_in_a_row + 1 if record["error"] else 0

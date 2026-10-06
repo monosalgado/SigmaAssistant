@@ -103,3 +103,20 @@ def test_an_error_is_recorded_not_raised_and_the_key_stays_out():
     out = search("q", "secret-key", session=_Session(_Response(429, {"error": "rate limited"})))
     assert out["status"] == 429 and out["results"] == [] and out["error"]
     assert "secret-key" not in repr(out)
+
+
+# --- resuming after the hourly limit (first run 2026-10-06: 25 searches answered, then HTTP 429 "you have reached your
+# web search hourly request limit") --------------------------------------------------------------------------------
+
+def test_a_saved_error_is_asked_again_and_a_saved_answer_is_not():
+    from eval.probe_web_search import needs_query
+    assert needs_query(None)
+    assert needs_query({"status": 429, "error": "you have reached your web search hourly request limit", "results": []})
+    assert not needs_query({"status": 200, "error": None, "results": []})
+
+
+def test_the_hourly_limit_is_told_apart_from_other_errors():
+    from eval.probe_web_search import is_hourly_limit
+    assert is_hourly_limit({"status": 429, "error": "you have reached your web search hourly request limit, upgrade"})
+    assert not is_hourly_limit({"status": 500, "error": "HTTP 500"})
+    assert not is_hourly_limit({"status": 200, "error": None})

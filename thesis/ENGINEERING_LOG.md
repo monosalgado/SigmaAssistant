@@ -5449,3 +5449,19 @@ sites); same for techniques; median seconds; errors. Offline counts for the CVE 
 ID, and reports whose text mentions one.
 **Not decided by the probe:** nothing is changed in the pipeline; whether and how to build the stage (filter,
 hand-on, evaluation) is decided with the user after it.
+**Probe, first pass (2026-10-06):** 25 searches answered (~1 s each, 5 results each), then **HTTP 429 "you have reached
+your web search hourly request limit, upgrade for higher limits"** on the next 3, and the probe stopped as planned
+(16 cases' stage queries and 9 CVE queries answered). **The free account allows about 25 searches per hour** —
+enough for the assistant (one search per report), so evaluation must search once and reuse saved results.
+**Fixed before continuing (tests first, 2, seen to fail):** a saved error was treated as an answer, so a rerun would
+have skipped those queries; now a saved error is asked again (`needs_query`), and on the hourly limit the probe waits
+10 minutes and asks again (`is_hourly_limit`; at most 4 hours per stop). The measures and the plan are unchanged.
+**Read by hand so far (the flags, not the scores):** the gold-leak flag fired in 3 of 16 cases. Two are real — the
+human rule itself on rule mirrors (Citrix CVE-2020-8193: `sigma.controlassurance.com`; Kapeka:
+`sigma.controlassurance.com`, `detection.fyi`, and a vendor page reprinting it). The third is not: the Griffon/FIN7.5
+gold title ("Griffon Malware Attack Pattern") is a phrase of the report itself, so the report and two library copies of
+it (orkl.eu) match by title. **So the title match over-counts; the `id` match is the precise one** — both will be
+reported. `sigma.controlassurance.com` is a rule mirror not on the fixed rule-site list (its pages are caught by the
+Sigma-text and leak flags); the list is not changed during the probe.
+Also seen: the stage's query repeats a CVE ID taken from a URL in two cases (`cve-2023-36874 CVE-2023-36874`; the
+builder's `set` keeps both spellings) — noted, not changed.
