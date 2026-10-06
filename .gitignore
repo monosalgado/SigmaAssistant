@@ -31,6 +31,8 @@ uploads/*
 
 # Evaluation snapshots (large cached HTML; rebuild with eval/build_snapshots.py)
 eval/snapshots/
+# Web search results (third-party page text; rebuild with eval/probe_web_search.py)
+eval/web_snapshots/
 
 # Local dev artifacts
 .claude/worktrees/

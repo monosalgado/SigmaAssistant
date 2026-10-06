@@ -5410,3 +5410,42 @@ instead of 3 (`probe_mitre_query.py`). In the tuning run no guard was worse (S3u
 crossing 0; time +8 s [−20, +36]).
 **What may be claimed:** the retrieval improved. **What may not:** that Change 42 raises the ATT&CK score — S4 +0.019
 [−0.047, +0.088] in one tuning run, a gap the size of run-to-run variation, never tested on fresh cases (CH6 §6.5e).
+
+---
+
+## 2026-10-06 — Web enrichment, step 1: a probe of Ollama's web search (plan fixed before any query)
+
+User: "What about we work on trying to make possible the web enrichment" … "Do the probe." The stage exists but has
+been a silent no-op since the pipeline went all-local (`OllamaLLMClient` inherits the empty `web_search`). Provider
+settled 2026-09-23 (Parking lot): **Ollama's web search API** (`POST https://ollama.com/api/web_search`, `query`,
+`max_results` ≤ 10 → `title`, `url`, `content`), the user's key in `.env` (`OLLAMA_API_KEY`; never printed or saved).
+The user's questions, answered with this probe's data: is a found human rule a problem, and should the query be the
+CVE ID or the title?
+**What leaves the machine:** only the query string, to ollama.com. **What is saved:** the raw results locally in
+`eval/web_snapshots/` (third-party page text; gitignored, like `eval/snapshots/`); the measures (URLs, domains, counts)
+in `eval/results/web_probe_tuning60.json` (committed).
+**Cases:** the 60 tuning cases (`--sample 60 --seed 0`). **Queries, two variants:**
+- **stage** — exactly what the stage would send: the report preprocessed offline from its snapshots, then
+  `WebEnrichStage._build_search_query` (CVE IDs from the user's own message, else the pages' titles, plus "exploit
+  detection indicators of compromise"); one per case.
+- **cve** — the CVE IDs the report's text mentions (up to 3, most frequent first), for the cases that mention any;
+  to compare a CVE query with the title query on the same cases.
+`max_results` 5 (the API's default, what the stage would use); one query at a time, 1 s apart; an error (e.g. a rate
+limit) is recorded, retried once, and the probe stops after 3 errors in a row.
+**Measures, per query, fixed now:** HTTP status, seconds, results returned; per result: domain, content characters,
+and four flags —
+- **own page** — the result is one of the case's input URLs (scheme, `www.`, trailing `/` ignored);
+- **rule site** — a detection-rule publisher, by a list fixed now: `github.com/SigmaHQ`, `sigma.nasbench.dev`,
+  `detection.fyi`, `socprime.com` (and subdomains), `uncoder.io`, `research.splunk.com`, `github.com/splunk/security_content`,
+  `github.com/elastic/detection-rules`; and **Sigma text** — the content holds `logsource:`, `detection:` and
+  `condition:` (a Sigma rule on any site);
+- **gold leak** — the gold rule's `id` or its `title` appears in the result's title, URL or content (case-insensitive);
+- **adds the human's values** — values of the gold rule (≥ 6 characters; `diagnose_detection.grounded`, as CH6 §6.5c)
+  found in the result's content but **not** in the report's text; and gold techniques (IDs) found in the result but not
+  in the report.
+Reported per variant: cases with ≥ 1 result; results per case; own-page, rule-site, Sigma-text and gold-leak results
+and cases; the human's values the report lacks, how many the results add (all results / excluding leaks and rule
+sites); same for techniques; median seconds; errors. Offline counts for the CVE question: queries that contain a CVE
+ID, and reports whose text mentions one.
+**Not decided by the probe:** nothing is changed in the pipeline; whether and how to build the stage (filter,
+hand-on, evaluation) is decided with the user after it.
