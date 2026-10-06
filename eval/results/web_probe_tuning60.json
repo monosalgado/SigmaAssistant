@@ -1,0 +1,3528 @@
+{
+ "cases": 60,
+ "offline": {
+  "stage_has_cve": 18,
+  "report_has_cve": 38,
+  "planned": {
+   "stage": 60,
+   "cve": 38
+  }
+ },
+ "variants": {
+  "stage": {
+   "queries": 34,
+   "answered": 32,
+   "errors": 2,
+   "with_results": 32,
+   "results": 160,
+   "median_seconds": 0.935,
+   "own_page": {
+    "results": 24,
+    "cases": 21
+   },
+   "rule_site": {
+    "results": 3,
+    "cases": 3
+   },
+   "sigma_text": {
+    "results": 5,
+    "cases": 4
+   },
+   "gold_leak": {
+    "results": 8,
+    "cases": 4
+   },
+   "gold_leak_id": {
+    "results": 4,
+    "cases": 3
+   },
+   "values": {
+    "lacking": 72,
+    "added": 26,
+    "added_clean": 15,
+    "cases_added_clean": 6
+   },
+   "techniques": {
+    "lacking": 32,
+    "added": 6,
+    "added_clean": 4,
+    "cases_added_clean": 4
+   },
+   "domains": {
+    "github.com": 19,
+    "securelist.com": 8,
+    "kaspersky.com": 7,
+    "nvd.nist.gov": 5,
+    "proofpoint.com": 5,
+    "steemit.com": 5,
+    "cloud.google.com": 5,
+    "orkl.eu": 4,
+    "security.com": 3,
+    "microsoft.com": 3,
+    "huntress.com": 3,
+    "slcyber.io": 3,
+    "sigma.controlassurance.com": 3,
+    "attack.mitre.org": 3,
+    "wikileaks.org": 3
+   }
+  },
+  "cve": {
+   "queries": 19,
+   "answered": 18,
+   "errors": 1,
+   "with_results": 18,
+   "results": 90,
+   "median_seconds": 0.9,
+   "own_page": {
+    "results": 1,
+    "cases": 1
+   },
+   "rule_site": {
+    "results": 0,
+    "cases": 0
+   },
+   "sigma_text": {
+    "results": 0,
+    "cases": 0
+   },
+   "gold_leak": {
+    "results": 0,
+    "cases": 0
+   },
+   "gold_leak_id": {
+    "results": 0,
+    "cases": 0
+   },
+   "values": {
+    "lacking": 37,
+    "added": 1,
+    "added_clean": 1,
+    "cases_added_clean": 1
+   },
+   "techniques": {
+    "lacking": 20,
+    "added": 0,
+    "added_clean": 0,
+    "cases_added_clean": 0
+   },
+   "domains": {
+    "nvd.nist.gov": 28,
+    "rapid7.com": 10,
+    "cve.org": 9,
+    "msrc.microsoft.com": 5,
+    "tenable.com": 5,
+    "wiz.io": 3,
+    "cisa.gov": 3,
+    "cve.circl.lu": 2,
+    "app.opencve.io": 2,
+    "github.com": 2,
+    "support.broadcom.com": 2,
+    "kevintel.com": 1,
+    "mallory.ai": 1,
+    "cve.armis.com": 1,
+    "cvepremium.circl.lu": 1
+   }
+  }
+ },
+ "per_query": {
+  "stage": [
+   {
+    "rule_id": "17ce9373-2163-4a2c-90ba-f91e9ef7a8c1",
+    "query": "CISA and FBI Raise Alerts on Exploited Flaws and Expanding HiatusRAT Campaign Streaming vulnerabilities from Windows Kernel - Proxying to Kernel - Part I | DE exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.97,
+    "error": null,
+    "results": [
+     {
+      "domain": "thehackernews.com",
+      "chars": 4546,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "fbi.gov",
+      "chars": 1118,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cybernoz.com",
+      "chars": 4586,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "scyscan.com",
+      "chars": 4951,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "ic3.gov",
+      "chars": 9293,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://thehackernews.com/2024/12/cisa-and-fbi-raise-alerts-on-exploited.html",
+     "https://www.fbi.gov/file-repository/hiatusrat-actors-targeting-web-cameras-and-dvrs.pdf/view",
+     "https://cybernoz.com/cisa-and-fbi-raise-alerts-on-exploited-flaws-and-expanding-hiatusrat-campaign/",
+     "https://www.scyscan.com/news/cisa-and-fbi-raise-alerts-on-exploited-flaws-and-expanding-hiatusrat-campaign/",
+     "https://www.ic3.gov/CSA/2024/241216.pdf"
+    ],
+    "values_lacking": 1,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "c5a178bf-9cfb-4340-b584-e4df39b6a3e7",
+    "query": "The Slingshot APT FAQ | Securelist exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 1.08,
+    "error": null,
+    "results": [
+     {
+      "domain": "securelist.com",
+      "chars": 12271,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "media.kasperskycontenthub.com",
+      "chars": 41766,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "github.com",
+      "chars": 6128,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "kaspersky.com",
+      "chars": 3717,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "kaspersky.com",
+      "chars": 7729,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://securelist.com/apt-slingshot/84312/",
+     "https://media.kasperskycontenthub.com/wp-content/uploads/sites/43/2018/03/09133534/The-Slingshot-APT_report_ENG_final.pdf",
+     "https://github.com/Neo23x0/signature-base/blob/master/yara/apt_slingshot.yar",
+     "https://www.kaspersky.com/blog/web-sas-2018-apt-announcement-2/21514/",
+     "https://www.kaspersky.com/about/press-releases/slingshot"
+    ],
+    "values_lacking": 1,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "1d218616-71b0-4c40-855b-9dbe75510f7f",
+    "query": "New NetWire RAT Malware Variant Being Spread Via Phishing | FortiGuard Labs GuLoader: Malspam Campaign Installing NetWire RAT exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.98,
+    "error": null,
+    "results": [
+     {
+      "domain": "fortinet.com",
+      "chars": 13863,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "unit42.paloaltonetworks.com",
+      "chars": 9014,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "fortinet.com",
+      "chars": 16661,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "blogs.opentext.com",
+      "chars": 2789,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "blog.knowbe4.com",
+      "chars": 1681,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://www.fortinet.com/blog/threat-research/new-netwire-rat-variant-spread-by-phishing",
+     "https://unit42.paloaltonetworks.com/guloader-installing-netwire-rat/",
+     "https://www.fortinet.com/blog/threat-research/netwire-rat-targeting-taxpayers-is-spreading-via-legacy-microsoft-excel-4-0-macro",
+     "https://blogs.opentext.com/dissecting-netwire-remote-access-trojan-rat-behavior-on-an-infected-endpoint/",
+     "https://blog.knowbe4.com/netwire-spread-by-phishing-campaign"
+    ],
+    "values_lacking": 0,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "92389a99-5215-43b0-a09f-e334453b2ed3",
+    "query": "CVE-2023-36874 cve-2023-36874 GitHub - Wh04m1001/CVE-2023-36874 \u00b7 GitHub Discovering and Blocking a Zero-Day Exploit with CrowdStrike Falcon Complete: Th exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.92,
+    "error": null,
+    "results": [
+     {
+      "domain": "crowdstrike.com",
+      "chars": 9838,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "github.com",
+      "chars": 851,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "github.com",
+      "chars": 5746,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "research.splunk.com",
+      "chars": 4371,
+      "own_page": false,
+      "rule_site": true,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 326,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://www.crowdstrike.com/en-us/blog/falcon-complete-zero-day-exploit-cve-2023-36874/",
+     "https://github.com/Wh04m1001/CVE-2023-36874",
+     "https://github.com/Octoberfest7/CVE-2023-36874_BOF",
+     "https://research.splunk.com/stories/windows_error_reporting_service_elevation_of_privilege_vulnerability/",
+     "https://nvd.nist.gov/vuln/detail/cve-2023-36874"
+    ],
+    "values_lacking": 0,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 0,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "2f974656-6d83-4059-bbdf-68ac5403422f",
+    "query": "Ukraine: Disk-wiping Attacks Precede Russian Invasion | SECURITY.COM exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 1.04,
+    "error": null,
+    "results": [
+     {
+      "domain": "security.com",
+      "chars": 6654,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "microsoft.com",
+      "chars": 11075,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cisa.gov",
+      "chars": 35114,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "eset.com",
+      "chars": 5991,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "deepinstinct.com",
+      "chars": 10396,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://www.security.com/threat-intelligence/ukraine-wiper-malware-russia",
+     "https://www.microsoft.com/en-us/security/blog/2022/01/15/destructive-malware-targeting-ukrainian-organizations/",
+     "https://www.cisa.gov/sites/default/files/publications/AA22-057A_Destructive_Malware_Targeting_Organizations_in_Ukraine.pdf",
+     "https://www.eset.com/us/about/newsroom/research/eset-research-ukraine-hit-by-destructive-attacks-before-and-during-the-russian-invasion-with-hermet/",
+     "https://www.deepinstinct.com/blog/hermeticwiper-malware-the-russian-ukrainian-cyber-war"
+    ],
+    "values_lacking": 1,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "bcc6f179-11cd-4111-a9a6-0fab68515cf7",
+    "query": "FIN7.5: the infamous cybercrime rig \u201cFIN7\u201d continues its activities | Securelist exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.85,
+    "error": null,
+    "results": [
+     {
+      "domain": "securelist.com",
+      "chars": 20460,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": true,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "securonix.com",
+      "chars": 7483,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "orkl.eu",
+      "chars": 21581,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": true,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "orkl.eu",
+      "chars": 22339,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": true,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "orkl.eu",
+      "chars": 10377,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://securelist.com/fin7-5-the-infamous-cybercrime-rig-fin7-continues-its-activities/90703/",
+     "https://www.securonix.com/blog/securonix-threat-research-carbanak-fin7-anunak-reappears-causes-losses/",
+     "https://orkl.eu/libraryEntry/9510f34a-4adf-4429-953c-e6372646997a",
+     "https://orkl.eu/libraryEntry/b68be7db-5dcc-426b-9f5d-538c86e78108",
+     "https://orkl.eu/libraryEntry/45804f00-bc37-4542-bdec-9b70b52ba729"
+    ],
+    "values_lacking": 2,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 0,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "76bc1601-9546-4b75-9419-06e0e8d10651",
+    "query": "3CX SmoothOperator | 3CXDesktopApp in Supply Chain Attack exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.98,
+    "error": null,
+    "results": [
+     {
+      "domain": "sentinelone.com",
+      "chars": 11889,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "ncsc.gov.uk",
+      "chars": 35612,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "guardsix.com",
+      "chars": 16037,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cybereason.com",
+      "chars": 7180,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "docs.velociraptor.app",
+      "chars": 20094,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://www.sentinelone.com/blog/smoothoperator-ongoing-campaign-trojanizes-3cx-software-in-software-supply-chain-attack/",
+     "https://www.ncsc.gov.uk/sites/default/files/documents/NCSC_MAR-Smooth-Operator.pdf",
+     "https://guardsix.com/blog/trojanized-3cx-desktop-applications",
+     "https://www.cybereason.com/hubfs/Threat%20Alert%20-%203CXDesktopApp%20Supply%20Chain%20Attack%20%5BPublic%5D.pdf",
+     "https://docs.velociraptor.app/exchange/artifacts/pages/smoothoperator/"
+    ],
+    "values_lacking": 1,
+    "values_added": 1,
+    "values_added_clean": 1,
+    "techniques_lacking": 0,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "43259cc4-1b80-4931-bd98-baea01afc196",
+    "query": "CVE-2025-59287 cve-2025-59287 Microsoft WSUS Remote Code Execution (CVE-2025-59287) Actively Exploited in the  Exploitation of Windows Server Update Services Remote Code | Huntress CVE-2025-59287 WSUS Unauthenticated RCE | HawkTrace exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.89,
+    "error": null,
+    "results": [
+     {
+      "domain": "huntress.com",
+      "chars": 6341,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "hawktrace.com",
+      "chars": 11189,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "msrc.microsoft.com",
+      "chars": 18123,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "unit42.paloaltonetworks.com",
+      "chars": 12881,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 8094,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://www.huntress.com/blog/exploitation-of-windows-server-update-services-remote-code-execution-vulnerability",
+     "https://hawktrace.com/blog/cve-2025-59287-unauth/",
+     "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2025-59287",
+     "https://unit42.paloaltonetworks.com/microsoft-cve-2025-59287/",
+     "https://nvd.nist.gov/vuln/detail/CVE-2025-59287"
+    ],
+    "values_lacking": 2,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "20c6ed1c-f7f0-4ea3-aa65-4f198e6acb0f",
+    "query": "Assetnote is now part of Searchlight Cyber %kb_name - %short_descr - Knowledge Portal exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 1.88,
+    "error": null,
+    "results": [
+     {
+      "domain": "slcyber.io",
+      "chars": 6279,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "slcyber.io",
+      "chars": 2903,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "assetnote.io",
+      "chars": 2121,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "slcyber.io",
+      "chars": 5819,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "docs.cyderes.cloud",
+      "chars": 5077,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://www.slcyber.io/assetnote",
+     "https://slcyber.io/products/attack-surface-management-tool/exposure-engine/",
+     "https://www.assetnote.io/platform/assetnote-exposure-engine",
+     "https://slcyber.io/press/searchlight-cyber-acquires-assetnote/",
+     "https://docs.cyderes.cloud/parser-knowledge-base/assetnote/"
+    ],
+    "values_lacking": 1,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "0d0d9a8a-a49e-4e27-b061-7ce4b936cfb7",
+    "query": "cve-2020-8196 cve-2020-8195 cve-2020-8193 Loading... Cyber Security Research | NCC Group Redirecting\u2026 exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 1.06,
+    "error": null,
+    "results": [
+     {
+      "domain": "nccgroup.com",
+      "chars": 3193,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nccgroup.com",
+      "chars": 8141,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "tenable.com",
+      "chars": 7416,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "sigma.controlassurance.com",
+      "chars": 2014,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": true,
+      "gold_leak": true,
+      "gold_leak_id": true
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 17208,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://www.nccgroup.com/research/rift-citrix-adc-vulnerabilities-cve-2020-8193-cve-2020-8195-and-cve-2020-8196-intelligence/",
+     "https://www.nccgroup.com/research/rift-f5-cve-2020-5902-and-citrix-cve-2020-8193-cve-2020-8195-and-cve-2020-8196-honeypot-data-release/",
+     "https://www.tenable.com/blog/cve-2020-8193-cve-2020-8195-and-cve-2020-819-active-exploitation-of-citrix-vulnerabilities",
+     "https://sigma.controlassurance.com/rules/web_cve_2020_8193_8195_citrix_exploit/",
+     "https://nvd.nist.gov/vuln/detail/CVE-2020-8193"
+    ],
+    "values_lacking": 4,
+    "values_added": 4,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 1,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "70761fe8-6aa2-4f80-98c1-a57049c08e66",
+    "query": "SocGholish Malware: A Real Threat from a Fake Update | Proofpoint US exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.95,
+    "error": null,
+    "results": [
+     {
+      "domain": "proofpoint.com",
+      "chars": 7019,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "proofpoint.com",
+      "chars": 7973,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "proofpoint.com",
+      "chars": 26670,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "proofpoint.com",
+      "chars": 2818,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "proofpoint.com",
+      "chars": 2722,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://www.proofpoint.com/us/blog/threat-insight/part-1-socgholish-very-real-threat-very-fake-update",
+     "https://www.proofpoint.com/us/blog/email-and-cloud-threats/detecting-analyzing-socgholish-attack",
+     "https://www.proofpoint.com/us/blog/threat-insight/ta569-socgholish-and-beyond",
+     "https://www.proofpoint.com/us/blog/security-awareness-training/attack-spotlight-fake-browser-updates",
+     "https://www.proofpoint.com/us/blog/security-briefs/fake-downloaders-aimed-organizations-canada-france-germany-spain-italy-united"
+    ],
+    "values_lacking": 2,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "5b2bbc47-dead-4ef7-8908-0cf73fcbecbf",
+    "query": "CVE-2021-1675 GitHub - cube0x0/CVE-2021-1675: C# and Impacket implementation of PrintNightmare exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.85,
+    "error": null,
+    "results": [
+     {
+      "domain": "github.com",
+      "chars": 3981,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "github.com",
+      "chars": 3733,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "github.com",
+      "chars": 12132,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "github.com",
+      "chars": 5242,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "github.com",
+      "chars": 8583,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://github.com/cube0x0/CVE-2021-1675/",
+     "https://github.com/cube0x0/CVE-2021-1675/blob/main/README.md",
+     "https://github.com/LaresLLC/CVE-2021-1675",
+     "https://github.com/corelight/CVE-2021-1675",
+     "https://github.com/cube0x0/CVE-2021-1675/blob/main/SharpPrintNightmare/CVE-2021-1675.py"
+    ],
+    "values_lacking": 2,
+    "values_added": 2,
+    "values_added_clean": 2,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "fb502828-2db0-438e-93e6-801c7548686d",
+    "query": "Chafer used Remexi malware to spy on Iran-based foreign diplomatic entities | Se exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 2.39,
+    "error": null,
+    "results": [
+     {
+      "domain": "kaspersky.com",
+      "chars": 5611,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "securelist.com",
+      "chars": 18350,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "incibe.es",
+      "chars": 1189,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "threatpost.com",
+      "chars": 8800,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "sechub.in",
+      "chars": 16608,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://www.kaspersky.com/about/press-releases/chafer-cyberespionage-group-targets-embassies-with-updated-homebrew-spyware",
+     "https://securelist.com/chafer-used-remexi-malware/89538/",
+     "https://www.incibe.es/en/incibe-cert/publications/cybersecurity-highlights/malware-infects-foreign-embassies-iran",
+     "https://threatpost.com/chafer-iran-apt-malware/141420/",
+     "http://sechub.in/view/1537831"
+    ],
+    "values_lacking": 1,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "e94486ea-2650-4548-bf25-88cbd0bb32d7",
+    "query": "CVE-2023-47246 Vulnerability - SysAid exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.86,
+    "error": null,
+    "results": [
+     {
+      "domain": "packetwatch.com",
+      "chars": 4492,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "huntress.com",
+      "chars": 8894,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "helpnetsecurity.com",
+      "chars": 4088,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "upguard.com",
+      "chars": 6958,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "zscaler.com",
+      "chars": 8001,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://packetwatch.com/resources/threat-intel/cve-2023-47246-sysaid-zero-day-vulnerability",
+     "https://www.huntress.com/blog/critical-vulnerability-sysaid-cve-2023-47246",
+     "https://www.helpnetsecurity.com/2023/11/09/exploited-cve-2023-47246/",
+     "https://www.upguard.com/blog/sysaid-0-day-2023",
+     "https://www.zscaler.com/blogs/security-research/coverage-advisory-cve-2023-47246-sysaid-zero-day-vulnerability"
+    ],
+    "values_lacking": 1,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 0,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "6c130acd-0adb-4545-bcc4-2e85d0883c9a",
+    "query": "4698(S) A scheduled task was created. - Windows 10 | Microsoft Learn Kapeka - WithSecure\u2122 exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.85,
+    "error": null,
+    "results": [
+     {
+      "domain": "learn.microsoft.com",
+      "chars": 6123,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "partner.gurucul.com",
+      "chars": 1499,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": true,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "sigma.controlassurance.com",
+      "chars": 2508,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": true,
+      "gold_leak": true,
+      "gold_leak_id": true
+     },
+     {
+      "domain": "detection.fyi",
+      "chars": 2090,
+      "own_page": false,
+      "rule_site": true,
+      "sigma_text": true,
+      "gold_leak": true,
+      "gold_leak_id": true
+     },
+     {
+      "domain": "manageengine.com",
+      "chars": 6005,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4698",
+     "https://partner.gurucul.com/articles/ThreatResearch/Kapeka-Backdoor-Scheduled-Task-Creation-17-2-2025",
+     "https://sigma.controlassurance.com/rules/win_security_malware_kapeka_backdoor_scheduled_task_creation/",
+     "https://detection.fyi/sigmahq/sigma/emerging-threats/2024/malware/kapeka/win_security_malware_kapeka_backdoor_scheduled_task_creation/",
+     "https://www.manageengine.com/log-management/detection-rules/kapeka-backdoor-persistence-activity.html"
+    ],
+    "values_lacking": 5,
+    "values_added": 5,
+    "values_added_clean": 3,
+    "techniques_lacking": 1,
+    "techniques_added": 1,
+    "techniques_added_clean": 1
+   },
+   {
+    "rule_id": "ab6b1a39-a9ee-4ab4-b075-e83acf6e346b",
+    "query": "OMIGOD: Critical Vulnerabilities in OMI Affecting Countless Azure Customers | Wi exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.96,
+    "error": null,
+    "results": [
+     {
+      "domain": "wiz.io",
+      "chars": 41925,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "corelight.com",
+      "chars": 6073,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "microsoft.com",
+      "chars": 13172,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "github.com",
+      "chars": 7133,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "wiz.io",
+      "chars": 13756,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://www.wiz.io/blog/omigod-critical-vulnerabilities-in-omi-azure",
+     "https://corelight.com/blog/detecting-cve-2021-38647-omigod",
+     "https://www.microsoft.com/en-us/msrc/blog/2021/09/additional-guidance-regarding-omi-vulnerabilities-within-azure-vm-management-extensions",
+     "https://github.com/marcosimioni/omigood",
+     "https://www.wiz.io/blog/secret-agent-exposes-azure-customers-to-unauthorized-code-execution"
+    ],
+    "values_lacking": 0,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 5,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "881834a4-6659-4773-821e-1c151789d873",
+    "query": "Lost in Translation \u2014 Steemit exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.86,
+    "error": null,
+    "results": [
+     {
+      "domain": "steemit.com",
+      "chars": 12880,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "steemit.com",
+      "chars": 7087,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "steemit.com",
+      "chars": 11915,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "steemit.com",
+      "chars": 17917,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "steemit.com",
+      "chars": 1159,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://steemit.com/steemit/@steemitblog/important-security-announcement-steemit-ceo-ned-scott?sort=new",
+     "https://steemit.com/steemit/@steemit3/first-update-to-july-14-security-announcement-from-steemit-ceo-ned-scott",
+     "https://steemit.com/steem/@robinhood/offline-attack-on-steem-user-credentials",
+     "https://steemit.com/steemit/@firepower/dummies-guide-to-basic-steemit-account-security-account-recovery-guide-must-read-for-steemit-users?sort=new",
+     "https://steemit.com/secpoint/@secpoint/scan-your-sites-with-secpoint-penetrator-for-darksword-related-web-indicators"
+    ],
+    "values_lacking": 2,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "b7155193-8a81-4d8f-805d-88de864ca50c",
+    "query": "Raindrop: New Malware Discovered in SolarWinds Investigation | SECURITY.COM Analyzing Solorigate, the compromised DLL file that started a sophisticated cybe atomic-red-team/atomics/T1047/T1047.md at f339e7da7d05f6057fdfcdd3742bfcf365fee2 exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 1.02,
+    "error": null,
+    "results": [
+     {
+      "domain": "microsoft.com",
+      "chars": 40316,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "security.com",
+      "chars": 13535,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "attack.mitre.org",
+      "chars": 2831,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "login.easychair.org",
+      "chars": 59172,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "security.com",
+      "chars": 14006,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://www.microsoft.com/en-us/security/blog/2021/01/20/deep-dive-into-the-solorigate-second-stage-activation-from-sunburst-to-teardrop-and-raindrop/",
+     "https://www.security.com/threat-intelligence/solarwinds-raindrop-malware",
+     "https://attack.mitre.org/software/S0565/",
+     "https://login.easychair.org/publications/preprint/7BDF/download",
+     "https://www.security.com/solarwinds/solarwinds-raindrop-malware-0"
+    ],
+    "values_lacking": 1,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "a902d249-9b9c-4dc4-8fd0-fbe528ef965c",
+    "query": "CVE-2023-22518 cve-2023-22518 CVE-2023-22518 - Improper Authorization Vulnerability In Confluence Data Center  Confluence to Cerber: Exploitation of \u200b\u200bCVE-2023-22518 | Huntress GitHub - ForceFledgling/CVE-2023-22518: Improper Authorization Vulnerability in  exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.93,
+    "error": null,
+    "results": [
+     {
+      "domain": "huntress.com",
+      "chars": 8451,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "support.atlassian.com",
+      "chars": 13813,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 14735,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "sentinelone.com",
+      "chars": 10060,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "jira.atlassian.com",
+      "chars": 6380,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://www.huntress.com/blog/confluence-to-cerber-exploitation-of-cve-2023-22518-for-ransomware-deployment",
+     "https://support.atlassian.com/atlassian-knowledge-base/kb/faq-for-cve-2023-22518/",
+     "https://nvd.nist.gov/vuln/detail/CVE-2023-22518",
+     "https://www.sentinelone.com/blog/c3rb3r-ransomware-ongoing-exploitation-of-cve-2023-22518-targets-unpatched-confluence-servers/",
+     "https://jira.atlassian.com/browse/CONFSERVER-93142"
+    ],
+    "values_lacking": 1,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "24c4d154-05a4-4b99-b57d-9b977472443a",
+    "query": "Lazarus covets COVID-19-related intelligence | Securelist Lazarus Report | HvS-Consulting exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.92,
+    "error": null,
+    "results": [
+     {
+      "domain": "securelist.com",
+      "chars": 22119,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "hvs-consulting.de",
+      "chars": 1134,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "kaspersky.com",
+      "chars": 6209,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "usa.kaspersky.com",
+      "chars": 6068,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "darkreading.com",
+      "chars": 4712,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://securelist.com/lazarus-covets-covid-19-related-intelligence/99906/",
+     "https://www.hvs-consulting.de/en/blog/lazarus-report",
+     "https://www.kaspersky.com/about/press-releases/never-enough-kaspersky-reveals-two-apt-incidents-related-to-vaccine-research",
+     "https://usa.kaspersky.com/about/press-releases/kaspersky-reveals-two-lazarus-attacks-targeting-vaccine-research",
+     "https://www.darkreading.com/threat-intelligence/lazarus-group-seeks-intelligence-related-to-covid-19"
+    ],
+    "values_lacking": 5,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "f8e9aa1c-14f2-4dbd-aa59-b98968ed650d",
+    "query": "Shining some light on the DarkGate loader | Telekom Security GitHub - pr0xylife/DarkGate \u00b7 GitHub exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.97,
+    "error": null,
+    "results": [
+     {
+      "domain": "github.security.telekom.com",
+      "chars": 23602,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "github.com",
+      "chars": 9091,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "blog.pulsedive.com",
+      "chars": 12827,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "splunk.com",
+      "chars": 18269,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "github.com",
+      "chars": 3071,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://github.security.telekom.com/2023/08/darkgate-loader.html",
+     "https://github.com/telekom-security/malware_analysis/blob/main/darkgate/extractor.py",
+     "https://blog.pulsedive.com/analyzing-darkgate-loaders/",
+     "https://www.splunk.com/en_us/blog/security/enter-the-gates-an-analysis-of-the-darkgate-autoit-loader.html?web_view=true",
+     "https://github.com/executemalware/Malware-IOCs/blob/main/2023-07-24%20DarkGate%20IOCs"
+    ],
+    "values_lacking": 4,
+    "values_added": 4,
+    "values_added_clean": 4,
+    "techniques_lacking": 1,
+    "techniques_added": 1,
+    "techniques_added_clean": 1
+   },
+   {
+    "rule_id": "64a871dd-83f6-4e5f-80fc-5a7ca3a8a819",
+    "query": "Kapeka - WithSecure\u2122 exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 1.04,
+    "error": null,
+    "results": [
+     {
+      "domain": "withsecure.com",
+      "chars": 58057,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "withsecure.com",
+      "chars": 3065,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cybersecuritynews.com",
+      "chars": 6096,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "attack.mitre.org",
+      "chars": 3346,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "sigma.controlassurance.com",
+      "chars": 3968,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": true,
+      "gold_leak": true,
+      "gold_leak_id": true
+     }
+    ],
+    "urls": [
+     "https://www.withsecure.com/wp-content/uploads/2026/05/WithSecure-Research-Kapeka.pdf",
+     "https://www.withsecure.com/en/resources-hub/w-labs/kapeka/",
+     "https://cybersecuritynews.com/new-flexible-kapeka-backdoor/",
+     "https://attack.mitre.org/software/S1190/",
+     "https://sigma.controlassurance.com/rules/proc_creation_win_malware_kapeka_backdoor_persistence/"
+    ],
+    "values_lacking": 9,
+    "values_added": 9,
+    "values_added_clean": 4,
+    "techniques_lacking": 1,
+    "techniques_added": 1,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "f6a711f3-d032-4f9e-890b-bbe776236c84",
+    "query": "Mandiant Cybersecurity Consulting | Google Cloud exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.82,
+    "error": null,
+    "results": [
+     {
+      "domain": "cloud.google.com",
+      "chars": 11260,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cloud.google.com",
+      "chars": 3983,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cloud.google.com",
+      "chars": 3724,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cloud.google.com",
+      "chars": 9438,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cloud.google.com",
+      "chars": 9628,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://cloud.google.com/security/mandiant",
+     "https://cloud.google.com/security/products/mandiant-managed-threat-hunting",
+     "https://cloud.google.com/security/consulting/mandiant-cyber-defense-assessment",
+     "https://cloud.google.com/security/consulting/mandiant-consulting-all",
+     "https://cloud.google.com/security/consulting/mandiant-technical-assurance"
+    ],
+    "values_lacking": 3,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 0,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "aa03c712-75c6-438b-8d42-de88f2427e09",
+    "query": "Operation Triangulation: iOS devices targeted with previously unknown malware |  \u041f\u043e\u0434\u0440\u043e\u0431\u043d\u0430\u044f \u0438\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044f :: \u0424\u0435\u0434\u0435\u0440\u0430\u043b\u044c\u043d\u0430\u044f \u0421\u043b\u0443\u0436\u0431\u0430 \u0411\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0441\u0442\u0438 exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.83,
+    "error": null,
+    "results": [
+     {
+      "domain": "securelist.com",
+      "chars": 24510,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "kaspersky.com",
+      "chars": 5008,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "attack.mitre.org",
+      "chars": 4593,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "securelist.com",
+      "chars": 22996,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "securelist.com",
+      "chars": 1585,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://securelist.com/operation-triangulation/109842/",
+     "https://www.kaspersky.com/blog/triangulation-attack-on-ios/48353/",
+     "https://attack.mitre.org/campaigns/C0054/",
+     "https://securelist.com/operation-triangulation-catching-wild-triangle/110916/",
+     "https://securelist.com/trng-2023/"
+    ],
+    "values_lacking": 15,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 0,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "b014ea07-8ea0-4859-b517-50a4e5b7ecec",
+    "query": "cve-2021-22005 CVE-2021-22005: Critical File Upload Vulnerability in VMware vCenter Server - Bl exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.84,
+    "error": null,
+    "results": [
+     {
+      "domain": "decryptiondigest.com",
+      "chars": 13214,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "github.com",
+      "chars": 20785,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "ctid.mitre.org",
+      "chars": 2144,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "fixthecve.com",
+      "chars": 5011,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "rapid7.com",
+      "chars": 3548,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://www.decryptiondigest.com/blog/cve-2021-22005-vmware-vcenter-analytics-file-upload-rce",
+     "https://github.com/vmware/vcf-security-and-compliance-guidelines/blob/main/security-advisories/vmsa-2021-0020/README.md",
+     "https://ctid.mitre.org/mappings/external/kev/attack-15.1/domain-enterprise/kev-02.13.2025/CVE-2021-22005/",
+     "https://fixthecve.com/cve/CVE-2021-22005",
+     "https://www.rapid7.com/blog/post/2021/09/21/critical-vcenter-server-file-upload-vulnerability-cve-2021-22005/"
+    ],
+    "values_lacking": 1,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 1,
+    "techniques_added_clean": 1
+   },
+   {
+    "rule_id": "994cac2b-92c2-44bf-8853-14f6ca39fbda",
+    "query": "BumbleBee: Round Two - The DFIR Report exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 2.06,
+    "error": null,
+    "results": [
+     {
+      "domain": "thedfirreport.com",
+      "chars": 26104,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": true,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "github.com",
+      "chars": 92663,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "hendryadrian.com",
+      "chars": 4867,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "anvilogic.com",
+      "chars": 48044,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "orkl.eu",
+      "chars": 44093,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://thedfirreport.com/2022/09/26/bumblebee-round-two/",
+     "https://github.com/center-for-threat-informed-defense/attack-flow/blob/main/corpus/DFIR%20-%20BumbleBee%20Round%202.afb",
+     "https://www.hendryadrian.com/bumblebee-round-two/",
+     "https://www.anvilogic.com/learn/avoid-the-sting-and-defend-the-honey-tree",
+     "https://orkl.eu/libraryEntry/d1d66856-4004-4090-9967-13f539978b22"
+    ],
+    "values_lacking": 0,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 1,
+    "techniques_added_clean": 1
+   },
+   {
+    "rule_id": "47e0852a-cf81-4494-a8e6-31864f8c86ed",
+    "query": "WikiLeaks - Vault 7: Projects exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.93,
+    "error": null,
+    "results": [
+     {
+      "domain": "wikileaks.org",
+      "chars": 22507,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "wikileaks.org",
+      "chars": 17654,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "our.wikileaks.org",
+      "chars": 5282,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "bleepingcomputer.com",
+      "chars": 5627,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "wikileaks.org",
+      "chars": 6439,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://wikileaks.org/vault7/?marble=",
+     "https://wikileaks.org/ciav7p1/cms/files/DevelopersGuide.pdf",
+     "https://our.wikileaks.org/Vault_7:_Grasshopper",
+     "https://www.bleepingcomputer.com/news/security/vault-7-wikileaks-docs-hint-cia-could-bypass-21-security-products/",
+     "https://wikileaks.org/vault7/darkmatter/document/ExpressLane-3_1_1-Requirement-Statement/ExpressLane-3_1_1-Requirement-Statement.pdf"
+    ],
+    "values_lacking": 1,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "a2e97350-4285-43f2-a63f-d0daff291738",
+    "query": "Attacking SSL VPN - Part 2: Breaking the Fortigate SSL VPN | DEVCORE exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.83,
+    "error": null,
+    "results": [
+     {
+      "domain": "devco.re",
+      "chars": 14524,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "orange-tw.blogspot.com",
+      "chars": 15675,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "rstforums.com",
+      "chars": 14708,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "media.defcon.org",
+      "chars": 18481,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "github.com",
+      "chars": 4987,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://devco.re/blog/2019/08/09/attacking-ssl-vpn-part-2-breaking-the-Fortigate-ssl-vpn/",
+     "https://orange-tw.blogspot.com/2019/08/attacking-ssl-vpn-part-2-breaking-the-fortigate-ssl-vpn.html",
+     "https://rstforums.com/forum/topic/111703-attacking-ssl-vpn-part-2-breaking-the-fortigate-ssl-vpn/",
+     "https://media.defcon.org/DEF%20CON%2027/DEF%20CON%2027%20presentations/DEFCON-27-Orange-Tsai-and-Meh-Chang-Infiltrating-Corporate-Intranet-Like-NSA-Pre-auth-RCE-on-Leading-SSL-VPNs.pdf",
+     "https://github.com/rapid7/metasploit-framework/blob/master/modules/auxiliary/gather/fortios_vpnssl_traversal_creds_leak.rb"
+    ],
+    "values_lacking": 2,
+    "values_added": 1,
+    "values_added_clean": 1,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "c601f20d-570a-4cde-a7d6-e17f99cb8e7f",
+    "query": "The Epic Turla Operation | Securelist exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.95,
+    "error": null,
+    "results": [
+     {
+      "domain": "securelist.com",
+      "chars": 25754,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "kaspersky.com",
+      "chars": 6243,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "kaspersky.com",
+      "chars": 8101,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "media.kasperskycontenthub.com",
+      "chars": 12168,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "apt.securelist.com",
+      "chars": 2436,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://securelist.com/the-epic-turla-operation/65545/",
+     "https://www.kaspersky.com/blog/epic-turla-catching-the-reptiles-tail/14991/",
+     "https://www.kaspersky.com/about/press-releases/the-epic-snake-unraveling-the-mysteries-of-the-turla-cyber-espionage-campaign",
+     "https://media.kasperskycontenthub.com/wp-content/uploads/sites/63/2014/08/21032604/KL_Epic_Turla_Technical_Appendix_20140806.pdf",
+     "https://apt.securelist.com/apt/epic-turla"
+    ],
+    "values_lacking": 3,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 4,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "ad7085ac-92e4-4b76-8ce2-276d2c0e68ef",
+    "query": "Protecting customers from a private-sector offensive actor using 0-day exploits  Hooking Candiru: Another Mercenary Spyware Vendor Comes into Focus - The Citizen exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.89,
+    "error": null,
+    "results": [
+     {
+      "domain": "citizenlab.ca",
+      "chars": 31644,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "citizenlab.ca",
+      "chars": 33536,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "utoronto.scholaris.ca",
+      "chars": 1054,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "50081908.fs1.hubspotusercontent-na1.net",
+      "chars": 7232,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "securityweek.com",
+      "chars": 4838,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://citizenlab.ca/research/hooking-candiru-another-mercenary-spyware-vendor-comes-into-focus/",
+     "https://citizenlab.ca/wp-content/uploads/2025/12/Report139-hooking-candiru.pdf",
+     "https://utoronto.scholaris.ca/items/62dfbd5c-d490-4cf5-a413-527cd84c9a54",
+     "https://50081908.fs1.hubspotusercontent-na1.net/hubfs/50081908/Case%20Studies/Citizen%20Lab%20Case%20Study_250408.pdf",
+     "https://www.securityweek.com/secretive-israeli-exploit-company-behind-wave-zero-day-exploits/"
+    ],
+    "values_lacking": 1,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 2,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "7b501acf-fa98-4272-aa39-194f82edc8a3",
+    "query": "CVE-2021-44077 Will the Real Msiexec Please Stand Up? Exploit Leads to Data Exfiltration CVE-2021-44077/exploit.py at b7a48e25824e8ead95e028475c7fd0e107e6e6bf \u00b7 horizon3 exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.85,
+    "error": null,
+    "results": [
+     {
+      "domain": "github.com",
+      "chars": 1799,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "github.com",
+      "chars": 2219,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cisa.gov",
+      "chars": 14784,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "hendryadrian.com",
+      "chars": 5435,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "github.com",
+      "chars": 2410,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://github.com/horizon3ai/CVE-2021-44077/blob/b7a48e25824e8ead95e028475c7fd0e107e6e6bf/exploit.py",
+     "https://github.com/horizon3ai/CVE-2021-44077/blob/master/exploit.py",
+     "https://www.cisa.gov/sites/default/files/AA21-336A_APT_Actors_Exploiting_CVE-2021-44077_in_Zoho_ManageEngine_ServiceDesk_Plus.pdf",
+     "https://www.hendryadrian.com/will-the-real-msiexec-please-stand-up-exploit-leads-to-data-exfiltration/",
+     "https://github.com/horizon3ai/CVE-2021-44077"
+    ],
+    "values_lacking": 0,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 0,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "ad0960eb-0015-4d16-be13-b3d9f18f1342",
+    "query": "CVE-2023-36874 cve-2023-36874 GitHub - Wh04m1001/CVE-2023-36874 \u00b7 GitHub Discovering and Blocking a Zero-Day Exploit with CrowdStrike Falcon Complete: Th exploit detection indicators of compromise",
+    "status": 200,
+    "seconds": 0.94,
+    "error": null,
+    "results": [
+     {
+      "domain": "crowdstrike.com",
+      "chars": 9838,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "github.com",
+      "chars": 851,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "github.com",
+      "chars": 5746,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "research.splunk.com",
+      "chars": 4371,
+      "own_page": false,
+      "rule_site": true,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 326,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://www.crowdstrike.com/en-us/blog/falcon-complete-zero-day-exploit-cve-2023-36874/",
+     "https://github.com/Wh04m1001/CVE-2023-36874",
+     "https://github.com/Octoberfest7/CVE-2023-36874_BOF",
+     "https://research.splunk.com/stories/windows_error_reporting_service_elevation_of_privilege_vulnerability/",
+     "https://nvd.nist.gov/vuln/detail/cve-2023-36874"
+    ],
+    "values_lacking": 0,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 0,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "7fc30d63-728d-48d9-ad6f-14d14f4accf7",
+    "query": "Operation Triangulation: iOS devices targeted with previously unknown malware |  \u041f\u043e\u0434\u0440\u043e\u0431\u043d\u0430\u044f \u0438\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044f :: \u0424\u0435\u0434\u0435\u0440\u0430\u043b\u044c\u043d\u0430\u044f \u0421\u043b\u0443\u0436\u0431\u0430 \u0411\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0441\u0442\u0438 exploit detection indicators of compromise",
+    "status": 429,
+    "seconds": 0.33,
+    "error": "you have reached your web search session request limit, upgrade for higher limits: https://ollama.com/upgrade (ref: a97bdcee-31c6-48aa-b3b7-be49eadf4b98)",
+    "results": [],
+    "urls": [],
+    "values_lacking": 15,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 0,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "9a2d8b3e-f5a1-4c68-9e21-7d9e1cf8a123",
+    "query": "CVE-2025-33053 Security Update Guide - Microsoft Security Response Center Stealth Falcon's Exploit of Microsoft Zero Day Vulnerability - Check Point Resea exploit detection indicators of compromise",
+    "status": 429,
+    "seconds": 0.32,
+    "error": "you have reached your web search session request limit, upgrade for higher limits: https://ollama.com/upgrade (ref: 10712021-aa01-4a71-a4bc-2abb4599e8cb)",
+    "results": [],
+    "urls": [],
+    "values_lacking": 2,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 2,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   }
+  ],
+  "cve": [
+   {
+    "rule_id": "17ce9373-2163-4a2c-90ba-f91e9ef7a8c1",
+    "query": "CVE-2024-35250 CVE-2023-29360 CVE-2024-38054",
+    "status": 200,
+    "seconds": 0.88,
+    "error": null,
+    "results": [
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 7626,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 10210,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "rapid7.com",
+      "chars": 2125,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "rapid7.com",
+      "chars": 1675,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "kevintel.com",
+      "chars": 9584,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://nvd.nist.gov/vuln/detail/cve-2024-38054",
+     "https://nvd.nist.gov/vuln/detail/CVE-2024-35250",
+     "https://www.rapid7.com/db/vulnerabilities/cve-2024-35250/",
+     "https://www.rapid7.com/db/vulnerabilities/msft-cve-2024-35250/",
+     "https://kevintel.com/CVE-2024-35250"
+    ],
+    "values_lacking": 1,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "c5a178bf-9cfb-4340-b584-e4df39b6a3e7",
+    "query": "CVE-2007-5633 CVE-2010-1592 CVE-2009-0824",
+    "status": 200,
+    "seconds": 0.9,
+    "error": null,
+    "results": [
+     {
+      "domain": "cve.org",
+      "chars": 1566,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 5309,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cve.org",
+      "chars": 2401,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "rapid7.com",
+      "chars": 643,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "mallory.ai",
+      "chars": 4977,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://www.cve.org/CVERecord?id=CVE-2007-5633",
+     "https://nvd.nist.gov/vuln/detail/CVE-2009-0824",
+     "https://www.cve.org/CVERecord?id=CVE-2009-0824",
+     "https://www.rapid7.com/db/vulnerabilities/cve-2007-5633/",
+     "https://mallory.ai/vulnerabilities/CVE-2007-5633"
+    ],
+    "values_lacking": 1,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "92389a99-5215-43b0-a09f-e334453b2ed3",
+    "query": "CVE-2023-36874 CVE-2021-24084",
+    "status": 200,
+    "seconds": 0.89,
+    "error": null,
+    "results": [
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 6478,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 12518,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cve.org",
+      "chars": 2476,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "wiz.io",
+      "chars": 2894,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cve.circl.lu",
+      "chars": 52688,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://nvd.nist.gov/vuln/detail/CVE-2021-24084",
+     "https://nvd.nist.gov/vuln/detail/CVE-2023-36874",
+     "https://www.cve.org/CVERecord?id=CVE-2023-36874",
+     "https://www.wiz.io/vulnerability-database/cve/cve-2023-36874",
+     "https://cve.circl.lu/vuln/msrc_cve-2023-36874"
+    ],
+    "values_lacking": 0,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 0,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "2f974656-6d83-4059-bbdf-68ac5403422f",
+    "query": "CVE-2021-1636",
+    "status": 200,
+    "seconds": 0.98,
+    "error": null,
+    "results": [
+     {
+      "domain": "msrc.microsoft.com",
+      "chars": 17047,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 6342,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "rapid7.com",
+      "chars": 1574,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "app.opencve.io",
+      "chars": 3910,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "wiz.io",
+      "chars": 2514,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://msrc.microsoft.com/en-US/security-guidance/advisory/CVE-2021-1636",
+     "https://nvd.nist.gov/vuln/detail/CVE-2021-1636",
+     "https://www.rapid7.com/db/vulnerabilities/cve-2021-1636/",
+     "https://app.opencve.io/cve/CVE-2021-1636",
+     "https://www.wiz.io/vulnerability-database/cve/cve-2021-1636"
+    ],
+    "values_lacking": 1,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "bcc6f179-11cd-4111-a9a6-0fab68515cf7",
+    "query": "CVE-2017-11882",
+    "status": 200,
+    "seconds": 0.78,
+    "error": null,
+    "results": [
+     {
+      "domain": "msrc.microsoft.com",
+      "chars": 6052,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 326,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "app.opencve.io",
+      "chars": 4046,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cve.armis.com",
+      "chars": 5563,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cvepremium.circl.lu",
+      "chars": 1539,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://msrc.microsoft.com/update-guide/en-US/vulnerability/CVE-2017-11882",
+     "https://nvd.nist.gov/vuln/detail/cve-2017-11882",
+     "https://app.opencve.io/cve/CVE-2017-11882",
+     "https://cve.armis.com/cve-2017-11882",
+     "https://cvepremium.circl.lu/known-exploited-vulnerabilities-catalog/aa41eeca-49c6-4f4a-b1f9-2f04942bb240"
+    ],
+    "values_lacking": 2,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 0,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "43259cc4-1b80-4931-bd98-baea01afc196",
+    "query": "CVE-2025-59287 CVE-2025-30406 CVE-2025-47812",
+    "status": 200,
+    "seconds": 0.89,
+    "error": null,
+    "results": [
+     {
+      "domain": "msrc.microsoft.com",
+      "chars": 18123,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 8094,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "rapid7.com",
+      "chars": 2078,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "tenable.com",
+      "chars": 4698,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 4737,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2025-59287",
+     "https://nvd.nist.gov/vuln/detail/CVE-2025-59287",
+     "https://www.rapid7.com/db/vulnerabilities/cve-2025-59287/",
+     "https://www.tenable.com/cve/CVE-2025-59287",
+     "https://nvd.nist.gov/vuln/detail/cve-2025-30412"
+    ],
+    "values_lacking": 2,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "0d0d9a8a-a49e-4e27-b061-7ce4b936cfb7",
+    "query": "CVE-2020-8193 CVE-2020-8195 CVE-2020-8196",
+    "status": 200,
+    "seconds": 0.93,
+    "error": null,
+    "results": [
+     {
+      "domain": "advisories.checkpoint.com",
+      "chars": 1555,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nccgroup.com",
+      "chars": 3193,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "tenable.com",
+      "chars": 7416,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 17208,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "tenable.com",
+      "chars": 1689,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://advisories.checkpoint.com/defense/advisories/public/2020/cpai-2020-0712.html/",
+     "https://www.nccgroup.com/research/rift-citrix-adc-vulnerabilities-cve-2020-8193-cve-2020-8195-and-cve-2020-8196-intelligence/",
+     "https://www.tenable.com/blog/cve-2020-8193-cve-2020-8195-and-cve-2020-819-active-exploitation-of-citrix-vulnerabilities",
+     "https://nvd.nist.gov/vuln/detail/CVE-2020-8193",
+     "https://www.tenable.com/cve/CVE-2020-8196"
+    ],
+    "values_lacking": 4,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "5b2bbc47-dead-4ef7-8908-0cf73fcbecbf",
+    "query": "CVE-2021-1675 CVE-2021-34527",
+    "status": 200,
+    "seconds": 0.9,
+    "error": null,
+    "results": [
+     {
+      "domain": "msrc.microsoft.com",
+      "chars": 23395,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 326,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "kb.cert.org",
+      "chars": 7187,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 12836,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "support.catonetworks.com",
+      "chars": 50134,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://msrc.microsoft.com/update-guide/en-US/advisory/CVE-2021-1675",
+     "https://nvd.nist.gov/vuln/detail/cve-2021-34527",
+     "https://www.kb.cert.org/vuls/id/383432",
+     "https://nvd.nist.gov/vuln/detail/CVE-2021-1675",
+     "https://support.catonetworks.com/hc/en-us/articles/4403558273169-CVE-2021-1675-and-CVE-2021-34527-PrintNightmare-Windows-Print-Spooler-RCE"
+    ],
+    "values_lacking": 2,
+    "values_added": 1,
+    "values_added_clean": 1,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "e94486ea-2650-4548-bf25-88cbd0bb32d7",
+    "query": "CVE-2023-47246",
+    "status": 200,
+    "seconds": 0.85,
+    "error": null,
+    "results": [
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 8582,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cve.org",
+      "chars": 576,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "rapid7.com",
+      "chars": 822,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "tenable.com",
+      "chars": 1537,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "helpnetsecurity.com",
+      "chars": 4088,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://nvd.nist.gov/vuln/detail/CVE-2023-47246",
+     "https://www.cve.org/CVERecord?id=CVE-2023-47246",
+     "https://www.rapid7.com/db/vulnerabilities/cve-2023-47246/",
+     "https://www.tenable.com/cve/CVE-2023-47246",
+     "https://www.helpnetsecurity.com/2023/11/09/exploited-cve-2023-47246/"
+    ],
+    "values_lacking": 1,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 0,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "ab6b1a39-a9ee-4ab4-b075-e83acf6e346b",
+    "query": "CVE-2021-38647 CVE-2021-38648 CVE-2021-38645",
+    "status": 200,
+    "seconds": 1.18,
+    "error": null,
+    "results": [
+     {
+      "domain": "cert.europa.eu",
+      "chars": 4120,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "msrc.microsoft.com",
+      "chars": 14542,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 9574,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cow-prod-www-v3.azurewebsites.net",
+      "chars": 3991,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cve.org",
+      "chars": 1931,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://cert.europa.eu/publications/security-advisories/2021-051/",
+     "https://msrc.microsoft.com/update-guide/en-US/security-guidance/advisory/CVE-2021-38647",
+     "https://nvd.nist.gov/vuln/detail/cve-2021-38648",
+     "https://cow-prod-www-v3.azurewebsites.net/publications/security-advisories/2021-051/pdf",
+     "https://www.cve.org/CVERecord?id=CVE-2021-38647"
+    ],
+    "values_lacking": 0,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 5,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "a902d249-9b9c-4dc4-8fd0-fbe528ef965c",
+    "query": "CVE-2023-22518 CVE-2023-46604 CVE-2023-47246",
+    "status": 200,
+    "seconds": 0.9,
+    "error": null,
+    "results": [
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 14735,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "confluence.atlassian.com",
+      "chars": 11249,
+      "own_page": true,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 8582,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cve.org",
+      "chars": 2735,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "rapid7.com",
+      "chars": 822,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://nvd.nist.gov/vuln/detail/CVE-2023-22518",
+     "https://confluence.atlassian.com/security/cve-2023-22518-improper-authorization-vulnerability-in-confluence-data-center-and-server-1311473907.html",
+     "https://nvd.nist.gov/vuln/detail/CVE-2023-47246",
+     "https://www.cve.org/CVERecord?id=CVE-2023-46604",
+     "https://www.rapid7.com/db/vulnerabilities/cve-2023-47246/"
+    ],
+    "values_lacking": 1,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "aa03c712-75c6-438b-8d42-de88f2427e09",
+    "query": "CVE-2022-46690",
+    "status": 200,
+    "seconds": 0.92,
+    "error": null,
+    "results": [
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 326,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "github.com",
+      "chars": 2954,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cve.org",
+      "chars": 2217,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "rapid7.com",
+      "chars": 1453,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "tenable.com",
+      "chars": 1024,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://nvd.nist.gov/vuln/detail/cve-2022-46690",
+     "https://github.com/advisories/ghsa-v86p-p58r-p852",
+     "https://www.cve.org/CVERecord?id=CVE-2022-46690",
+     "https://www.rapid7.com/db/vulnerabilities/cve-2022-46690/",
+     "https://www.tenable.com/cve/CVE-2022-46690"
+    ],
+    "values_lacking": 15,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 0,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "b014ea07-8ea0-4859-b517-50a4e5b7ecec",
+    "query": "CVE-2021-22005 CVE-2021-21985 CVE-2021-21991",
+    "status": 200,
+    "seconds": 0.84,
+    "error": null,
+    "results": [
+     {
+      "domain": "support.broadcom.com",
+      "chars": 28122,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "github.com",
+      "chars": 20785,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "support.broadcom.com",
+      "chars": 7635,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 326,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cve.org",
+      "chars": 992,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/23611",
+     "https://github.com/vmware/vcf-security-and-compliance-guidelines/blob/main/security-advisories/vmsa-2021-0020/README.md",
+     "https://support.broadcom.com/web/ecx/support-content-notification/-/external/content/SecurityAdvisories/0/23602",
+     "https://nvd.nist.gov/vuln/detail/cve-2021-21985",
+     "https://www.cve.org/CVERecord?id=CVE-2021-21991"
+    ],
+    "values_lacking": 1,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "a2e97350-4285-43f2-a63f-d0daff291738",
+    "query": "CVE-2018-13379 CVE-2018-13381 CVE-2018-13383",
+    "status": 200,
+    "seconds": 0.89,
+    "error": null,
+    "results": [
+     {
+      "domain": "threatprotect.qualys.com",
+      "chars": 6720,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "opencve.greenant.net",
+      "chars": 1453,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 970,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "exploit-intel.com",
+      "chars": 4157,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 5223,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://threatprotect.qualys.com/2020/04/15/fortinet-fortios-ssl-vpn-multiple-cross-site-scripting-vulnerabilities-cve-2018-13379cve-2018-13380cve-2018-13381cve-2018-13382cve-2018-13383/",
+     "https://opencve.greenant.net/cve/CVE-2018-13381",
+     "https://nvd.nist.gov/vuln/detail/CVE-2018-13383",
+     "https://exploit-intel.com/vuln/CVE-2018-13383",
+     "https://nvd.nist.gov/vuln/detail/cve-2018-13379"
+    ],
+    "values_lacking": 2,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 1,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "c601f20d-570a-4cde-a7d6-e17f99cb8e7f",
+    "query": "CVE-2012-1723 CVE-2013-5065 CVE-2012-4681",
+    "status": 200,
+    "seconds": 0.93,
+    "error": null,
+    "results": [
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 9868,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "rapid7.com",
+      "chars": 4493,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "kev.5sn.com",
+      "chars": 3235,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nmmapper.com",
+      "chars": 6121,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "snort.org",
+      "chars": 3110,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://nvd.nist.gov/vuln/detail/cve-2013-5065",
+     "https://www.rapid7.com/db/vulnerabilities/cve-2012-1723/",
+     "https://kev.5sn.com/2012/",
+     "https://www.nmmapper.com/nvd/cve/CVE-2012-4681/",
+     "https://www.snort.org/rule_docs/1-26805"
+    ],
+    "values_lacking": 3,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 4,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "ad7085ac-92e4-4b76-8ce2-276d2c0e68ef",
+    "query": "CVE-2021-31979 CVE-2021-33771 CVE-2022-38028",
+    "status": 200,
+    "seconds": 0.95,
+    "error": null,
+    "results": [
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 15760,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 11139,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 11139,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "rapid7.com",
+      "chars": 2667,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 326,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://nvd.nist.gov/vuln/detail/CVE-2021-31979",
+     "https://nvd.nist.gov/vuln/detail/CVE-2021-33771",
+     "https://nvd.nist.gov/vuln/detail/cve-2021-33771",
+     "https://www.rapid7.com/db/vulnerabilities/cve-2021-31979/",
+     "https://nvd.nist.gov/vuln/detail/cve-2024-38028"
+    ],
+    "values_lacking": 1,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 2,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "7b501acf-fa98-4272-aa39-194f82edc8a3",
+    "query": "CVE-2021-44077",
+    "status": 200,
+    "seconds": 0.97,
+    "error": null,
+    "results": [
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 20437,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cisa.gov",
+      "chars": 13738,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cisa.gov",
+      "chars": 1513,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "ctid.mitre.org",
+      "chars": 12312,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cisa.gov",
+      "chars": 14784,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://nvd.nist.gov/vuln/detail/CVE-2021-44077",
+     "https://www.cisa.gov/news-events/cybersecurity-advisories/aa21-336a",
+     "https://www.cisa.gov/news-events/alerts/2021/12/02/cisa-and-fbi-release-alert-active-exploitation-cve-2021-44077-zoho-manageengine-servicedesk-plus",
+     "https://ctid.mitre.org/mappings/external/kev/attack-16.1/domain-enterprise/kev-07.28.2025/CVE-2021-44077/",
+     "https://www.cisa.gov/sites/default/files/AA21-336A_APT_Actors_Exploiting_CVE-2021-44077_in_Zoho_ManageEngine_ServiceDesk_Plus.pdf"
+    ],
+    "values_lacking": 0,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 0,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "ad0960eb-0015-4d16-be13-b3d9f18f1342",
+    "query": "CVE-2023-36874 CVE-2021-24084",
+    "status": 200,
+    "seconds": 0.87,
+    "error": null,
+    "results": [
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 6478,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "nvd.nist.gov",
+      "chars": 12518,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cve.org",
+      "chars": 2476,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "wiz.io",
+      "chars": 2894,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     },
+     {
+      "domain": "cve.circl.lu",
+      "chars": 52688,
+      "own_page": false,
+      "rule_site": false,
+      "sigma_text": false,
+      "gold_leak": false,
+      "gold_leak_id": false
+     }
+    ],
+    "urls": [
+     "https://nvd.nist.gov/vuln/detail/CVE-2021-24084",
+     "https://nvd.nist.gov/vuln/detail/CVE-2023-36874",
+     "https://www.cve.org/CVERecord?id=CVE-2023-36874",
+     "https://www.wiz.io/vulnerability-database/cve/cve-2023-36874",
+     "https://cve.circl.lu/vuln/msrc_cve-2023-36874"
+    ],
+    "values_lacking": 0,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 0,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   },
+   {
+    "rule_id": "7fc30d63-728d-48d9-ad6f-14d14f4accf7",
+    "query": "CVE-2022-46690",
+    "status": 429,
+    "seconds": 0.32,
+    "error": "you have reached your web search session request limit, upgrade for higher limits: https://ollama.com/upgrade (ref: 4b229e08-8009-4745-99c7-c33877a352d2)",
+    "results": [],
+    "urls": [],
+    "values_lacking": 15,
+    "values_added": 0,
+    "values_added_clean": 0,
+    "techniques_lacking": 0,
+    "techniques_added": 0,
+    "techniques_added_clean": 0
+   }
+  ]
+ }
+}

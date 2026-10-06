@@ -120,3 +120,21 @@ def test_the_hourly_limit_is_told_apart_from_other_errors():
     assert is_hourly_limit({"status": 429, "error": "you have reached your web search hourly request limit, upgrade"})
     assert not is_hourly_limit({"status": 500, "error": "HTTP 500"})
     assert not is_hourly_limit({"status": 200, "error": None})
+
+
+# --- after the second pass (2026-10-06: 50 answered, then HTTP 429 "web search session request limit") --------------
+# The leak is reported by id (precise) and by title (over-counts: a gold title can be a phrase of the report itself);
+# --offline summarises the saved answers and sends nothing.
+
+def test_a_leak_by_id_is_told_apart_from_a_leak_by_title():
+    from eval.probe_web_search import gold_leak_by_id
+    gold = {"id": "5f1c6e3a-1111-2222-3333-444455556666", "title": "Griffon Malware Attack Pattern"}
+    assert gold_leak_by_id({"title": "", "url": "", "content": "id: 5f1c6e3a-1111-2222-3333-444455556666"}, gold)
+    by_title_only = {"title": "", "url": "", "content": "the griffon malware attack pattern is"}
+    assert gold_leak(by_title_only, gold) and not gold_leak_by_id(by_title_only, gold)
+
+
+def test_offline_sends_nothing():
+    from eval.probe_web_search import needs_query
+    assert not needs_query(None, offline=True)
+    assert not needs_query({"status": 429, "error": "limit", "results": []}, offline=True)

@@ -5465,3 +5465,28 @@ reported. `sigma.controlassurance.com` is a rule mirror not on the fixed rule-si
 Sigma-text and leak flags); the list is not changed during the probe.
 Also seen: the stage's query repeats a CVE ID taken from a URL in two cases (`cve-2023-36874 CVE-2023-36874`; the
 builder's `set` keeps both spellings) — noted, not changed.
+**Probe, second pass (2026-10-06, 09:00–10:09):** 25 more answered, then the hourly limit again (the probe waited
+60 minutes), then **HTTP 429 "you have reached your web search session request limit"** — a second limit, not on
+Ollama's pricing or docs pages (they mention only monthly usage and, on the free plan, 1 concurrent request); its reset
+is unknown. **Free account: ~25 searches per hour and ~50 per "session".** The probe stopped as planned (3 errors).
+Answered: **stage 32 of 60 planned, cve 18 of 38**; the rest can be asked later (a rerun resumes).
+Added after the pass, before reading the measures (tests first, 2, seen to fail): the leak by `id` reported apart
+(`gold_leak_id`, as promised above) and `--offline` (summarise the saved answers, send nothing). 786 pass.
+**Measures (`probe_web_search.py --offline`; `eval/results/web_probe_tuning60.json`):**
+- **stage (title) query, 32 cases:** 5 results each, median 0.94 s. **The report itself is among the results in 21 of
+  32 cases** (24 results). Rule sites 3 results in 3 cases (`research.splunk.com` twice — another vendor's detection, not
+  the gold; `detection.fyi` once); Sigma text 5 in 4. **Gold leak by id: 4 results in 3 cases** — Citrix CVE-2020-8193
+  and two Kapeka rules, all from rule mirrors (`sigma.controlassurance.com` 3, `detection.fyi` 1); by title 8 results in
+  4 cases (the extra: Griffon/FIN7.5, whose title is a phrase of the report). **Of 72 human values the reports lack, the
+  results hold 26; without leaks, rule sites and Sigma text, 15, in 6 cases** (3CX 1 of 1, PrintNightmare 2 of 2,
+  DarkGate 4 of 4, Kapeka 3 of 5 and 4 of 9, Fortigate 1 of 2). Techniques the reports lack: 32; results hold 6;
+  clean 4, in 4 cases.
+- **cve query, 18 cases:** NVD 28 of 90 results, then Rapid7, cve.org, Microsoft, Tenable. **No leak, no rule site, no
+  Sigma text.** Of 37 human values the reports lack, the results hold **1**; techniques 0 of 20.
+- Offline, all 60: the stage's query holds a CVE ID in 18; the report mentions one in 38 (**22 mention none**).
+Read by hand (descriptive): The DFIR Report's own page (BumbleBee) carries Sigma rules of its own — the source can
+itself publish detections. `research.splunk.com` came up for both CVE-2023-36874 cases.
+**Reading:** title queries find the report itself most of the time, the human rule in about 1 case in 10 (always via a
+rule mirror), and new detection values in about 1 case in 5 — at most 15 of the 72 values the reports lack. CVE queries
+find vulnerability databases: no leaks, and almost no detection detail. For the evaluation, saved results with rule
+mirrors, Sigma text and the gold id removed are required; for the assistant, one search per report fits the free limits.

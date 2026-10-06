@@ -48,6 +48,7 @@ OUT_PATH = REPO / "eval/results/web_probe_tuning60.json"
 RULE_SITES = (("github.com", "/sigmahq/"), ("sigma.nasbench.dev", ""), ("detection.fyi", ""), ("socprime.com", ""),
               ("uncoder.io", ""), ("research.splunk.com", ""), ("github.com", "/splunk/security_content"),
               ("github.com", "/elastic/detection-rules"))
+FLAGS = ("own_page", "rule_site", "sigma_text", "gold_leak", "gold_leak_id")
 _CVE = re.compile(r"CVE-\d{4}-\d{4,7}", re.IGNORECASE)
 
 
@@ -87,6 +88,11 @@ def gold_leak(result: dict, gold_rule: dict) -> bool:
     haystack = " ".join(str(result.get(k) or "") for k in ("title", "url", "content")).lower()
     marks = [str(gold_rule.get(k) or "").strip().lower() for k in ("id", "title")]
     return any(m and m in haystack for m in marks)
+
+
+def gold_leak_by_id(result: dict, gold_rule: dict) -> bool:
+    """The precise leak: the gold rule's `id` (a title can also be a phrase of the report itself)."""
+    return gold_leak(result, {"id": gold_rule.get("id")})
 
 
 # --- what the results add that the report lacks -----------------------------------------------------------------------
@@ -144,9 +150,10 @@ def search(query: str, key: str, session=None, max_results: int = MAX_RESULTS, t
             "error": error.replace(key, "<key>") if error and key else error}
 
 
-def needs_query(saved: Optional[dict]) -> bool:
-    """A query is sent unless an answer is saved; a saved error (e.g. the hourly limit) is asked again."""
-    return saved is None or bool(saved.get("error"))
+def needs_query(saved: Optional[dict], offline: bool = False) -> bool:
+    """A query is sent unless an answer is saved; a saved error (e.g. the hourly limit) is asked again. Offline,
+    nothing is sent."""
+    return not offline and (saved is None or bool(saved.get("error")))
 
 
 def is_hourly_limit(record: dict) -> bool:
@@ -178,7 +185,7 @@ def measure(record: dict, case: dict, gold: dict, report_text: str) -> dict:
     results = record["results"]
     flags = [{"domain": domain(r["url"]), "chars": len(r["content"] or ""), "own_page": is_own_page(r["url"], case["urls"]),
               "rule_site": is_rule_site(r["url"]), "sigma_text": has_sigma_text(r["content"]),
-              "gold_leak": gold_leak(r, gold)} for r in results]
+              "gold_leak": gold_leak(r, gold), "gold_leak_id": gold_leak_by_id(r, gold)} for r in results]
     clean = [r["content"] for r, f in zip(results, flags) if not (f["gold_leak"] or f["rule_site"] or f["sigma_text"])]
     values = extract_detection_values(gold.get("detection"))
     techniques = extract_techniques(gold.get("tags"))
@@ -199,7 +206,7 @@ def summarise(measures: list) -> dict:
     out = {"queries": len(measures), "answered": len(answered), "errors": len(measures) - len(answered),
            "with_results": sum(1 for m in answered if m["results"]),
            "results": len(flat), "median_seconds": statistics.median([m["seconds"] for m in answered]) if answered else None}
-    for flag in ("own_page", "rule_site", "sigma_text", "gold_leak"):
+    for flag in FLAGS:
         out[flag] = {"results": sum(f[flag] for f in flat), "cases": sum(any(f[flag] for f in m["results"]) for m in answered)}
     for kind in ("values", "techniques"):
         out[kind] = {"lacking": sum(m[f"{kind}_lacking"] for m in answered),
@@ -220,14 +227,19 @@ def _load_raw(path: Path) -> dict:
     return saved
 
 
-def main() -> int:
+def main(argv: list = None) -> int:
+    import argparse
+
     import yaml
     from dotenv import load_dotenv
 
     from eval.run_eval import load_cases, load_github_manifest, stratified_sample
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--offline", action="store_true", help="summarise the saved answers; send nothing")
+    args = parser.parse_args(argv)
     load_dotenv(REPO / ".env")
     key = os.getenv("OLLAMA_API_KEY", "").strip()
-    if not key:
+    if not key and not args.offline:
         print("OLLAMA_API_KEY is not set in .env")
         return 1
     with contextlib.redirect_stdout(io.StringIO()):
@@ -235,7 +247,8 @@ def main() -> int:
     url_map = load_github_manifest(REPO / "eval/github_manifest.jsonl")
     RAW_PATH.parent.mkdir(parents=True, exist_ok=True)
     saved = _load_raw(RAW_PATH)
-    measures, offline, errors_in_a_row = {"stage": [], "cve": []}, {"stage_has_cve": 0, "report_has_cve": 0}, 0
+    measures, errors_in_a_row = {"stage": [], "cve": []}, 0
+    offline = {"stage_has_cve": 0, "report_has_cve": 0, "planned": {"stage": 0, "cve": 0}}
     for n, case in enumerate(cases, 1):
         preprocessed, text = _preprocess(case, url_map)
         gold = yaml.safe_load((REPO / case["rule_path"]).read_text(encoding="utf-8")) or {}
@@ -245,8 +258,9 @@ def main() -> int:
         for variant, query in queries.items():
             if not query:
                 continue
+            offline["planned"][variant] += 1
             record = saved.get((case["rule_id"], variant))
-            if needs_query(record):
+            if needs_query(record, args.offline):
                 if errors_in_a_row >= 3:
                     continue
                 time.sleep(1)
@@ -268,6 +282,8 @@ def main() -> int:
                 status = record["status"] if not record["error"] else f"{record['status']} {record['error'][:60]}"
                 print(f"  {n:>2}/60 {variant:5} {status}  {len(record['results'])} results  {record['seconds']} s  "
                       f"{query[:70]}")
+            if record is None:
+                continue
             measures[variant].append({"rule_id": case["rule_id"], "query": query, **measure(record, case, gold, text)})
     if errors_in_a_row >= 3:
         print("stopped: 3 errors in a row (saved queries are kept; rerun to continue)")
@@ -277,9 +293,9 @@ def main() -> int:
     print(f"\n{len(cases)} cases; the stage's query holds a CVE ID in {offline['stage_has_cve']}; the report mentions "
           f"one in {offline['report_has_cve']}")
     for variant, s in summary["variants"].items():
-        print(f"\n{variant}: {s['queries']} queries, answered {s['answered']}, errors {s['errors']}, with results "
+        print(f"\n{variant}: {offline['planned'][variant]} planned, {s['queries']} asked, answered {s['answered']}, errors {s['errors']}, with results "
               f"{s['with_results']}, results {s['results']}, median {s['median_seconds']} s")
-        for flag in ("own_page", "rule_site", "sigma_text", "gold_leak"):
+        for flag in FLAGS:
             print(f"  {flag:10} {s[flag]['results']:>3} results in {s[flag]['cases']:>2} cases")
         for kind in ("values", "techniques"):
             k = s[kind]
