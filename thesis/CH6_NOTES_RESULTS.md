@@ -651,6 +651,27 @@ attack — it inherits the agreement measures' blind spot (CH6 §6.5c); only rea
 first validation pass crashed on a numeric keyword (fixed with tests, then re-run); two precisions (V5 "far below" =
 at most half; V1 in both rule sets) were fixed during the build, before any validation ran. (log 2026-10-04/05)
 
+
+## 6.5e ATT&CK techniques — a better search, and a limit that was read as a quota `[MEASURED]` 2026-10-06, tuning set
+
+**The search was reading the page header.** The analysis stage searched ATT&CK with the text's first 500
+characters — on many pages the site menu. Offline, a gold technique was among the 5 results in 3 of 42 cases;
+searching with the attack-vector summary first, 14 of 42 (`probe_mitre_query.py`). **Change 42** made that the query.
+**The limit became a quota.** "At most 10 techniques" (Change 32) → exactly 10 in 41–44 of 60 cases per run.
+**Change 43** reworded it: "as many as the text gives evidence for and never more than 10; 10 is a limit, not a target".
+**Three-arm run** (before / +42 / +42+43; same night, same 60 cases; one run each; gates fixed before):
+- **Change 42: S4 +0.019 [−0.047, +0.088]; gate passed narrowly.** But the model's list barely changed: it named a
+  gold technique in 17 → 18 of 42 cases (by parent 26 → 26). Better search results did not become better lists — without
+  the better search the model already named a gold technique in 17 of 42 (from the report or its own knowledge; which
+  one is not measured). Post-hoc: fewer exactly-10 lists, 49 →
+  40 of 60. Pending confirmation on fresh cases (expected to fail; stated before running).
+- **Change 43: S4 −0.035 [−0.102, +0.030]; gate failed.** Exactly-10 lists fell only 40 → 35, and the shorter lists
+  dropped right techniques too (gold by parent 26 → 21 of 42).
+**What is claimed:** the technique score is not limited by what the search hands the model; and telling the model a
+number is a limit, not a target, did not make its lists more precise. `[DISCLOSE]` One run per arm on the tuning set;
+run-to-run variation is of the same size (the unchanged pipeline listed exactly 10 in 44 and 49 of 60 on two days).
+(log 2026-10-05/06)
+
 ---
 
 ## 6.6 Smaller observations worth a sentence each

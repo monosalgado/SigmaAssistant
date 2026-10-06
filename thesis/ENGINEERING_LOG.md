@@ -5302,3 +5302,39 @@ User: "can you start the other 40, so I can leave it all night running." **Sessi
 the run resumes after the 20 saved rows). The only difference from the logged plan is one long session instead of two
 short ones; the cases and the comparison are unchanged. The tunnel answered (HTTP 200) right before; the full preflight
 was not repeated (same frozen code that passed it ~3 hours earlier and has just run 20 cases cleanly).
+
+---
+
+## 2026-10-06 — Changes 42/43, tuning run: 42 passes its gate narrowly, 43 fails
+
+The overnight session ended 01:12–01:18 EDT (last rows of A, B, C): **60 of 60 rows in each arm, the same 60 cases, 0 errors**, no stop, relaunch or
+give-up lines; `summarise.py` verdict **CITABLE** for A, B and C. Before reading any score, the measures the run plan
+names that no committed tool computed (S4 by parent, S4 precision, the analysis lists a gold technique exact/parent,
+techniques listed, exactly 10) were added to `compare_arms.py` (`ATTACK`; tests first, 4, seen to fail; `3af5c32`). Check
+against an earlier logged count: `c41A_tuning60` lists exactly 10 in 44 of 60 (logged 44) and 42 cases' gold rules name
+techniques (logged 42). 773 pass. All numbers below from `compare_arms.py`, one run per arm, paired, bootstrap 95% CI.
+
+**Change 42 (B − A), primary S4:** 0.193 → 0.212, **+0.019 [−0.047, +0.088]** (n = 37); by parent +0.039 [−0.060,
++0.134]; precision +0.032 [−0.009, +0.079]. **Mechanism:** the analysis lists a gold technique in **17 → 18 of 42**
+cases exactly, **26 → 26** by parent. Guards: S3u +0.033 [−0.033, +0.100], S5u +0.076 [−0.011, +0.169], S5vu +0.024
+[−0.011, +0.067], S1 +0.033 [−0.033, +0.100], rules +0.05, seconds +8 [−20, +36], tokens +3,367 [−89, +7,131]; cut
+answers A 1 call in 1 case, B 0. **Gate (S4 > 0, mechanism higher, no guard CI entirely below 0): passed — narrowly:**
+the mechanism rose by one case exactly and not at all by parent, so the S4 gain is not shown to come through it. The
+offline retrieval check (a gold technique among the 5 results: 3 → 14 of 42) did not carry into the list the model
+writes: in A it already listed a gold technique in 17 of 42 without that retrieval.
+Post-hoc (not a gate measure): Change 42 also lowered the quota — exactly 10 listed in **49 → 40 of 60** (−0.150
+[−0.250, −0.067]); mean listed 8.93 → 8.18. Why is not measured.
+
+**Change 43 (C − B), primary S4:** 0.206 → 0.171, **−0.035 [−0.102, +0.030]** (n = 40); by parent −0.070 [−0.155,
++0.012]; precision −0.019 [−0.078, +0.041]. **Mechanism:** exactly 10 listed **40 → 35 of 60** (−0.083 [−0.200,
++0.033]); mean listed 8.18 → 7.63; median 10 in all three arms. A gold technique listed **18 → 15 of 42** exactly, **26
+→ 21** by parent (−0.119 [−0.238, 0.000]): the shorter lists dropped right techniques as well as padding. Guards: S3u
+−0.017 [−0.083, +0.033], S5u −0.036 [−0.125, +0.044], S5vu +0.003, S1 −0.033 [−0.100, +0.033], rules +0.17, seconds
++4. **Gate (S4 > 0, fewer exactly 10, guards): failed** (S4 lower).
+Run-to-run scale for reading these: arm A (same pipeline as `c41A_tuning60` a day earlier) lists exactly 10 in 49 of
+60, that run in 44.
+
+**Per the plan:** Change 43 is removed (it failed its gate); Change 42 goes to confirmation set 3 (60 never-run cases,
+drawn and committed before any run, k = 3 per arm, confirmed if S4's paired 95% CI lower bound is above 0) — both
+pending the user's word. Expectation, stated before any confirmation run: with a +0.019 tuning effect and its mechanism
+flat, a lower bound above 0 is unlikely.
