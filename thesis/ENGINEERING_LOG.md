@@ -5338,3 +5338,20 @@ Run-to-run scale for reading these: arm A (same pipeline as `c41A_tuning60` a da
 drawn and committed before any run, k = 3 per arm, confirmed if S4's paired 95% CI lower bound is above 0) — both
 pending the user's word. Expectation, stated before any confirmation run: with a +0.019 tuning effect and its mechanism
 flat, a lower bound above 0 is unlikely.
+
+---
+
+## 2026-10-06 — Change 43 removed; the ceiling of 10 stays
+
+User: "remove change 43" (it failed its gate: S4 C − B −0.035 [−0.102, +0.030]). The analysis prompt's ATT&CK item 5
+returns to Change 32's "List at most the 10 most relevant techniques, most relevant first". Tests first
+(`test_change43_removed.py`, 2, and Change 32's `test_the_list_has_an_end` restored; 3 seen to fail); Change 43's own
+tests (`test_technique_cap.py`) deleted with it (in history at `7dd5964`). 773 pass. Checked: `prompts.py` now differs
+from arm A's (`1b90c44`) only by Change 44.
+**The user's concern:** without a limit the list "got stuck kinda on a loop". That is defect 19 (2026-09-24: 13 real
+techniques, then 336 invented `T1562.001 … T1562.339`, 116,776 characters, until the client timeout), before Change 32
+existed. Change 43 never removed the ceiling ("never more than 10"); both wordings keep it. In this run
+(`count_techniques.py`): **no arm listed more than 10 in any case (max 10 in A, B and C)**; answers cut at the output
+limit: A 1 case, B 0, C 0; invented IDs A 0, B 0, C 2 cases (dropped by Change 31's check). The backstops behind the
+prompt's ceiling: the output limit (Change 24, 16,384 tokens, two retries) and the ID check (Change 31). There is no code
+cap at 10 — the model's list is used as written.

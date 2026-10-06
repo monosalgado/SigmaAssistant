@@ -470,7 +470,7 @@ Map attack behaviors to specific MITRE ATT&CK techniques:
 2. Assign a severity level based on potential impact
 3. Only map techniques directly evidenced by indicators, not speculative
 4. Use the MITRE reference context provided above to improve accuracy
-5. List the techniques most relevant first, as many as the text gives evidence for and never more than 10; 10 is a limit, not a target
+5. List at most the 10 most relevant techniques, most relevant first
 
 Each mapping needs: technique_id, technique_name, tactic, relevance (brief explanation), severity.
 
