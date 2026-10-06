@@ -664,7 +664,8 @@ searching with the attack-vector summary first, 14 of 42 (`probe_mitre_query.py`
   gold technique in 17 → 18 of 42 cases (by parent 26 → 26). Better search results did not become better lists — without
   the better search the model already named a gold technique in 17 of 42 (from the report or its own knowledge; which
   one is not measured). Post-hoc: fewer exactly-10 lists, 49 →
-  40 of 60. Pending confirmation on fresh cases (expected to fail; stated before running).
+  40 of 60. Kept without a confirmation run (user, 2026-10-06) as the fix of a measured retrieval defect;
+  its effect on S4 is not shown (one tuning run, never tested on fresh cases).
 - **Change 43: S4 −0.035 [−0.102, +0.030]; gate failed.** Exactly-10 lists fell only 40 → 35, and the shorter lists
   dropped right techniques too (gold by parent 26 → 21 of 42).
 **What is claimed:** the technique score is not limited by what the search hands the model; and telling the model a

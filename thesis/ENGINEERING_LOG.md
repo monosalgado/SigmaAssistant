@@ -5395,3 +5395,18 @@ copies of `samlidp`, `<app path>`, `<random token>` in rules; expected 0 → 0) 
 reported as a negative result next to the retrieval measurement (3 → 14 of 42), which stands on its own.
 **Expectation, written before any run:** with a +0.019 tuning effect and the mechanism flat (+1 case), a lower bound
 above 0 is unlikely.
+
+---
+
+## 2026-10-06 — Change 42 kept without a confirmation run (user)
+
+User: "if it is slightly ahead, why remove it? why don't we just leave it. I think 3 runs is way too much time
+wasted." **Change 42 stays in `main`; the confirmation plan above (`cd4e25c`) is not run** — dropped before any run,
+no confirmation row exists. Confirmation set 3 (`eval/manifest_confirm3.jsonl`) stays unused and available; the
+worktrees `../SigmaAssistant-c42confA/B` and the branch `confirm3-before` are kept (user: keep everything).
+**Basis for keeping it** — a fix, not a measured gain: the old search read the page's first 500 characters, often URLs
+and a site menu; with the attack-vector summary first, a gold technique is among the 5 results in 14 of 42 tuning cases
+instead of 3 (`probe_mitre_query.py`). In the tuning run no guard was worse (S3u +0.033, S5u +0.076, S1 +0.033, all CIs
+crossing 0; time +8 s [−20, +36]).
+**What may be claimed:** the retrieval improved. **What may not:** that Change 42 raises the ATT&CK score — S4 +0.019
+[−0.047, +0.088] in one tuning run, a gap the size of run-to-run variation, never tested on fresh cases (CH6 §6.5e).
