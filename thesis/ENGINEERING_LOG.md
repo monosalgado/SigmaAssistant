@@ -5288,3 +5288,17 @@ so: **the call record now keeps the last 2,000 characters of an answer cut at th
 The Change 42/43 arms are frozen checkouts from before this, so their sessions will not record tails; the first run from
 `main` after them will. A change (e.g. a limit on indicators, worded as a limit, not a target — Change 43's lesson — or
 the indicator list as its own call) waits for what the tails show.
+
+---
+
+## 2026-10-05 — Change 42/43 run: session 1 done; sessions 2 and 3 run together overnight
+
+Session 1 (cases 1–20, started ~17:28 EDT after all three preflights passed) finished ~19:50: **20 of 20 rows in each
+arm, the same 20 cases in all three, 0 errors**, no stop, relaunch or give-up lines; mean ~6.6–7.0 min per case. The
+three worktrees are unchanged (A `1b90c44`, B `ef6d118`, C `7dd5964`, no edits). **No scores read** (the plan reads them
+only when all 60 are done in all arms).
+User: "can you start the other 40, so I can leave it all night running." **Sessions 2 and 3 are run as one session of
+40 (`--limit 60`) at ~20:00 EDT**, all three arms together, as the plan requires (same night, same cases, same order;
+the run resumes after the 20 saved rows). The only difference from the logged plan is one long session instead of two
+short ones; the cases and the comparison are unchanged. The tunnel answered (HTTP 200) right before; the full preflight
+was not repeated (same frozen code that passed it ~3 hours earlier and has just run 20 cases cleanly).
