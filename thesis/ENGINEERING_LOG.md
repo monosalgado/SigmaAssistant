@@ -5355,3 +5355,43 @@ existed. Change 43 never removed the ceiling ("never more than 10"); both wordin
 limit: A 1 case, B 0, C 0; invented IDs A 0, B 0, C 2 cases (dropped by Change 31's check). The backstops behind the
 prompt's ceiling: the output limit (Change 24, 16,384 tokens, two retries) and the ID check (Change 31). There is no code
 cap at 10 — the model's list is used as written.
+
+---
+
+## 2026-10-06 — Change 42: confirmation plan (confirmation set 3) — fixed before any confirmation run
+
+User: "design the confirmation". Change 42 passed its tuning gate narrowly (S4 +0.019 [−0.047, +0.088]; mechanism
+17 → 18 of 42), so by the plan it is tested on fresh cases.
+**Cases:** `eval/manifest_confirm3.jsonl` (`2ece908`), 60 drawn by `draw_heldout.py` (seed 0) from the **121 corpus
+cases never run**: every result file in `eval/results` and in every arm's worktree (`../SigmaAssistant-*/eval/results`,
+smoke runs included, 367 files) and two scratch pilots counted as run; checked: 0 overlap with the first held-out set,
+confirmation set 2 and any result file. Looked at before the runs: categories only (process_creation 28, webserver 11,
+none 7, file_event 6, proxy 3, registry_event 2, image_load 2, registry_set 1) and that **50 of the 60 gold rules name a
+technique** (S4's possible n).
+**Arms** (frozen worktrees; differ only by the ATT&CK query — checked, `git diff` of `backend/`: the 2 query lines):
+- **A** `e321ed9` (branch `confirm3-before`, never merged) = `2ece908` without Change 42 (the analysis stage's
+  `stage_analysis.py` is byte-identical to `1b90c44`'s; Change 42's test deleted, a test of the old query added;
+  772 pass) → `../SigmaAssistant-c42confA`, `c42A_confirm_r1/r2/r3.jsonl`.
+- **B** `2ece908` = `main` (Change 42 in, Change 43 removed) → `../SigmaAssistant-c42confB`,
+  `c42B_confirm_r1/r2/r3.jsonl`.
+Both carry everything else in `main`: Change 32's ceiling of 10, Change 44, and the cut answers' tails (#7).
+**Flags:** `--manifest eval/manifest_confirm3.jsonl --no-web-enrich`, no `--sample`, `run_resilient`, k = 3 runs per arm.
+**Schedule (the user's sessions):** run N of A and run N of B always run **together** (one tab each), so each pair
+sees the same server conditions; one pair per session, 60 cases (at set 2's pace, 368–399 s per case with two runs
+at once, ~6–7 hours); a pair cut short is resumed together. Preflight (VPN on) before each session.
+**Nobody reads any confirmation row or score until all six runs are finished** (progress checks read counts and
+errors only).
+**Primary:** S4 (exact-technique F1, rules that parse), B − A, each case's value the mean of its 3 runs, paired over
+the cases every run has (`compare_arms.py --a r1 r2 r3 --b r1 r2 r3`, bootstrap 95% CI, 10,000, seed 0). **Confirmed
+if the CI's lower bound is above 0**; otherwise not confirmed (reported as is).
+**Secondary, descriptive** (`compare_arms.py`, case = mean of 3 runs): mechanism — the analysis lists a gold technique,
+exact and by parent (Tgold, Tgoldp); S4 by parent, S4 precision; techniques listed and exactly 10 (Tn, T10 — the tuning
+run's post-hoc observation, 49 → 40 of 60, named here before it is tested); guards S3u, S5u, S5vu, S1, S3, S5, S5v,
+rules per case, time, tokens; consistency across the 3 runs; contamination-flagged cases apart.
+**Also read from these six runs (they do not decide Change 42):** Change 44's measure (`count_example_copies.py`:
+copies of `samlidp`, `<app path>`, `<random token>` in rules; expected 0 → 0) and #7's cut answers
+(`analysis_length.py`, and the recorded tails).
+**Decision:** confirmed → Change 42 stays. Not confirmed → by the working rule it is removed (the user's word), and
+reported as a negative result next to the retrieval measurement (3 → 14 of 42), which stands on its own.
+**Expectation, written before any run:** with a +0.019 tuning effect and the mechanism flat (+1 case), a lower bound
+above 0 is unlikely.
