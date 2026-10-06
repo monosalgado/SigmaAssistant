@@ -5567,3 +5567,34 @@ compared with whitespace ignored and a backslash run read as one (the characters
 paraphrase is still dropped. 821 pass.
 **Saved answers for the tuning set complete:** 29 searched (once past the hourly limit), 26 copied from the probe →
 `eval/web_snapshots/tuning60.jsonl` (55 queries; local, gitignored, recorded in each run's config by SHA-256).
+
+---
+
+## 2026-10-06 — Change 45: the two-arm run's plan (tuning set) — fixed before the run
+
+User: "push it and prepare the run"; on the limits: "when it hit the quota … it can just continue" — the stage already
+does (records the limit, goes on without web results; tested); the snapshot builder now also waits out the session
+limit (`0a82353`). New measuring tool, before the run: `eval/web_effect.py` (tests first, 6, seen to fail; 828 pass).
+**Code:** one frozen worktree, `../SigmaAssistant-c45` at this plan's commit; both arms run from it.
+**Arms** (same night, together; the 60 tuning cases, `--sample 60 --seed 0`, `run_resilient`, one run each):
+- **A — web off:** `--no-web-enrich` → `c45A_tuning60.jsonl`.
+- **B — web on, from the saved answers:** `--web-snapshots eval/web_snapshots/tuning60.jsonl` (SHA-256
+  `d9f72b9c2a436e08716f126ee8c87e6d2c97b85387f32f46507a1fe37b4ecc14`; 55 queries; rule pages dropped; nothing sent)
+  → `c45B_tuning60.jsonl`.
+**Primary:** **S5vu** (detection values as the user gets it), B − A, paired, bootstrap 95% CI (`compare_arms.py`) —
+chosen because the probe's measurable gain was the human's values the report lacks (15 of 72 in 6 of 32 cases).
+**Mechanism (`web_effect.py`):** the human values the report lacks that the first rule has, A vs B (and per case: more
+in B / fewer); the new web strings the first rule uses, and any rule.
+**Secondary and guards (`compare_arms.py`, incl. its ATT&CK measures):** S4 and S4 by parent, S3u (the risk seen in the
+live check: pages about another topic of a multi-topic report), S5u, S1, S3, S5, S5v, rules per case, time, tokens; the
+digest's record (cases with a digest, cut digests, strings kept and dropped); **leaks** — kept pages holding the gold
+id (expected 0; if any, the comparison is also reported without those cases).
+**Gate:** S5vu B − A > 0, the mechanism higher in B (human values the report lacks found by the first rule), and
+neither S3u nor S1 lower with a 95% CI entirely below 0.
+**Then:** whether to confirm on fresh cases is decided with the user after the result (their time). If the gate fails,
+the web stage stays in the assistant (the user's choice: context for the analyst) without a claim of better agreement,
+and the evaluation's default stays `--no-web-enrich`.
+**Disclosed before the run:** the pages were searched in October 2026 for reports up to years older; the human rule
+itself is dropped (rule pages, and its id is checked), but later write-ups may carry detection knowledge that did not
+exist when the report came out. The result is an upper bound on what a search adds for a brand-new report.
+Both arms also record the analysis stage's cut answers (#7).
