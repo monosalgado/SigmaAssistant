@@ -46,3 +46,11 @@ def test_the_hourly_and_the_session_limits_are_told_apart():
     assert limit_kind("you have reached your web search hourly request limit, upgrade") == "hourly"
     assert limit_kind("you have reached your web search session request limit, upgrade") == "session"
     assert limit_kind("HTTP 500") is None and limit_kind(None) is None
+
+
+def test_the_builder_waits_out_both_limits():
+    # User 2026-10-06: "when it hit the quota ... it can just continue". The session limit reset within ~2 hours that
+    # day, so the builder waits it out too (every 30 minutes, at most 12 hours), instead of stopping.
+    from eval.build_web_snapshots import LIMIT_WAIT_MAX_S, wait_seconds
+    assert wait_seconds("hourly") == 600 and wait_seconds("session") == 1800 and wait_seconds(None) is None
+    assert LIMIT_WAIT_MAX_S == 12 * 3600

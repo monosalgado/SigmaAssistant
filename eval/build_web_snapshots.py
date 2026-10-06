@@ -6,7 +6,8 @@ answers, and the free account's limits (~25 searches per hour, ~50 per "session"
 web stage's own query is computed offline (the report preprocessed from its snapshots, then
 `WebEnrichStage._build_search_query`). A query already in the output file is skipped; one the probe answered with
 exactly the same query is copied from the probe's file (nothing sent); only the rest is searched (5 results, as the
-stage). On the hourly limit the builder waits; on the session limit it stops - a rerun continues.
+stage). On either limit the builder waits and asks again (hourly: 10 min, session: 30 min; at most 12 hours); an
+interrupted build continues on a rerun.
 
 Usage:
     .venv/bin/python eval/build_web_snapshots.py --sample 60 --seed 0 --out eval/web_snapshots/tuning60.jsonl \\
@@ -28,8 +29,8 @@ from typing import Optional
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-LIMIT_WAIT_S = 600
-LIMIT_WAIT_MAX_S = 4 * 3600
+# User 2026-10-06: "when it hit the quota ... it can just continue" - both limits are waited out, at most 12 hours.
+LIMIT_WAIT_MAX_S = 12 * 3600
 
 
 def _answered(path: Path, stage_only: bool) -> dict:
@@ -74,6 +75,11 @@ def limit_kind(error: Optional[str]) -> Optional[str]:
     if "session request limit" in text:
         return "session"
     return None
+
+
+def wait_seconds(kind: Optional[str]) -> Optional[int]:
+    """How long to wait before asking again: 10 minutes after the hourly limit, 30 after the session limit."""
+    return {"hourly": 600, "session": 1800}.get(kind)
 
 
 def stage_queries(cases: list) -> dict:
@@ -130,10 +136,12 @@ def main(argv: list = None) -> int:
     for n, query in enumerate(to_search, 1):
         time.sleep(1)
         record, waited = searcher.search(query), 0
-        while limit_kind(record["error"]) == "hourly" and waited < LIMIT_WAIT_MAX_S:
-            print(f"  hourly search limit reached; waiting {LIMIT_WAIT_S // 60} min ({waited // 60} min so far)")
-            time.sleep(LIMIT_WAIT_S)
-            waited += LIMIT_WAIT_S
+        while wait_seconds(limit_kind(record["error"])) and waited < LIMIT_WAIT_MAX_S:
+            pause = wait_seconds(limit_kind(record["error"]))
+            print(f"  {limit_kind(record['error'])} search limit reached; waiting {pause // 60} min "
+                  f"({waited // 60} min so far)")
+            time.sleep(pause)
+            waited += pause
             record = searcher.search(query)
         if record["error"]:
             print(f"  stopped at {n}/{len(to_search)}: {record['error'][:100]} (saved answers are kept; rerun to "
