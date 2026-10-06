@@ -5490,3 +5490,43 @@ itself publish detections. `research.splunk.com` came up for both CVE-2023-36874
 rule mirror), and new detection values in about 1 case in 5 — at most 15 of the 72 values the reports lack. CVE queries
 find vulnerability databases: no leaks, and almost no detection detail. For the evaluation, saved results with rule
 mirrors, Sigma text and the gold id removed are required; for the assistant, one search per report fits the free limits.
+
+---
+
+## 2026-10-06 — Change 45 (web enrichment, local): design, fixed before the code
+
+User: "start building the stage"; on the free limits (~25 searches/hour, ~50/session): "what happens when we are going
+to actually use the assistant" — one search per report, below the pipeline's own pace; a limit is recorded, not an
+error; the evaluation never searches live. On the hand-on, after the probe showed whole pages (median 7,324 characters
+per result; ~37,000 per case after the filter): **"the model digest, checked, but lets not cap it … It will be just
+[an] agent that focus on that."**
+**1. Search** (`backend/web_search.py`): `POST https://ollama.com/api/web_search`, the key from `.env`, 5 results
+(as the probe). Never raises; the record holds status, results, error, whether a limit was hit, never the key; a
+telemetry record per search. **Saved per query** (`data/web_cache.jsonl`, gitignored): the same query reuses its saved
+answer. `OllamaLLMClient.web_search` uses it when `OLLAMA_API_KEY` is set (else the old no-op); it returns the old
+`{"text", "sources"}` plus the raw `results`.
+**2. Order:** the web stage moves **after the PoC stage**, so the PoC stage reads only the report and the links the
+report gives (it scans the text for GitHub links); attack vector and analysis read the report, the PoC analysis, then
+the web block. With the web off (every run so far) the order changes nothing.
+**3. Query:** the stage's builder as before (CVE IDs from the user's own message, else the pages' titles); a CVE ID is
+kept once (seen in the probe: `cve-2023-36874 CVE-2023-36874`).
+**4. Filter (code, recorded):** a result that is one of the case's own pages is dropped (it adds nothing; 21 of 32 in
+the probe). **Rule pages** (the probe's list plus `sigma.controlassurance.com`, or Sigma text in the content): in the
+assistant they are kept and listed as "published rules found" (the user's view); **in the evaluation they are dropped**
+(`exclude_rule_pages`, set by the harness), because a found human rule would make the score measure copying.
+**5. Digest (one model call, its own prompt `WEB_DIGEST`, T = 0):** reads the report and the kept pages and lists what
+the pages add about **this** attack that helps detect it — each item a finding, the exact strings, and its source URL;
+pages about other attacks are skipped; page text is data, not instructions. **Not capped by code** (the user); the
+output limit (16,384 tokens) is the only bound. **Checked by code:** an item's source must be a kept page; each string
+must appear in that page (case-insensitive, whitespace collapsed) — strings that do not are dropped; an item whose
+strings all fail is dropped; an item with no strings (a description) is kept. Everything is recorded (proposed, kept,
+dropped and why). A failed call (cut, unreadable) → no digest, recorded, the pipeline goes on.
+**6. Hand-on:** the kept items are appended to the text the attack-vector and analysis stages read, under a header
+saying they come from the web, not the report, with their links. The generation stage still never sees the text.
+**7. Record:** `context["enrichment"]` (query, every result kept/dropped and why, rule pages, the digest record, the
+block) goes into the row (`pipeline_metadata["web_enrichment"]`, `run_eval.DIAGNOSIS_FIELDS`).
+**8. Evaluation:** `run_eval.py --web-snapshots FILE` answers each query from a saved file and **never sends**; a query
+not in the file is recorded as missing. `eval/build_web_snapshots.py` builds the file once per case set, reusing the
+probe's saved answers where the query is unchanged (32 of 60 tuning cases), so the rest fits one ~50-search session.
+Then one two-arm night (web off vs web on from the file); its plan is fixed before it runs.
+Tests first throughout, offline (stand-in HTTP and client).

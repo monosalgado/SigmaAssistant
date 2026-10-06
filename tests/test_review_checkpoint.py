@@ -122,10 +122,11 @@ ANALYSIS_STEPS = [
     ("stage", "classification", "complete", "Intent: generate_rule"),
     ("stage", "preprocessing", "running", "Parsing input and fetching URLs..."),
     ("stage", "preprocessing", "complete", "1 segments, 1 URLs"),
-    ("stage", "web_enrichment", "running", "Searching for additional threat intelligence..."),
-    ("stage", "web_enrichment", "complete", "0 sources from 0 queries"),
+    # Change 45 (2026-10-06): the web stage runs after the PoC stage, and its line says what it did.
     ("stage", "poc_analysis", "running", "Scanning for code snippets and PoC artifacts..."),
     ("stage", "poc_analysis", "complete", "No code snippets found"),
+    ("stage", "web_enrichment", "running", "Searching for additional threat intelligence..."),
+    ("stage", "web_enrichment", "complete", "No web search"),
     ("stage", "attack_vector", "running", "Identifying the primary attack vector..."),
     ("stage", "attack_vector", "complete",
      "auth_bypass via local · 1 payload signatures · 0 incidental strings blacklisted · confidence 90%"),
@@ -140,7 +141,7 @@ GENERATION_STEPS = [
     ("stage", "coverage_check", "complete", "No gaps detected"),
 ]
 FEEDBACK_STEP = [("stage", "feedback", "complete", "No corrections needed")]
-ANALYSIS_CALLS = ["preprocess", "web_enrich", "poc_analysis", "attack_vector", "analysis"]
+ANALYSIS_CALLS = ["preprocess", "poc_analysis", "web_enrich", "attack_vector", "analysis"]
 
 
 # --- the one-pass stream is unchanged -----------------------------------------------

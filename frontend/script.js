@@ -53,8 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const ANALYSIS_STAGES = [
         { id: 'classification', label: 'Intent Classification' },
         { id: 'preprocessing', label: 'Preprocessing' },
-        { id: 'web_enrichment', label: 'Web Enrichment' },
         { id: 'poc_analysis', label: 'PoC Analysis' },
+        { id: 'web_enrichment', label: 'Web Enrichment' },
         { id: 'attack_vector', label: 'Attack Vector Extraction' },
         { id: 'analysis', label: 'Threat Analysis' },
     ];

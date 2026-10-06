@@ -18,7 +18,7 @@ from typing import Generator
 
 from backend.pipeline.base_stage import PipelineStage
 from backend.pipeline.stage_preprocess import PreprocessStage
-from backend.pipeline.stage_web_enrich import WebEnrichStage
+from backend.pipeline.stage_web_enrich import WebEnrichStage, web_detail
 from backend.pipeline.stage_poc_analysis import PoCAnalysisStage
 from backend.pipeline.stage_attack_vector import AttackVectorStage
 from backend.pipeline.indicator_use import indicator_use
@@ -205,11 +205,11 @@ class PipelineOrchestrator:
         # Stage 1: Preprocess (no LLM unless image)
         context = self.preprocess.run(context)
 
-        # Stage 2: Web Search Enrichment (FAST)
-        context = self.web_enrich.run(context)
-
-        # Stage 3: PoC Code Analysis (FAST, only if code found)
+        # Stage 2: PoC Code Analysis (FAST, only if code found)
         context = self.poc_analysis.run(context)
+
+        # Stage 3: Web Search Enrichment - after the PoC stage, so it reads only the report's own links (Change 45)
+        context = self.web_enrich.run(context)
 
         # Stage 3b: Attack Vector Extraction (PRIMARY) - anchors downstream stages
         context = self.attack_vector.run(context)
@@ -354,15 +354,7 @@ class PipelineOrchestrator:
         pp = context["preprocessed"]
         yield {"event": "stage", "data": {"stage": "preprocessing", "status": "complete", "detail": f"{len(pp['segments'])} segments, {len(pp['url_content'])} URLs"}}
 
-        # Stage 2: Web Search Enrichment (FAST)
-        yield {"event": "stage", "data": {"stage": "web_enrichment", "status": "running", "detail": "Searching for additional threat intelligence..."}}
-        context = self.web_enrich.run(context)
-        enrich = context.get("enrichment", {})
-        n_sources = len(enrich.get("sources", []))
-        n_queries = len(enrich.get("search_queries", []))
-        yield {"event": "stage", "data": {"stage": "web_enrichment", "status": "complete", "detail": f"{n_sources} sources from {n_queries} queries"}}
-
-        # Stage 3: PoC Code Analysis (FAST, only if code found)
+        # Stage 2: PoC Code Analysis (FAST, only if code found)
         yield {"event": "stage", "data": {"stage": "poc_analysis", "status": "running", "detail": "Scanning for code snippets and PoC artifacts..."}}
         context = self.poc_analysis.run(context)
         poc = context.get("poc_analysis", {})
@@ -372,6 +364,12 @@ class PipelineOrchestrator:
             yield {"event": "stage", "data": {"stage": "poc_analysis", "status": "complete", "detail": f"{n_snippets} snippets, {n_behaviors} behavioral indicators"}}
         else:
             yield {"event": "stage", "data": {"stage": "poc_analysis", "status": "complete", "detail": "No code snippets found"}}
+
+        # Stage 3: Web Search Enrichment - after the PoC stage, so it reads only the report's own links (Change 45)
+        yield {"event": "stage", "data": {"stage": "web_enrichment", "status": "running", "detail": "Searching for additional threat intelligence..."}}
+        context = self.web_enrich.run(context)
+        enrich = context.get("enrichment", {})
+        yield {"event": "stage", "data": {"stage": "web_enrichment", "status": "complete", "detail": web_detail(enrich)}}
 
         # Stage 3b: Attack Vector Extraction (PRIMARY model) - anchors the rest of the pipeline
         yield {"event": "stage", "data": {"stage": "attack_vector", "status": "running", "detail": "Identifying the primary attack vector..."}}
@@ -748,6 +746,8 @@ class PipelineOrchestrator:
             "suggested_log_sources": extraction.get("suggested_log_sources", []),
             "enrichment_sources": enrichment.get("sources", []),
             "enrichment_queries": enrichment.get("search_queries", []),
+            # Change 45: the web stage's whole record (query, every result kept or dropped and why, the digest)
+            "web_enrichment": enrichment,
             "poc_snippets_found": poc_analysis.get("snippets_found", 0),
             "poc_behavioral_indicators": poc_analysis.get("behavioral_indicators", []),
             "poc_attack_flow": poc_analysis.get("attack_flow", ""),

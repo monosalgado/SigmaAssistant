@@ -50,6 +50,7 @@ from contextlib import contextmanager
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 from urllib.parse import urldefrag
 
 import yaml
@@ -72,6 +73,8 @@ DIAGNOSIS_FIELDS = (
     "logsource_suggestions", "logsource_primary", "suggested_log_sources",
     "coverage_check", "indicator_use", "pre_review_rules", "review_changes", "validation_issues", "poc_snippets_found",
     "generations", "generation_retried",
+    # Change 45: what the web stage searched, kept, dropped and digested.
+    "web_enrichment",
     # Only in the simulated-analyst run's oracle rows (plan 5.3): the review and its check.
     "analyst_review", "analyst_check",
 )
@@ -223,6 +226,44 @@ def web_enrichment_disabled(client, disabled: bool):
         yield
     finally:
         client.web_search = original
+
+
+def web_mode_error(no_web_enrich: bool, web_snapshots) -> Optional[str]:
+    """The evaluation never searches live (Change 45): the web is off, or every query is answered from a saved file."""
+    if no_web_enrich and web_snapshots:
+        return "use either --no-web-enrich or --web-snapshots, not both"
+    if not no_web_enrich and not web_snapshots:
+        return ("the evaluation never searches live: use --no-web-enrich, or --web-snapshots FILE "
+                "(build it with eval/build_web_snapshots.py)")
+    if web_snapshots and not Path(web_snapshots).is_file():
+        return f"--web-snapshots: {web_snapshots} not found"
+    return None
+
+
+@contextmanager
+def web_search_from_file(agent, path):
+    """Change 45: the web stage's searches answered from a saved file - nothing is sent; a query not in the file is
+    recorded as missing - and rule pages dropped, so a found human rule cannot make the score measure copying."""
+    if not path:
+        yield
+        return
+    from backend.web_search import OllamaWebSearch
+    searcher = OllamaWebSearch(None, cache_path=path, offline=True)
+    client, stage = agent.client, agent.orchestrator.web_enrich
+    original, original_exclude = client.web_search, stage.exclude_rule_pages
+
+    def search(query):
+        out = searcher.search(query)
+        return {"text": "", "sources": [{"url": r["url"], "title": r["title"]} for r in out["results"]],
+                "results": out["results"], "error": out["error"], "limited": False, "cached": True}
+
+    client.web_search = search
+    stage.exclude_rule_pages = True
+    try:
+        yield
+    finally:
+        client.web_search = original
+        stage.exclude_rule_pages = original_exclude
 
 
 # --------------------------------------------------------------------------
@@ -382,6 +423,13 @@ def _head_revision() -> str:
                            "HEAD"], capture_output=True, text=True).stdout.strip()
 
 
+def _file_record(path):
+    if not path:
+        return None
+    import hashlib
+    return {"path": str(path), "sha256": hashlib.sha256(Path(path).read_bytes()).hexdigest()}
+
+
 def run_config(agent, args, head_revision=_head_revision) -> dict:
     """What every row records about the run, including which code ran: this checkout's commit,
     or the older checkout given with --code (eval/old_code.py)."""
@@ -394,6 +442,7 @@ def run_config(agent, args, head_revision=_head_revision) -> dict:
         "fast_model": getattr(client, "fast_model_name", ""),
         "economy_model": getattr(client, "economy_model_name", ""),
         "web_enrich": not args.no_web_enrich,
+        "web_snapshots": _file_record(getattr(args, "web_snapshots", None)),
         "min_chars": args.min_chars,
         "code": agent.code_revision if old else head_revision(),
         "code_path": old,
@@ -401,7 +450,7 @@ def run_config(agent, args, head_revision=_head_revision) -> dict:
 
 
 def run_case(agent, case: dict, config: dict, no_web_enrich: bool,
-             poc_url_map: dict = None) -> dict:
+             poc_url_map: dict = None, web_snapshots=None) -> dict:
     """Run the pipeline on one case and return its result row."""
     client = agent.client
     TELEMETRY.reset()
@@ -411,7 +460,8 @@ def run_case(agent, case: dict, config: dict, no_web_enrich: bool,
     try:
         with snapshots_instead_of_network(case["url_to_path"]) as shim, \
                 poc_snapshots_instead_of_network(poc_url_map or {}) as poc_shim, \
-                web_enrichment_disabled(client, no_web_enrich):
+                web_enrichment_disabled(client, no_web_enrich), \
+                web_search_from_file(agent, web_snapshots):
             # run_sync, not agent.analyze_attack: the agent wraps this same call
             # in a catch-all that returns the error as ordinary response text,
             # which would turn a crashed case into a normal-looking row with
@@ -455,7 +505,7 @@ def unmeasured_reason(row: dict):
 
 
 def run_cases(agent, cases: list, config: dict, no_web_enrich: bool, out_file,
-              poc_url_map: dict = None):
+              poc_url_map: dict = None, web_snapshots=None):
     """Run cases in order, appending one JSON row per case to `out_file`.
 
     Stops at the first case with a failed LLM call and does NOT write its row, so
@@ -465,7 +515,7 @@ def run_cases(agent, cases: list, config: dict, no_web_enrich: bool, out_file,
     n_ok = n_failed = 0
     stopped = None
     for idx, case in enumerate(cases, 1):
-        row = run_case(agent, case, config, no_web_enrich, poc_url_map)
+        row = run_case(agent, case, config, no_web_enrich, poc_url_map, web_snapshots)
         reason = unmeasured_reason(row)
         if reason:
             stopped = (f"STOPPED at case {case['rule_id']} ({idx}/{len(cases)}): {reason}. "
@@ -651,6 +701,9 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--no-web-enrich", action="store_true",
                         help="Stub out Gemini Google-Search grounding.")
+    parser.add_argument("--web-snapshots", default=None, metavar="FILE",
+                        help="Answer the web stage's searches from this saved file (Change 45; build it with "
+                             "eval/build_web_snapshots.py); nothing is sent and rule pages are dropped.")
     parser.add_argument("--arm", default="default",
                         help="Label recorded with every row, for comparing runs.")
     parser.add_argument("--github-manifest", default="eval/github_manifest.jsonl",
@@ -669,6 +722,11 @@ def main() -> None:
                              "with no review and with the gold log source as the analyst's choice; "
                              "writes <out>_unreviewed.jsonl and <out>_oracle.jsonl.")
     args = parser.parse_args()
+    web_error = web_mode_error(args.no_web_enrich, args.web_snapshots)
+    if web_error:
+        parser.error(web_error)
+    if args.web_snapshots and args.oracle_logsource:
+        parser.error("--web-snapshots is not wired into --oracle-logsource")
 
     repo_root = Path(__file__).resolve().parent.parent
     manifest_path = repo_root / args.manifest
@@ -761,7 +819,7 @@ def main() -> None:
     else:
         with open(out_path, "a", encoding="utf-8") as out_file:
             n_ok, n_failed, stopped = run_cases(agent, todo, config, args.no_web_enrich, out_file,
-                                                poc_url_map)
+                                                poc_url_map, args.web_snapshots)
 
     elapsed = time.time() - started_all
     print(f"\n--- Done in {elapsed/60:.1f} min ---")

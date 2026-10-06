@@ -16,6 +16,7 @@ Gemini three-tier model support:
 
 from __future__ import annotations
 import os
+from pathlib import Path
 import time
 import threading
 from collections import deque
@@ -297,7 +298,7 @@ class GeminiLLMClient(LLMClient):
 class OllamaLLMClient(LLMClient):
     """Ollama/LM Studio backend via the OpenAI-compatible local API."""
 
-    def __init__(self, base_url: str, model_name: str):
+    def __init__(self, base_url: str, model_name: str, web_searcher=None):
         from openai import OpenAI
         self._openai = OpenAI(
             base_url=f"{base_url.rstrip('/')}/v1",
@@ -306,6 +307,18 @@ class OllamaLLMClient(LLMClient):
         self.model_name = model_name
         self.fast_model_name = model_name  # Same model for local
         self.base_url = base_url
+        # Change 45: Ollama's web search API (backend.web_search) when OLLAMA_API_KEY is set; else the base no-op.
+        self._web_searcher = web_searcher
+
+    def web_search(self, query: str) -> dict:
+        """The old {"text", "sources"} plus the raw results (title, URL, page text) for the web stage to filter and
+        digest, the error and whether a limit was hit. Without a searcher, the base no-op."""
+        if self._web_searcher is None:
+            return super().web_search(query)
+        out = self._web_searcher.search(query)
+        return {"text": "", "sources": [{"url": r["url"], "title": r["title"]} for r in out["results"]],
+                "results": out["results"], "error": out["error"], "limited": out["limited"],
+                "cached": out.get("cached", False)}
 
     def generate(
         self,
@@ -456,7 +469,13 @@ def create_llm_client() -> LLMClient:
         base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         model = os.getenv("OLLAMA_MODEL", "qwen2.5:14b")
         print(f"[LLM] Backend: Ollama - {model} @ {base_url}")
-        return OllamaLLMClient(base_url, model)
+        searcher = None
+        web_key = os.getenv("OLLAMA_API_KEY", "").strip()
+        if web_key:
+            from backend.web_search import OllamaWebSearch
+            searcher = OllamaWebSearch(web_key, cache_path=Path(__file__).resolve().parent.parent / "data/web_cache.jsonl")
+            print("[LLM] Web search: Ollama web search API (answers saved in data/web_cache.jsonl)")
+        return OllamaLLMClient(base_url, model, web_searcher=searcher)
 
     else:  # default: gemini (or hybrid)
         api_key = os.getenv("GEMINI_API_KEY")

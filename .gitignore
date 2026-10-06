@@ -21,6 +21,7 @@ Thumbs.db
 data/chroma_db/
 data/sessions.json
 data/saved_rules.json
+data/web_cache.jsonl
 data/sigma/
 *.sqlite3
 *.bin
