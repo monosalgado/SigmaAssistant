@@ -56,40 +56,55 @@ def classify_result(result: dict, own_urls: list) -> Optional[str]:
 
 
 def _squash(text: str) -> str:
-    return " ".join(str(text or "").split()).lower()
+    """For checking a string against a page: lower case, whitespace ignored (PDF text splits words and paths), a run
+    of backslashes read as one (a YARA or JSON page writes `\\\\.\\x` for `\\.\\x`)."""
+    return re.sub(r"\\+", r"\\", "".join(str(text or "").split())).lower()
+
+
+def _cited_pages(source, pages: list) -> list:
+    """The kept pages an item cites: by number (1, "2", "[3]", [1, 2] - the model wrote all of these) or by URL."""
+    by_url = {norm_url(p["url"]): p for p in pages}
+    refs = source if isinstance(source, list) else re.findall(r"\d+", str(source)) if re.fullmatch(
+        r"\s*\[?\s*\d+(\s*,\s*\d+)*\s*\]?\s*", str(source or "")) else [source]
+    cited = []
+    for ref in refs:
+        ref = str(ref).strip()
+        page = pages[int(ref) - 1] if ref.isdigit() and 1 <= int(ref) <= len(pages) else by_url.get(norm_url(ref))
+        if page is not None and page not in cited:
+            cited.append(page)
+    return cited
 
 
 def check_digest(items: list, pages: list) -> tuple:
-    """Keep what the pages back up. An item's source must be a kept page; each string must appear in that page
-    (case-insensitive, whitespace collapsed, >= MIN_STRING_CHARS) or it is dropped; an item whose strings all fail is
-    dropped; an item with no strings is kept. Returns (kept items, dropped records)."""
-    by_url = {norm_url(p["url"]): (p["url"], _squash(p.get("content"))) for p in pages}
+    """Keep what the pages back up. An item must cite a kept page; each string must appear in one of the pages it
+    cites (case-insensitive, whitespace ignored, a backslash run read as one, >= MIN_STRING_CHARS) or it is dropped; an item whose strings all fail
+    is dropped; an item with no strings is kept. Returns (kept items, dropped records)."""
     kept, dropped = [], []
     for item in items if isinstance(items, list) else []:
         if not isinstance(item, dict):
             continue
-        finding, source = str(item.get("finding") or "").strip(), str(item.get("source") or "").strip()
+        finding, source = str(item.get("finding") or "").strip(), item.get("source")
         strings = [str(s) for s in item.get("strings") or [] if str(s).strip()]
-        if source.isdigit() and 1 <= int(source) <= len(pages):     # cited by its number, as the prompt asks
-            source = pages[int(source) - 1]["url"]
-        source, page = by_url.get(norm_url(source), (source, None))
-        if page is None:
-            dropped.append({"finding": finding, "source": source, "reason": "source is not a kept page"})
+        cited = _cited_pages(source, pages)
+        if not cited:
+            dropped.append({"finding": finding, "source": source, "strings": strings,
+                            "reason": "source is not a kept page"})
             continue
+        texts, urls = [_squash(p.get("content")) for p in cited], [p["url"] for p in cited]
         good, bad = [], []
         for s in strings:
             if len(s.strip()) < MIN_STRING_CHARS:
                 bad.append((s, "string too short"))
-            elif _squash(s) in page:
+            elif any(_squash(s) in t for t in texts):
                 good.append(s)
             else:
                 bad.append((s, "string not in the page"))
         if strings and not good:
-            dropped.append({"finding": finding, "source": source, "strings": strings,
+            dropped.append({"finding": finding, "sources": urls, "strings": strings,
                             "reason": "no string found in the page"})
             continue
-        dropped.extend({"finding": finding, "source": source, "string": s, "reason": r} for s, r in bad)
-        kept.append({"finding": finding, "strings": good, "source": source})
+        dropped.extend({"finding": finding, "sources": urls, "string": s, "reason": r} for s, r in bad)
+        kept.append({"finding": finding, "strings": good, "source": urls[0], "sources": urls})
     return kept, dropped
 
 
@@ -117,7 +132,7 @@ def digest_block(items: list) -> str:
     lines = [WEB_HEADER]
     for item in items:
         strings = f" Strings: {', '.join('`' + s + '`' for s in item['strings'])}." if item["strings"] else ""
-        lines.append(f"- {item['finding']}{strings} (source: {item['source']})")
+        lines.append(f"- {item['finding']}{strings} (source: {', '.join(item.get('sources') or [item['source']])})")
     return "\n".join(lines)
 
 

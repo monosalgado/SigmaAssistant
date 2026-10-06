@@ -5554,3 +5554,16 @@ URL.
 strings of one kind from one page share an item (prompt); `OutputLimitReached` carries the last cut answer
 (`partial`), and **a cut digest keeps its complete items** (`complete_items`), checked like any other (recorded as
 `cut`). 819 pass. Rerun of the same 2 cases started.
+**Second live check (same 2 cases, after the fix above):** neither digest was cut (993 tokens / 23 s; 1,360 / 39 s), but
+**every item was dropped as "source is not a kept page"** — the model cited pages as lists (`[4]`, and `[1, 2, 4]` for
+a finding from several pages). The spec had not foreseen it. **Fixed (test first, seen to fail):** a source may be a
+number, `"[n]"` or a list; a string is kept if it is in any cited page; the kept item records every cited URL.
+**Third live check:** HiatusRAT 10 of 10 items, 26 strings (dropped: 4 short ports, 1 device model not in the page);
+Slingshot 15 of 16 items, **46 strings** — the mutex `Global\{6D29520B-…}`, the abused drivers (`Goad.sys`,
+`SpeedFan.sys`, `Sandra.sys`, `ElbyCDIO.sys`), `wcp.dll`, YARA strings — none cut. Six Slingshot strings were dropped
+though real: the YARA file writes `\\\\.\\amxpci` for `\\.\amxpci`, and the PDF's text splits a path
+(`5.20- 43520 3610090039`); one dropped string was a real paraphrase. **Fixed (test first, seen to fail):** strings are
+compared with whitespace ignored and a backslash run read as one (the characters must still match in order); a
+paraphrase is still dropped. 821 pass.
+**Saved answers for the tuning set complete:** 29 searched (once past the hourly limit), 26 copied from the probe →
+`eval/web_snapshots/tuning60.jsonl` (55 queries; local, gitignored, recorded in each run's config by SHA-256).

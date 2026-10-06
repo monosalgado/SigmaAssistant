@@ -202,3 +202,34 @@ def test_a_cut_digest_keeps_its_complete_items():
 def test_the_digest_prompt_cites_pages_by_number_and_groups_strings():
     p = prompts.WEB_DIGEST.lower()
     assert "page's number" in p and "group" in p
+
+
+# --- the second live check (2026-10-06): the model cited pages as lists - `[4]`, and `[1, 2, 4]` for a finding from
+# several pages - so every item was dropped as "source is not a kept page". A source may be a number, "[n]" or a list
+# of numbers; a string is kept if it is in any of the cited pages. -------------------------------------------------
+
+def test_a_source_may_be_a_list_of_page_numbers():
+    third = {"title": "3", "url": "https://third.example/", "content": "uses schtasks /create for persistence"}
+    pages = [OWN, OTHER, third]
+    kept, dropped = check_digest([
+        {"finding": "f", "source": [2], "strings": ["rundll32.exe"]},
+        {"finding": "g", "source": "[2]", "strings": ["evil.example"]},
+        {"finding": "h", "source": [2, 3], "strings": ["rundll32.exe", "schtasks /create"]},
+        {"finding": "i", "source": "[1, 9]", "strings": ["the report"]}], pages)
+    assert [k["finding"] for k in kept] == ["f", "g", "h", "i"]
+    assert kept[2]["strings"] == ["rundll32.exe", "schtasks /create"] and kept[2]["sources"] == [OTHER["url"], third["url"]]
+    assert kept[3]["sources"] == [OWN["url"]] and not dropped    # page 9 does not exist; page 1 holds the string
+
+
+# --- the third live check (2026-10-06): real strings dropped for their page's formatting - a YARA file writes
+# `\\\\.\\amxpci` for `\\.\amxpci`, and PDF text splits a path (`5.20- 43520 3610090039`). Compared with backslash
+# runs read as one and whitespace ignored; a paraphrase is still dropped. ---------------------------------------------
+
+def test_escaped_backslashes_and_split_text_do_not_hide_a_string():
+    page = {"title": "y", "url": "https://y.example/r.yar",
+            "content": '$s3 = "\\\\\\\\.\\\\amxpci" fullword\n%AppData%\\Roaming\\mikrotik\\winbox\\5.20- 43520 3610090039\\ipv4.dll'}
+    kept, dropped = check_digest([{"finding": "f", "source": 1, "strings": [
+        "\\\\.\\amxpci", "%AppData%\\Roaming\\mikrotik\\winbox\\5.20-435203610090039\\ipv4.dll", "winbox loader dll"]}],
+        [page])
+    assert kept[0]["strings"] == ["\\\\.\\amxpci", "%AppData%\\Roaming\\mikrotik\\winbox\\5.20-435203610090039\\ipv4.dll"]
+    assert [d["string"] for d in dropped] == ["winbox loader dll"]
