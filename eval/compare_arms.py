@@ -22,6 +22,10 @@ Usage:
     .venv/bin/python eval/compare_arms.py --a may_r1.jsonl may_r2.jsonl may_r3.jsonl \\
         --b main_r1.jsonl main_r2.jsonl main_r3.jsonl [--label-a May --label-b main] [--manifest M]
 
+ATT&CK (Changes 42/43's run plan, 2026-10-05): S4 by parent technique and S4's exact precision (rules that parse);
+whether the analysis stage's technique list (`ttp_mappings`) holds a gold technique, exact and by parent (undefined
+when the gold rule names none); distinct techniques listed per case, and cases listing exactly 10.
+
 With --manifest (Change 38): P / Pany - the analysis stage's top log-source pick is the gold's / the
 gold's or another human rule's for the same report (`alternative_logsources.py`, emerging-threats rules).
 """
@@ -29,6 +33,7 @@ gold's or another human rule's for the same report (`alternative_logsources.py`,
 from __future__ import annotations
 
 import argparse
+import statistics
 import sys
 from functools import lru_cache
 from itertools import combinations
@@ -44,6 +49,9 @@ from eval.list_disagreements import first_logsource, stage_differences  # noqa: 
 
 PRIMARY = ("S3u", "S5u", "S5vu")
 SECONDARY = ("S1", "S3", "S4", "S5", "S5v", "rules", "seconds", "tokens")
+# Changes 42/43's run plan (2026-10-05): S4 by parent, S4's exact precision; the analysis's technique list holds a
+# gold technique (exact / parent); distinct techniques listed; exactly 10 listed.
+ATTACK = ("S4p", "S4prec", "Tgold", "Tgoldp", "Tn", "T10")
 STAGES = ("attack vector", "analysis", "first rule's log source")
 
 
@@ -56,6 +64,41 @@ def _gold_detection(rule_path: str):
     path = Path(rule_path)
     path = path if path.is_absolute() else REPO / path
     return (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("detection")
+
+
+@lru_cache(maxsize=None)
+def _gold_techniques(rule_path: str) -> frozenset:
+    from eval.scorers import extract_techniques
+    path = Path(rule_path)
+    path = path if path.is_absolute() else REPO / path
+    return frozenset(extract_techniques((yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("tags")))
+
+
+def _listed_techniques(row: dict) -> set:
+    mappings = (row.get("pipeline") or {}).get("ttp_mappings") or []
+    return {str(m.get("technique_id") or "").strip().lower() for m in mappings if isinstance(m, dict)} - {""}
+
+
+def _attack_value(row: dict, metric: str):
+    """S4p / S4prec as the harness's convention; Tgold / Tgoldp over the analysis's `ttp_mappings` (undefined when
+    the gold rule names no technique); Tn distinct techniques listed; T10 exactly 10 listed."""
+    if metric in ("S4p", "S4prec"):
+        if not _parses(row):
+            return None
+        attack = row["scores"].get("attack") or {}
+        return ((attack.get("parent") or {}).get("f1") if metric == "S4p"
+                else (attack.get("exact") or {}).get("precision"))
+    listed = _listed_techniques(row)
+    if metric == "Tn":
+        return float(len(listed))
+    if metric == "T10":
+        return 1.0 if len(listed) == 10 else 0.0
+    gold = set(_gold_techniques(row["rule_path"]))
+    if not gold:
+        return None
+    if metric == "Tgoldp":
+        gold, listed = {g.split(".")[0] for g in gold}, {t.split(".")[0] for t in listed}
+    return 1.0 if gold & listed else 0.0
 
 
 def _first_detection(row: dict):
@@ -96,6 +139,8 @@ def run_value(row: dict, metric: str, gold_has_fields: bool = None, pick: tuple 
         return 1.0 if ((row["scores"].get("logsource") or {}).get("exact_match")) else 0.0
     if metric in ("S5vu", "S5v"):
         return _s5v(row, metric == "S5vu")
+    if metric in ATTACK:
+        return _attack_value(row, metric)
     if metric == "S5u":
         if not gold_has_fields:
             return None
@@ -244,6 +289,13 @@ def main() -> None:
     print("\nSecondary - the harness's convention (content scores only for rules that parse)")
     for metric in SECONDARY:
         show(metric)
+    print("\nATT&CK (Changes 42/43) - S4 by parent, S4 precision; the analysis lists a gold technique (exact, parent);"
+          " techniques listed, exactly 10")
+    for metric in ATTACK:
+        show(metric)
+    for label, runs in ((la, a_runs), (lb, b_runs)):
+        listed = sorted(case_means(runs, "Tn").get(rid, 0.0) for rid in cases)
+        print(f"  {label}: techniques listed per case, median {statistics.median(listed) if listed else '-'}")
 
     print("\nConsistency - the same first-rule log source in every run")
     con_a, con_b = consistency(a_runs), consistency(b_runs)

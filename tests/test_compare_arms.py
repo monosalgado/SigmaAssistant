@@ -181,3 +181,54 @@ def test_a_rule_with_no_values_scores_zero_as_the_user_gets_it(tmp_path):
 def test_s5vu_is_a_primary_measure():
     from eval.compare_arms import PRIMARY, SECONDARY
     assert "S5vu" in PRIMARY and "S5v" in SECONDARY
+
+
+# --- ATT&CK measures for Changes 42/43 (named in their run plan, 2026-10-05, before the run; added after the run,
+# before any score was read) ----------------------------------------------------------------------------------------
+# S4p: S4 by parent technique; S4prec: S4's exact precision (both the harness's convention: rules that parse).
+# Tgold / Tgoldp: the analysis stage's technique list (`ttp_mappings`) holds a gold technique, exact / by parent
+# (undefined when the gold rule names no technique). Tn: distinct techniques listed; T10: exactly 10 listed.
+
+def _attack_row(tmp_path, rid, listed, gold_tags=("attack.t1059.001",), parses=True, attack=None):
+    import yaml
+    gold = tmp_path / f"{rid}.yml"
+    gold.write_text(yaml.safe_dump({"title": "g", "tags": list(gold_tags), "detection": {"condition": "s"}}))
+    scores = {"validity": {"parses": parses}}
+    if parses:
+        scores["attack"] = attack or {"exact": {"precision": 0.25, "f1": 0.4}, "parent": {"f1": 0.8}}
+    return {"rule_id": rid, "rule_path": str(gold), "rules_yaml": ["title: r"], "scores": scores,
+            "pipeline": {"ttp_mappings": [{"technique_id": t} for t in listed]}}
+
+
+def test_s4_by_parent_and_s4_precision_follow_the_harness_convention(tmp_path):
+    row = _attack_row(tmp_path, "a", [])
+    assert run_value(row, "S4p") == 0.8 and run_value(row, "S4prec") == 0.25
+    unparsed = _attack_row(tmp_path, "b", [], parses=False)
+    assert run_value(unparsed, "S4p") is None and run_value(unparsed, "S4prec") is None
+
+
+def test_the_analysis_lists_a_gold_technique_exact_or_by_parent(tmp_path):
+    assert run_value(_attack_row(tmp_path, "a", ["T1105", " t1059.001 "]), "Tgold") == 1.0
+    sibling = _attack_row(tmp_path, "b", ["T1059.003"])
+    assert run_value(sibling, "Tgold") == 0.0 and run_value(sibling, "Tgoldp") == 1.0
+    assert run_value(_attack_row(tmp_path, "c", ["T1105"]), "Tgoldp") == 0.0
+    assert run_value(_attack_row(tmp_path, "d", []), "Tgold") == 0.0          # no analysis: nothing listed
+    assert run_value(_attack_row(tmp_path, "e", ["T1105"], gold_tags=("attack.execution",)), "Tgold") is None
+
+
+def test_techniques_listed_counts_distinct_ids_and_exactly_ten(tmp_path):
+    ten = [f"T{1000 + i}" for i in range(10)]
+    assert run_value(_attack_row(tmp_path, "a", ten), "Tn") == 10.0
+    assert run_value(_attack_row(tmp_path, "a", ten), "T10") == 1.0
+    assert run_value(_attack_row(tmp_path, "b", ten[:9] + ["t1000"]), "Tn") == 9.0   # a repeat counts once
+    assert run_value(_attack_row(tmp_path, "b", ten[:9] + ["t1000"]), "T10") == 0.0
+    assert run_value(_attack_row(tmp_path, "c", []), "Tn") == 0.0
+
+
+def test_the_attack_measures_are_compared_paired(tmp_path):
+    a = {"x": _attack_row(tmp_path, "x", ["T1105"]), "y": _attack_row(tmp_path, "y", ["T1105"])}
+    b = {"x": _attack_row(tmp_path, "x", ["T1059.001"]), "y": _attack_row(tmp_path, "y", ["T1105"])}
+    r = compare([a], [b], "Tgold")
+    assert r["n"] == 2 and r["mean_a"] == 0.0 and r["mean_b"] == 0.5
+    from eval.compare_arms import ATTACK
+    assert set(ATTACK) == {"S4p", "S4prec", "Tgold", "Tgoldp", "Tn", "T10"}
