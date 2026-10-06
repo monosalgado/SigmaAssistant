@@ -5598,3 +5598,8 @@ and the evaluation's default stays `--no-web-enrich`.
 itself is dropped (rule pages, and its id is checked), but later write-ups may carry detection knowledge that did not
 exist when the report came out. The result is an upper bound on what a search adds for a brand-new report.
 Both arms also record the analysis stage's cut answers (#7).
+**Run started 2026-10-06 15:27 EDT** (user: "push it and before you start the run …"): preflight passed in the worktree (tunnel,
+model, context, 828 tests, smoke CITABLE); both arms from `46da793`, together, in the user's terminal (tabs "C45 arm A
+(web off)", "C45 arm B (web on, saved)"); B's config records the saved file and its SHA-256 (matches the plan). Two
+stuck background wait loops of mine (`until ! pgrep -f …` matching their own command line) were stopped first; they
+only slept.
