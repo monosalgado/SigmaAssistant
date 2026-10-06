@@ -15,6 +15,7 @@ import re
 from typing import Optional
 from urllib.parse import urlparse
 
+from backend.llm_client import OutputLimitReached
 from backend.pipeline import prompts
 from backend.pipeline.base_stage import PipelineStage
 
@@ -62,14 +63,16 @@ def check_digest(items: list, pages: list) -> tuple:
     """Keep what the pages back up. An item's source must be a kept page; each string must appear in that page
     (case-insensitive, whitespace collapsed, >= MIN_STRING_CHARS) or it is dropped; an item whose strings all fail is
     dropped; an item with no strings is kept. Returns (kept items, dropped records)."""
-    by_url = {norm_url(p["url"]): _squash(p.get("content")) for p in pages}
+    by_url = {norm_url(p["url"]): (p["url"], _squash(p.get("content"))) for p in pages}
     kept, dropped = [], []
     for item in items if isinstance(items, list) else []:
         if not isinstance(item, dict):
             continue
         finding, source = str(item.get("finding") or "").strip(), str(item.get("source") or "").strip()
         strings = [str(s) for s in item.get("strings") or [] if str(s).strip()]
-        page = by_url.get(norm_url(source))
+        if source.isdigit() and 1 <= int(source) <= len(pages):     # cited by its number, as the prompt asks
+            source = pages[int(source) - 1]["url"]
+        source, page = by_url.get(norm_url(source), (source, None))
         if page is None:
             dropped.append({"finding": finding, "source": source, "reason": "source is not a kept page"})
             continue
@@ -88,6 +91,26 @@ def check_digest(items: list, pages: list) -> tuple:
         dropped.extend({"finding": finding, "source": source, "string": s, "reason": r} for s, r in bad)
         kept.append({"finding": finding, "strings": good, "source": source})
     return kept, dropped
+
+
+def complete_items(text: str) -> list:
+    """The items an answer cut at the output limit had finished: each complete JSON object of its "items" list, in
+    order, until the first one cut off."""
+    start = (text or "").find('"items"')
+    start = text.find("[", start) if start >= 0 else -1
+    if start < 0:
+        return []
+    decoder, i, items = json.JSONDecoder(), start + 1, []
+    while True:
+        while i < len(text) and text[i] in " \t\r\n,":
+            i += 1
+        if i >= len(text) or text[i] != "{":
+            return items
+        try:
+            item, i = decoder.raw_decode(text, i)
+        except ValueError:
+            return items
+        items.append(item)
 
 
 def digest_block(items: list) -> str:
@@ -193,16 +216,16 @@ class WebEnrichStage(PipelineStage):
         pages = "\n\n".join(f"[{i}] {p.get('title', '')}\nURL: {p['url']}\n{p.get('content') or ''}"
                             for i, p in enumerate(kept_pages, 1))
         prompt = prompts.WEB_DIGEST.format(report=self.source_text(preprocessed["combined_text"]), pages=pages)
+        error, cut = None, False
         try:
             answer = self.parse_json(self.llm_call(prompt, temperature=0.0, json_mode=True, economy=True))
             items = answer.get("items", []) if isinstance(answer, dict) else []
-        except Exception as e:  # a cut or unreadable answer: no digest, the pipeline goes on
-            enrichment["digest"] = {"error": f"{type(e).__name__}: {e}"[:300], "proposed": 0, "kept": [],
-                                    "dropped": []}
-            print(f"[{self.name}] Digest failed: {e}")
-            return context
+        except Exception as e:  # cut: keep its complete items; unreadable: no digest. The pipeline goes on.
+            error, cut = f"{type(e).__name__}: {e}"[:300], isinstance(e, OutputLimitReached)
+            items = complete_items(getattr(e, "partial", "")) if cut else []
+            print(f"[{self.name}] Digest {'cut' if cut else 'failed'}: {e}; {len(items)} complete items kept to check")
         kept, dropped = check_digest(items, kept_pages)
-        enrichment["digest"] = {"error": None, "proposed": len(items) if isinstance(items, list) else 0,
+        enrichment["digest"] = {"error": error, "cut": cut, "proposed": len(items) if isinstance(items, list) else 0,
                                 "kept": kept, "dropped": dropped}
         if kept:
             block = digest_block(kept)

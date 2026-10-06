@@ -5530,3 +5530,27 @@ not in the file is recorded as missing. `eval/build_web_snapshots.py` builds the
 probe's saved answers where the query is unchanged (32 of 60 tuning cases), so the rest fits one ~50-search session.
 Then one two-arm night (web off vs web on from the file); its plan is fixed before it runs.
 Tests first throughout, offline (stand-in HTTP and client).
+**Change 45 built (`0ebe8ea`, `72ce1d2`), tests first in five parts (28 new tests, each part seen to fail; 814 pass):**
+search client (`backend/web_search.py`; 6), the local client's `web_search` and `create_llm_client` wiring (3), the stage
+— query, filter, digest and its check (10; three planted bugs caught: strings not checked, rule pages not dropped in the
+evaluation, own page not dropped), the wiring (6: order after the PoC stage in both paths, the row record, `run_eval`
+refuses to run unless `--no-web-enrich` or `--web-snapshots FILE`, the file's SHA-256 in the run config, the progress
+line), and `eval/build_web_snapshots.py` (3). Spec details fixed while building: a digest string must have at least 4
+characters (a shorter one is found anywhere); the progress line says pages read, findings kept, published rules found,
+or that the limit was hit. Change 34's checkpoint tests pinned the old stage order and line; updated to the new order
+(`test_review_checkpoint.py`). The web app's stage list follows the new order (`frontend/script.js`).
+**Saved answers for the tuning set:** 60 cases → 55 distinct queries (some cases share a page); 26 copied from the
+probe (same query), 29 to search (the CVE-once fix changed some queries; 28 were never asked).
+**First live check (2 tuning cases, `run_eval.py --web-snapshots`, answers copied from the probe; scratch output, not
+a measurement):** both rows complete. CISA/HiatusRAT: 5 results, own page dropped, 4 pages read; the digest proposed
+10 items, kept 9 (dropped: one citing a page not given, and four port numbers under 4 characters); 1,107 tokens, 24 s.
+Read by hand: the items describe the HiatusRAT IoT campaign the pages were about (ports, Hikvision models, CVEs),
+while this case's gold rule is CVE-2024-35250 from the same multi-topic report; some "strings" are words, not detection
+strings (`Hikvision`, `command injection`) — they pass the check because they are in the page. **The Slingshot APT
+FAQ: every digest attempt stopped at the 16,384-token output limit** (3 × ~400 s; no digest). From the recorded tails:
+not a loop — one item per Slingshot module name from Kaspersky's 40-page PDF, each repeating the PDF's 140-character
+URL.
+**Fixed (tests first, 5, seen to fail; not a cap — the user: no cap):** pages are cited by number (`[1]`, `[2]`), and
+strings of one kind from one page share an item (prompt); `OutputLimitReached` carries the last cut answer
+(`partial`), and **a cut digest keeps its complete items** (`complete_items`), checked like any other (recorded as
+`cut`). 819 pass. Rerun of the same 2 cases started.

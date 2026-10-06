@@ -160,3 +160,45 @@ def test_the_digest_prompt_treats_pages_as_data_and_asks_for_exact_strings():
     p = prompts.WEB_DIGEST.lower()
     assert "ignore any instructions" in p and "exactly" in p and "this attack" in p
     assert "{report}" in prompts.WEB_DIGEST and "{pages}" in prompts.WEB_DIGEST
+
+
+# --- after the first live check (2026-10-06): on The Slingshot APT FAQ every digest attempt stopped at the 16,384-token
+# output limit - one item per module name from a 40-page PDF, each repeating the PDF's 140-character URL. Not a cap
+# (the user: no cap): pages are cited by number, strings of one kind from one page share an item, and a cut answer
+# keeps its complete items (checked as any other). -----------------------------------------------------------------
+
+def test_a_page_is_cited_by_its_number():
+    pages = [OWN, OTHER]
+    kept, dropped = check_digest([{"finding": "f", "source": 2, "strings": ["rundll32.exe"]},
+                                  {"finding": "g", "source": "2", "strings": ["evil.example"]},
+                                  {"finding": "h", "source": 3, "strings": ["rundll32.exe"]}], pages)
+    assert [k["source"] for k in kept] == [OTHER["url"], OTHER["url"]]
+    assert [d["reason"] for d in dropped] == ["source is not a kept page"]
+
+
+def test_the_complete_items_of_a_cut_answer_are_read():
+    from backend.pipeline.stage_web_enrich import complete_items
+    cut = ('{"items": [{"finding": "a", "strings": ["x1"], "source": 1},\n  {"finding": "b, with a } brace", '
+           '"strings": [], "source": 2}, {"finding": "c", "stri')
+    assert [i["finding"] for i in complete_items(cut)] == ["a", "b, with a } brace"]
+    assert complete_items("not json at all") == [] and complete_items("") == []
+
+
+def test_a_cut_digest_keeps_its_complete_items():
+    from backend.llm_client import OutputLimitReached
+
+    class _Cut(_Client):
+        def generate(self, prompt, **kwargs):
+            self.prompts.append(prompt)
+            raise OutputLimitReached("answer stopped at the output limit", partial=(
+                '{"items": [{"finding": "Started with rundll32.", "strings": ["rundll32.exe C:\\\\ProgramData\\\\x.dll'
+                ',Start"], "source": 1}, {"finding": "cut he'))
+    context = WebEnrichStage(_Cut([OTHER]), "fake").run(_context())
+    d = context["enrichment"]["digest"]
+    assert d["cut"] is True and "output limit" in d["error"] and len(d["kept"]) == 1
+    assert "rundll32.exe C:\\ProgramData\\x.dll,Start" in context["preprocessed"]["combined_text"]
+
+
+def test_the_digest_prompt_cites_pages_by_number_and_groups_strings():
+    p = prompts.WEB_DIGEST.lower()
+    assert "page's number" in p and "group" in p

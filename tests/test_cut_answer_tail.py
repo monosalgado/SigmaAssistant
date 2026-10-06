@@ -59,3 +59,10 @@ def test_a_finished_answer_keeps_no_tail():
     assert _client("{\"ok\": 1}", "stop").generate("p") == "{\"ok\": 1}"
     assert TELEMETRY.as_dicts()[0]["cut_tail"] is None
     assert OUTPUT_TOKEN_LIMIT == 16384
+
+
+def test_the_error_carries_the_last_cut_answer():
+    # Change 45: the web digest keeps the complete items of a cut answer.
+    with pytest.raises(OutputLimitReached) as caught:
+        _client("{\"items\": [{\"finding\": \"a\"}, {\"fin", "length").generate("p")
+    assert caught.value.partial == "{\"items\": [{\"finding\": \"a\"}, {\"fin"

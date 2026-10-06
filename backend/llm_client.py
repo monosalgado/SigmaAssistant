@@ -39,7 +39,12 @@ CUT_TAIL_CHARS = 2000
 
 
 class OutputLimitReached(Exception):
-    """Every attempt stopped at OUTPUT_TOKEN_LIMIT: the model did not finish."""
+    """Every attempt stopped at OUTPUT_TOKEN_LIMIT: the model did not finish. `partial` is the last attempt's
+    answer, so a stage can keep what was complete (Change 45: the web digest)."""
+
+    def __init__(self, message: str = "", partial: str = ""):
+        super().__init__(message)
+        self.partial = partial or ""
 
 
 # ---------------------------------------------------------------------------
@@ -373,7 +378,7 @@ class OllamaLLMClient(LLMClient):
                 return content
         raise OutputLimitReached(
             f"answer stopped at the {OUTPUT_TOKEN_LIMIT}-token output limit on "
-            f"{1 + OUTPUT_LIMIT_RETRIES} attempts")
+            f"{1 + OUTPUT_LIMIT_RETRIES} attempts", partial=content or "")
 
     def make_image_part(self, file_path: str, mime_type: str):
         """Image transcription not supported for text-only local models."""

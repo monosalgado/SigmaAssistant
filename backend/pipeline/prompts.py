@@ -246,11 +246,11 @@ List what the web pages add about THIS attack (the one the report describes) tha
 
 For each item give:
 - `finding`: one sentence saying what the attack does, in your words.
-- `strings`: the strings a detection could look for, copied exactly as the page writes them (no paraphrase, no added wildcards). Leave it empty if the finding has none.
-- `source`: the URL of the page it comes from, exactly as given above.
+- `strings`: the strings a detection could look for, copied exactly as the page writes them (no paraphrase, no added wildcards). Leave it empty if the finding has none. Group the strings of the same kind from the same page (for example all its module names, or all its file paths) into one item.
+- `source`: the page's number, as in [1], [2] above.
 
 Output JSON only:
-{{"items": [{{"finding": "...", "strings": ["..."], "source": "..."}}]}}
+{{"items": [{{"finding": "...", "strings": ["..."], "source": 1}}]}}
 If the pages add nothing about this attack, output {{"items": []}}.
 """
 
