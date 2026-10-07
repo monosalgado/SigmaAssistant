@@ -1398,3 +1398,18 @@ textarea:focus {
     font-size: 0.8rem;
     margin-top: 0.3rem;
 }
+
+/* Change 46: each set of rules is a numbered version (1 automatic; 2+ with the analyst's corrections) */
+.version-label {
+    align-self: flex-start;
+    margin: 1rem 0 -0.4rem 3rem;
+    font-size: 0.72rem;
+    font-family: var(--font-mono);
+    color: var(--accent);
+    background: var(--accent-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.2rem 0.55rem;
+    max-width: calc(100% - 4rem);
+    overflow-wrap: anywhere;
+}

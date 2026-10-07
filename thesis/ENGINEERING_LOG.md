@@ -5639,3 +5639,20 @@ analysis with the gold log source as the analyst's choice, S5 +0.144 [0.056, 0.2
 step, so it now measures "correct and regenerate".
 Tests first, offline (fake stages as Change 34's tests; the session functions; the screen checked in the browser with
 one real report once the Spark is back).
+**Change 46 built (offline; tests first, 13 new, each seen to fail; 841 pass):** `analyse_then_generate` (orchestrator;
+5 tests: analysis → checkpoint → generation with no stop and no feedback step; generation sees no analyst decision; the
+first rules equal the one-pass stream's; one retry on errors as before; a correction regenerates without analysing
+again). Sessions (8): `first_pass_events` (the analysis saved at the checkpoint, not sent; version 1; a failure before
+the checkpoint is a plain message, after it the analysis is kept to generate again), versions on every generation
+(`finish_generation` returns the number), regeneration allowed from a generated analysis (not while one runs), a failed
+one leaves the versions as they were, `corrections_summary` (the corrections behind a version in words, saved with it
+for a reload), `saved_analysis_metadata`. Change 34's test "an analysis is generated from once" now reads "cannot start
+again while being generated from" (by design). `/analyze_stream` without `review` runs the new flow; `/generate_stream`
+returns the version, the corrections and the saved analysis's panel data. The screen: the whole pipeline's progress,
+then "Version n · automatic / with your corrections: …" above each set of rules, and the Analysis panel showing the
+**saved analysis** (the corrections refer to its items by position) with the latest version's own record of the
+corrections and their check; button "Regenerate with my corrections". Cache tags of `script.js`/`style.css` bumped.
+**Checked in the browser, offline** (the web app starts without the Spark; only GET requests made): no script errors; an
+old Change 34 session whose analysis was generated now opens with the corrections and the regenerate button; the version
+label rendered (inserted by hand, not saved). **Not yet checked live:** a real first pass and a regeneration (needs the
+Spark).

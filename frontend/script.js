@@ -191,13 +191,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (contextDiv) contextDiv.innerHTML = '';
 
         let last = null;
+        let lastAnalysis = null;
         msgs.forEach(m => {
+            if (m.status) lastAnalysis = m;
+            if (m.status && !m.content) return;   // Change 46: the saved analysis has no chat text of its own
+            if (m.version) appendVersionLabel(m.version, m.corrections);
             appendMessage(m.role, m.content);
             if (m.role === 'assistant' && m.context && Object.keys(m.context).length > 0) last = m;
         });
         review = null;
-        if (last && last.status === 'awaiting_review') {
-            await startReview(last.analysis_id, last.context, last.pipeline_metadata);
+        if (lastAnalysis && lastAnalysis.status === 'awaiting_review') {
+            await startReview(lastAnalysis.analysis_id, lastAnalysis.context, lastAnalysis.pipeline_metadata);
+        } else if (lastAnalysis && lastAnalysis.status === 'generated' && last && last.analysis_id === lastAnalysis.analysis_id) {
+            await startReview(lastAnalysis.analysis_id, last.context,
+                panelMeta(last.pipeline_metadata, lastAnalysis.pipeline_metadata), true);
         } else {
             if (last) renderContext(last.context, last.pipeline_metadata || null);
             updateReviewBar();
@@ -639,8 +646,9 @@ level: medium`;
             return;
         }
 
-        // Use SSE streaming for text-only requests; the analysis stops for the analyst's review
-        const pipelineDiv = createPipelineProgress(ANALYSIS_STAGES);
+        // Use SSE streaming for text-only requests. Change 46: the pipeline runs to the rules; the analyst's
+        // corrections come after, from the saved analysis.
+        const pipelineDiv = createPipelineProgress(ANALYSIS_STAGES.concat(GENERATION_STAGES));
         chatHistory.appendChild(pipelineDiv);
         chatHistory.scrollTop = chatHistory.scrollHeight;
 
@@ -648,7 +656,7 @@ level: medium`;
             const response = await fetch('/analyze_stream', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ description: text, session_id: currentSessionId, review: true })
+                body: JSON.stringify({ description: text, session_id: currentSessionId })
             });
 
             await readSSE(response, async (event, data) => {
@@ -662,10 +670,21 @@ level: medium`;
                     loadSessions();
                 } else if (event === 'result') {
                     pipelineDiv.remove();
-                    if (data.rule) {
+                    if (data.session_id) currentSessionId = data.session_id;
+                    if (data.analysis_id) {
+                        // Version 1, then the corrections against the saved analysis
+                        appendVersionLabel(data.version, data.corrections);
+                        appendMessage('assistant', data.rule || 'No rules were generated.');
+                        await startReview(data.analysis_id, data.context,
+                            panelMeta(data.pipeline_metadata, data.analysis_metadata), true);
+                        loadSessions();
+                    } else if (data.retry_analysis_id) {
+                        // The analysis was saved but generation failed: it can be generated from again
+                        appendMessage('assistant', data.rule);
+                        await switchSession(currentSessionId);
+                    } else if (data.rule) {
                         appendMessage('assistant', data.rule);
                         if (data.context) renderContext(data.context, data.pipeline_metadata);
-                        if (data.session_id) currentSessionId = data.session_id;
                         loadSessions();
                     } else {
                         appendMessage('assistant', "I encountered an error analyzing that.");
@@ -737,10 +756,29 @@ level: medium`;
         return logsourceChoices;
     }
 
-    async function startReview(analysisId, context, meta) {
+    // Change 46: a version's panel shows the saved analysis's items (what the corrections refer to by position)
+    // and that version's own record of the corrections and their check.
+    const ANALYSIS_FIELDS = ['indicators', 'ttp_mappings', 'attack_vector', 'logsource_suggestions', 'logsource_primary',
+        'suggested_log_sources'];
+
+    function panelMeta(versionMeta, analysisMeta) {
+        const out = Object.assign({}, versionMeta || {});
+        ANALYSIS_FIELDS.forEach(f => { if (analysisMeta && f in analysisMeta) out[f] = analysisMeta[f]; });
+        return out;
+    }
+
+    function appendVersionLabel(version, corrections) {
+        if (!version) return;
+        const label = el('div', 'version-label',
+            version === 1 && !corrections ? 'Version 1 · automatic'
+                : `Version ${version} · ${corrections ? 'with your corrections: ' + corrections : 'automatic'}`);
+        chatHistory.appendChild(label);
+    }
+
+    async function startReview(analysisId, context, meta, after = false) {
         await loadLogsourceChoices();
         review = {
-            analysisId, techniques: {}, indicators: {}, patterns: {}, excluded: {}, logsource: null, note: '',
+            analysisId, after, techniques: {}, indicators: {}, patterns: {}, excluded: {}, logsource: null, note: '',
             values: {
                 patterns: ((meta && meta.attack_vector && meta.attack_vector.payload_signatures) || []).map(p => p.pattern),
                 indicators: ((meta && meta.indicators) || []).map(i => i.value),
@@ -878,7 +916,9 @@ level: medium`;
         if (copies) parts.push(`${copies} cop${copies === 1 ? 'y' : 'ies'} rejected with them`);
         parts.push(review.logsource ? `log source: ${logsourceName(review.logsource)}` : "log source: the model's suggestion");
         document.getElementById('review-summary').textContent = parts.join(' · ');
-        document.getElementById('generate-btn').disabled = false;
+        const btn = document.getElementById('generate-btn');
+        btn.textContent = review.after ? 'Regenerate with my corrections' : 'Generate rules';
+        btn.disabled = false;
     }
 
     async function generateFromReview() {
@@ -906,11 +946,14 @@ level: medium`;
                     updatePipelineStage(data.stage, data.status, data.detail);
                 } else if (event === 'result') {
                     progress.remove();
+                    if (data.retry_analysis_id) {   // the analysis is kept; the review stays open
+                        appendMessage('assistant', data.rule || 'No rules were generated.');
+                        return;
+                    }
+                    appendVersionLabel(data.version, data.corrections);
                     appendMessage('assistant', data.rule || 'No rules were generated.');
-                    if (data.retry_analysis_id) return;   // the analysis is kept; the review stays open
-                    review = null;
-                    renderContext(data.context, data.pipeline_metadata);
-                    updateReviewBar();
+                    // Change 46: every version is kept; the analyst can correct again, from the saved analysis
+                    startReview(review.analysisId, data.context, panelMeta(data.pipeline_metadata, data.analysis_metadata), true);
                     loadSessions();
                 }
             });
@@ -976,7 +1019,12 @@ level: medium`;
         meta = meta || {};
         const av = meta.attack_vector || {};
 
-        if (review) {
+        if (review && review.after) {
+            root.appendChild(el('p', 'an-review-intro',
+                'The rules were written from what the pipeline understood, shown below. If something is wrong, ' +
+                'correct it - reject what is wrong, restore a string that was wrongly excluded, change the log ' +
+                'source - and regenerate. Only the rules are written again; the analysis stays. Every version is kept.'));
+        } else if (review) {
             root.appendChild(el('p', 'an-review-intro',
                 'Confirm what is right, reject what is wrong, and change the log source if needed - then ' +
                 'generate. Rejected items are not given to the rule writer; a log source you choose is given as ' +
@@ -986,7 +1034,9 @@ level: medium`;
         // 0. The analyst's review, as applied before these rules were written
         const rec = meta.analyst_review;
         if (rec) {
-            const s = panelSection('Your review', 'applied before the rules were written', true);
+            const s = review && review.after
+                ? panelSection('Your corrections', 'applied to the latest version', true)
+                : panelSection('Your review', 'applied before the rules were written', true);
             if (rec.logsource) {
                 const rank = rec.logsource.suggested_rank;
                 add(s.body, kv('Log source', `${logsourceName(rec.logsource)} - ${rank ? `the model's suggestion #${rank}` : 'your choice'}`));
