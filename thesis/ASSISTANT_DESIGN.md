@@ -286,3 +286,27 @@ confounded. Recommendation: separately.
   explanations come from computed traceability, not from the model's narration.
 - Answers can loop until the output limit (13 cut calls over two runs, all in the
   analysis stage). The report must show a stage that could not finish (§5).
+
+---
+
+## 11. Restructure (user, 2026-10-07): rules first, the analyst's corrections after — Change 46
+
+The user moved the human step **after** generation: "the human input is included after the rule is generated". It
+also answers the professor (2026-09-28): automate more, the human only where needed.
+
+```
+URL/text ──► analysis ──► (analysis saved) ──► generation ──► Version 1 (automatic)  ── what the evaluation measures
+                                                                    │
+                          analyst reads the rules and what the pipeline understood; corrects it
+                                                                    ▼
+             saved analysis + corrections ──► generation only ──► Version 2 (with your corrections) …
+```
+
+- **Decisions (user, asked 2026-10-07):** after the rules, **correct and regenerate** (Change 34/35's controls and P4's
+  check, reused); YAML editing and "ask to revise" (§6, decision 3) are **not now**; the review-before-generating
+  checkpoint (§4, Change 34) **leaves the screen** (kept in the API and its tests); **every version is kept** and shown,
+  the analyst saves the one they want.
+- **What changes in §4:** Phase A and Phase B run back to back; the checkpoint still saves the analysis, so Phase B can
+  run again from it with the analyst's corrections. P5 becomes simpler: version 1 *is* the automated path.
+- **Evaluation (§7):** the "simulated analyst" (plan 5.3) measured generation from the saved analysis with a corrected
+  log source — the correction step of this flow. Version 1 is measured by every harness run.

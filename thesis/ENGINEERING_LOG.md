@@ -5611,3 +5611,31 @@ the arms are resumed together (same commands) as soon as it answers. No row or s
 At 21:33 the Spark still did not answer (SSH port, ping), while USF's DNS servers answered through the VPN — so the VPN
 works and the Spark itself was unreachable. **User: "lets just stop for today"** — the arms stay at 6 of 60 each and
 resume together tomorrow with the same commands (the run plan above is unchanged).
+
+---
+
+## 2026-10-07 — Change 46 (the assistant): rules first, the analyst's corrections after — design, fixed before the code
+
+User (offline day, the Spark unreachable): "remember I want to restructure our assistant where the human input is
+included after the rule is generated". Choices (asked): **after the rules, "correct and regenerate"** only (editing the
+YAML and asking the assistant to revise a rule: not now); **the review-before-generating checkpoint is removed from the
+screen**; **both versions kept** and shown, the analyst saves the one they want. Matches the professor's "automate more,
+human only when needed" (2026-09-28).
+**Flow:**
+1. **The pipeline runs to the rules on its own** — `PipelineOrchestrator.analyse_then_generate`: the analysis events, a
+   `checkpoint` (the analysis saved, as Change 34), then generation from the **same** context with no review — the
+   one-pass stream's stages and calls without its old feedback step. **The first rules the analyst sees are what the
+   evaluation measures** (`run_sync`'s stage sequence; pinned by tests: same calls, generation sees no analyst decision).
+2. **The session** keeps the analysis (saved at the checkpoint) and each **version** of the rules: version 1 =
+   automatic; "Regenerate with my corrections" = Change 34's `/generate_stream` from the saved analysis with the analyst's
+   review → version 2, 3, …; no new analysis. An analysis can now be generated from again (was: once). A failed
+   regeneration leaves the versions as they were.
+3. **The screen:** the rules first, labelled "Version n" (1: automatic; n ≥ 2: with your corrections, listed); under them
+   the Analysis panel with Change 34/35's controls (confirm / reject / restore, the log source among SigmaHQ's, a note)
+   and "Regenerate with my corrections". Every version keeps its own save buttons. The `review: true` path (review before
+   generating) stays in the API and its tests, off the screen.
+**Evaluation:** the harness (`run_sync`) is untouched. The simulated analyst (plan 5.3: generation from the saved
+analysis with the gold log source as the analyst's choice, S5 +0.144 [0.056, 0.241]) is exactly this flow's correction
+step, so it now measures "correct and regenerate".
+Tests first, offline (fake stages as Change 34's tests; the session functions; the screen checked in the browser with
+one real report once the Spark is back).
