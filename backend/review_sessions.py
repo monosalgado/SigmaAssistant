@@ -7,8 +7,11 @@ the saved analysis (`state`), the Analysis panel's data and a status:
 
     awaiting_review -> generating -> generated     (back to awaiting_review on failure)
 
-Each analysis is generated from once. These functions only touch the message list;
-`backend/main.py` saves the sessions.
+Change 46 (user, 2026-10-07): the rules come first. The web app saves the analysis at the checkpoint and generation
+goes on (`first_pass_events`); the analyst's corrections then regenerate from the saved analysis. Every set of rules is
+kept as a numbered version (1 = automatic), so a generated analysis can be generated from again (generated ->
+generating -> generated); a failed generation leaves the versions as they were. These functions only touch the
+message list; `backend/main.py` saves the sessions.
 """
 
 from __future__ import annotations
@@ -24,7 +27,7 @@ class AnalysisNotFound(KeyError):
 
 
 class AnalysisNotAwaiting(ValueError):
-    """The analysis is being generated from, or already was."""
+    """The analysis is being generated from."""
 
 
 def checkpoint_message(analysis_id: str, checkpoint: dict) -> dict:
@@ -55,7 +58,7 @@ def start_generation(messages: list, analysis_id: str) -> tuple:
     """
     i = _find(messages, analysis_id)
     msg = messages[i]
-    if msg["status"] != AWAITING:
+    if msg["status"] not in (AWAITING, GENERATED):
         raise AnalysisNotAwaiting(f"analysis {analysis_id} is {msg['status']}")
     msg["status"] = GENERATING
     history = messages[:i]
@@ -64,23 +67,32 @@ def start_generation(messages: list, analysis_id: str) -> tuple:
     return msg["state"], history
 
 
-def finish_generation(messages: list, analysis_id: str, result: dict) -> None:
-    """Record the analyst's review on the analysis and append the rules."""
+def _versions(messages: list, analysis_id: str) -> int:
+    return sum(1 for m in messages if m.get("analysis_id") == analysis_id and "version" in m)
+
+
+def finish_generation(messages: list, analysis_id: str, result: dict) -> int:
+    """Record the analyst's review on the analysis and append the rules as the next version; returns its number."""
     msg = messages[_find(messages, analysis_id)]
     msg["status"] = GENERATED
     msg["review"] = (result.get("pipeline_metadata") or {}).get("analyst_review")
+    version = _versions(messages, analysis_id) + 1
     messages.append({
         "role": "assistant",
         "content": result.get("rule", ""),
         "context": result.get("context", {}),
         "pipeline_metadata": result.get("pipeline_metadata"),
         "analysis_id": analysis_id,
+        "version": version,
+        # The corrections behind this version, in words, for the screen and a reload (None: automatic).
+        "corrections": corrections_summary(msg["review"]) if msg["review"] else None,
     })
+    return version
 
 
 def abandon_generation(messages: list, analysis_id: str) -> None:
-    """A generation that failed: the analysis waits for the analyst again."""
-    messages[_find(messages, analysis_id)]["status"] = AWAITING
+    """A generation that failed: the versions stay as they were (none yet: the analysis waits again)."""
+    messages[_find(messages, analysis_id)]["status"] = GENERATED if _versions(messages, analysis_id) else AWAITING
 
 
 def reset_interrupted(sessions: dict) -> None:
@@ -88,7 +100,68 @@ def reset_interrupted(sessions: dict) -> None:
     for messages in sessions.values():
         for msg in messages:
             if msg.get("status") == GENERATING:
-                msg["status"] = AWAITING
+                msg["status"] = GENERATED if _versions(messages, msg["analysis_id"]) else AWAITING
+
+
+def saved_analysis_metadata(messages: list, analysis_id: str) -> dict:
+    """What the Analysis panel shows for the saved analysis - what the analyst's corrections refer to."""
+    return messages[_find(messages, analysis_id)]["pipeline_metadata"]
+
+
+def analysis_message(analysis_id: str, checkpoint: dict) -> dict:
+    """The session message for an analysis saved on the way to the rules (Change 46): no chat text of its own."""
+    return dict(checkpoint_message(analysis_id, checkpoint), content="", status=GENERATING)
+
+
+def first_pass_events(messages: list, events, analysis_id: str):
+    """The web app's first pass (Change 46), as (event, data) for the browser: the analysis is saved at the
+    checkpoint (not sent), the rules become version 1. A failure before the checkpoint is a plain message; after it,
+    the analysis is kept so it can be generated from again."""
+    saved = False
+    for event in events:
+        kind, data = event.get("event", "stage"), event.get("data", {})
+        if kind == "checkpoint":
+            messages.append(analysis_message(analysis_id, data))
+            saved = True
+            continue
+        if kind == "result":
+            if saved and data.get("pipeline_metadata") is not None:
+                data["version"] = finish_generation(messages, analysis_id, data)
+                data["analysis_id"] = analysis_id
+                data["analysis_metadata"] = saved_analysis_metadata(messages, analysis_id)
+            else:
+                messages.append({"role": "assistant", "content": data.get("rule", ""),
+                                 "context": data.get("context", {})})
+                if saved:
+                    abandon_generation(messages, analysis_id)
+                    data["retry_analysis_id"] = analysis_id
+        yield kind, data
+
+
+def _count(n: int, word: str) -> str:
+    return f"{n} {word}{'' if n == 1 else 's'}"
+
+
+def corrections_summary(record: dict) -> str:
+    """The analyst's corrections behind a version, in plain words (from `analyst_review`)."""
+    if not record:
+        return "no corrections"
+    words = {"techniques": "technique", "indicators": "indicator", "patterns": "pattern"}
+    parts = []
+    ls = record.get("logsource")
+    if ls:
+        parts.append("log source " + " / ".join(v for v in (ls.get("category"), ls.get("product"), ls.get("service")) if v))
+    for status in ("rejected", "confirmed"):
+        counts = [_count(len((record.get(k) or {}).get(status) or []), w) for k, w in words.items()
+                  if (record.get(k) or {}).get(status)]
+        if counts:
+            parts.append(f"{status} " + ", ".join(counts))
+    restored = len((record.get("excluded") or {}).get("restored") or [])
+    if restored:
+        parts.append("restored " + _count(restored, "string"))
+    if record.get("note"):
+        parts.append(f"note: {record['note']}")
+    return "; ".join(parts) or "no corrections"
 
 
 def public_messages(messages: list) -> list:

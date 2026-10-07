@@ -311,6 +311,9 @@ def analyze_stream(request: AttackRequest):
     save_sessions()
 
     history = sessions[session_id][:-1]
+    if not request.review and not request.feedback_data:
+        # Change 46 (user, 2026-10-07): the rules first; the analysis is saved for the analyst's corrections.
+        return _first_pass_response(session_id, history, request.description)
     if request.review:
         events = _guarded(agent.orchestrator.analyse_for_review(request.description, history=history))
     else:
@@ -377,6 +380,31 @@ def analyze_stream(request: AttackRequest):
         },
     )
 
+def _first_pass_response(session_id: str, history: list, description: str):
+    """The rules first (Change 46): progress events, then version 1 with the saved analysis's id."""
+    messages = sessions[session_id]
+    events = _guarded(agent.orchestrator.analyse_then_generate(description, history=history))
+
+    def event_generator():
+        sent_result = False
+        for event_type, data in review_sessions.first_pass_events(messages, events, str(uuid.uuid4())):
+            if event_type == "result":
+                sent_result = True
+                data["session_id"] = session_id
+            save_sessions()
+            yield f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
+        if not sent_result:
+            error_data = {"rule": "Pipeline completed without generating a result.",
+                          "context": {"sigma": [], "mitre": [], "sysmon": []}, "pipeline_metadata": None,
+                          "session_id": session_id}
+            messages.append({"role": "assistant", "content": error_data["rule"], "context": error_data["context"]})
+            save_sessions()
+            yield f"event: result\ndata: {json.dumps(error_data)}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"})
+
+
 def _guarded(events):
     """A pipeline error becomes a result event, as in SigmaAgent.analyze_attack_stream."""
     try:
@@ -418,7 +446,10 @@ def generate_stream(request: GenerateRequest):
                 event_type = event.get("event", "stage")
                 data = event.get("data", {})
                 if event_type == "result":
-                    review_sessions.finish_generation(messages, request.analysis_id, data)
+                    data["version"] = review_sessions.finish_generation(messages, request.analysis_id, data)
+                    data["analysis_id"] = request.analysis_id
+                    data["analysis_metadata"] = review_sessions.saved_analysis_metadata(messages, request.analysis_id)
+                    data["corrections"] = messages[-1]["corrections"]
                     save_sessions()
                     finished = True
                     data["session_id"] = request.session_id

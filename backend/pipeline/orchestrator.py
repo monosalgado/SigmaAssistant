@@ -309,6 +309,23 @@ class PipelineOrchestrator:
             "context": self._references(context),
         }}
 
+    def analyse_then_generate(self, description: str, history: list[dict] = None, media_file: dict = None) -> Generator[dict, None, None]:
+        """The web app's flow since Change 46 (user, 2026-10-07): the rules first, the analyst's corrections after.
+
+        The analysis, a checkpoint that saves it (so corrections can regenerate from it with
+        `generate_after_review`), then generation from the same context with no review - the one-pass
+        stream's stages without its old feedback step, so the first rules are what the evaluation measures.
+        """
+        context = yield from self._analysis_events(description, history, media_file)
+        if context is None:
+            return
+        yield {"event": "checkpoint", "data": {
+            "state": analysis_state(context),
+            "pipeline_metadata": self._pipeline_metadata(context),
+            "context": self._references(context),
+        }}
+        yield from self._generation_events(context)
+
     def generate_after_review(self, state: dict, review: dict, history: list[dict] = None) -> Generator[dict, None, None]:
         """Generation from a saved analysis and the analyst's review; no analysis runs again.
 

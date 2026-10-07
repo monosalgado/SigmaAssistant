@@ -413,3 +413,52 @@ def test_a_rewrite_for_the_log_source_is_not_told_about_rejected_strings():
     list(orch.generate_after_review(state, dict(CHOOSE_WINDOWS, patterns={"0": "rejected"})))
     feedback = orch.seen_by_generation[1]["analyst_feedback"]
     assert "log source" in feedback and "sudo -u#-1" not in feedback
+
+
+# --- Change 46 (user 2026-10-07): the rules first, the analyst's corrections after --------------------------------
+# The web app runs to the rules on its own: the analysis, a checkpoint that saves it, then generation from the same
+# context with no review. Those first rules are what the evaluation measures; the analyst then corrects the saved
+# analysis and generation runs again from it (`generate_after_review`).
+
+def test_the_rules_first_flow_runs_analysis_checkpoint_then_generation():
+    orch = _orchestrator()
+    events = list(orch.analyse_then_generate(URL))
+    assert _steps(events) == ANALYSIS_STEPS + GENERATION_STEPS            # no feedback step, no stop
+    kinds = [e["event"] for e in events]
+    assert kinds.count("checkpoint") == 1 and kinds[-1] == "result"
+    first_generation = next(i for i, e in enumerate(events) if e["data"].get("stage") == "generation")
+    assert kinds.index("checkpoint") < first_generation
+    assert orch.calls == ANALYSIS_CALLS + ["generate", "review"]
+
+
+def test_the_first_rules_are_written_with_no_analyst_decision():
+    orch = _orchestrator()
+    list(orch.analyse_then_generate(URL))
+    seen = orch.seen_by_generation[0]
+    assert seen["analyst_feedback"] is None
+    assert seen["logsource"]["primary_source"] == "process_creation/windows"   # the model's own suggestion
+    assert "confirmed_logsource" not in seen["logsource"]
+    assert seen["techniques"] == ["T1548.003", "T1068"]
+
+
+def test_the_first_rules_match_the_one_pass_stream():
+    one_pass = list(_orchestrator().run_stream(URL))[-1]["data"]
+    first = list(_orchestrator().analyse_then_generate(URL))[-1]["data"]
+    assert first["rule"] == one_pass["rule"]
+    assert "analyst_review" not in first["pipeline_metadata"]
+
+
+def test_the_rules_first_flow_still_retries_once_on_review_errors():
+    orch = _orchestrator(first_review_valid=False)
+    list(orch.analyse_then_generate(URL))
+    assert orch.calls == ANALYSIS_CALLS + ["generate", "review", "generate", "review"]
+
+
+def test_the_analyst_corrects_the_saved_analysis_and_only_generation_runs_again():
+    orch = _orchestrator()
+    events = list(orch.analyse_then_generate(URL))
+    state = next(e for e in events if e["event"] == "checkpoint")["data"]["state"]
+    orch.calls.clear()
+    list(orch.generate_after_review(state, {"logsource": {"category": "process_creation", "product": "linux"}}))
+    assert orch.calls[0] == "generate" and not set(orch.calls) & set(ANALYSIS_CALLS)
+    assert orch.seen_by_generation[-1]["logsource"]["confirmed_logsource"]["product"] == "linux"
