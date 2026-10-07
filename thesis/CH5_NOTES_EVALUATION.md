@@ -644,6 +644,19 @@ real recordings, V3 unrelated rules quiet, V4 a known ordering (today vs the May
 built from the reference answers inherits the reference's blind spot** — here it was specific (0.17% false fires vs
 real logs) but caught only 15 of 44 real "different rule, same attack" pairs.
 
+### Web enrichment in the evaluation — saved answers, never live `[DESIGN]` (added 2026-10-07)
+The web stage (Change 45) searches the live web, whose answers change and whose free account allows ~25 searches per
+hour and ~50 per "session". So **each case is searched once and the answers saved** (`eval/build_web_snapshots.py`;
+`eval/web_snapshots/<set>.jsonl`, local — third-party page text); every run, arm and rerun reads the same file
+(`run_eval.py --web-snapshots`), which never sends a query (a missing one is recorded); the file's SHA-256 is in each
+run's config. **The harness refuses to run unless the web is off or answered from a saved file** — an evaluation can
+never search live. **Rule pages are dropped** in the evaluation (`exclude_rule_pages`: rule mirrors, any page with
+Sigma rule text) and kept pages are checked for the gold rule's `id` (`web_effect.py`), because a found human rule would
+make the score measure copying — in the assistant they are kept and listed (the user: context for the analyst).
+**Disclose:** the pages were found in October 2026 for reports up to years older, so later write-ups can carry
+detection knowledge that did not exist when the report came out; the measured effect is an upper bound for a brand-new
+report. The probe that informed this design: CH6 §6.5f.
+
 ## 5.7 Status — what exists vs. what is claimed (2026-09-24)
 
 | Component | State |

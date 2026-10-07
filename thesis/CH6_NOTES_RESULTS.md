@@ -675,6 +675,28 @@ run-to-run variation is of the same size (the unchanged pipeline listed exactly 
 
 ---
 
+## 6.5f Web search for a local model — what it returns `[MEASURED]` 2026-10-06 (probe), run pending
+
+**Probe** (`probe_web_search.py`, plan fixed before any query; tuning set; Ollama's web search, 5 results per query;
+the free account stopped it at ~50 searches — 32 title queries and 18 CVE queries answered):
+- **Title query (what the stage sends):** the report itself among the results in **21 of 32**; the **gold rule itself
+  in 3 of 32** (by its id — all on rule mirrors, `sigma.controlassurance.com`, `detection.fyi`; a title match
+  over-counts, a rule title can be a phrase of the report); **new detection values: of 72 human values the reports
+  lack, the pages hold 26 — 15 without leaks and rule pages, in 6 of 32 cases.**
+- **CVE query:** vulnerability databases (NVD 28 of 90 results, then Rapid7, cve.org, Microsoft, Tenable); no leak;
+  **1 of 37** missing human values. And **22 of 60** tuning reports mention no CVE at all.
+**Live checks of the built stage** (2 cases, saved answers, not a measurement): the digest found real detection strings
+(Slingshot: the mutex, abused drivers `Goad.sys`/`SpeedFan.sys`/`Sandra.sys`, YARA strings — 46 checked strings) after
+three fixes, each from what the live answers showed: an exhaustive digest cut at the output limit (pages now cited by
+number, a cut answer keeps its complete items), page numbers written as lists, and real strings hidden by page formatting
+(YARA escapes, PDF spacing). For a multi-topic report the digest followed pages about another topic (HiatusRAT for a
+CVE-2024-35250 case) — a risk for the log source.
+**What is claimed so far:** a title search reaches the human's missing values in about 1 case in 5 and the human rule in
+about 1 in 10; a CVE search reaches neither. Whether the rules improve: the two-arm run (S5vu primary), paused
+2026-10-06 at 6 of 60 per arm when the Spark went down.
+
+---
+
 ## 6.6 Smaller observations worth a sentence each
 
 - `[MEASURED]` Only **26.6%** (54/203) of the "quotes" the attack-vector stage gives as

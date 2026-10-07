@@ -271,6 +271,16 @@ limitation in the log belongs here too.
     pass its own pre-registered validation (V4), and only 2 of the 303 corpus reports have a real SigmaHQ recording.
     Real attack logs (lab detonation) are the remaining route; a validated evaluator exists for them (132 of 136 on
     SigmaHQ's recordings). (log 2026-10-05)
+57. **Web search: later knowledge, a free account, and pages about the wrong topic** `[DISCLOSE]` (CH5, CH6 §6.5f).
+    The pages were searched in October 2026 for reports up to years older: the human rule is removed (rule pages, its
+    id checked), but later write-ups may carry detection knowledge the report's readers did not have — the measured
+    effect is an upper bound for a new report. The free account allows ~25 searches per hour and ~50 per "session"
+    (undocumented). The digest can follow pages about another topic of a multi-topic report, and some "strings" it keeps
+    are plain words present in the page. (log 2026-10-06)
+58. **The assistant's correction step is measured only by simulation** `[DISCLOSE]` (Change 46, CH4 §4.4). The web
+    app now shows the automatic rules first and regenerates from the analyst's corrections; version 1 is what every
+    harness run measures, and the correction step's worth is the simulated analyst's upper bound (S5 +0.144 when the
+    analyst's log source is right) — no user study (decided 2026-09-23). (log 2026-10-07)
 
 ---
 
@@ -280,7 +290,6 @@ limitation in the log belongs here too.
   Zircolite chain — contribution 1, if agreed.
 - RAFT-style tuning of *how the model uses retrieval*; KTO with pySigma pass/fail as the
   free binary signal. No fine-tuning of facts (Ovadia et al.: RAG beats it).
-- Web search for local models (Ollama's web search API) as its own evaluation arm, with a
-  gold-leakage blocklist (SigmaHQ, rule mirrors such as sigma.nasbench.dev) and
-  prompt-injection handling.
+- Web search for local models: built (Change 45) with a rule-page filter and saved answers for the evaluation; still
+  open — prompt-injection hardening of fetched pages (R14), a query written by the model instead of the titles.
 - Quantisation × structured-output correctness — an open gap in the literature.
