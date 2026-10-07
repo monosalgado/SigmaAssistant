@@ -5839,3 +5839,6 @@ The arms' `backend/` must differ only in Change 48's wording (checked with `git 
 coverage regenerations (rows with `generation_retried`); rules per case; seconds; tokens; the rest of `compare_arms.py`.
 **Expectation, written before the run:** fewer unsupported signatures used and more marked inferred; the scores within
 run-to-run noise. **When:** after the Change 45 run frees the Spark, on the user's go.
+**Arms ready:** A `e3d0ec0` (branch `c48-before`) at `../SigmaAssistant-c48A`, B `579e185` at `../SigmaAssistant-c48B`
+(data links as the other arms). Checked: A's `backend/` differs from B's by exactly Change 48's lines (the patch of
+`95eb07d`, reversed); tests from each arm's own folder — A 865 pass (Change 48's 4 tests absent), B 869 pass. Not started.
