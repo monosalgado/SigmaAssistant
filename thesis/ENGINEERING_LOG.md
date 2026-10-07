@@ -5728,3 +5728,10 @@ Read by hand (18 random "not in the report", `c42B`): generic class-level patter
 **Reading:** about one signature in six is not in the report, the stage almost never says so, and the rule writer uses
 those as readily as the supported ones — consistent with labels that present every signature as what an attacker
 "MUST produce". Post-hoc; a design (honest labels; ordered instructions) is drafted for the user before any change.
+**The Spark is back (2026-10-07 14:57 EDT, user on the VPN).** It **was restarted**: up 3 h 40 min at 14:58 (booted
+~11:18); **Ollama 0.34.1 as before, `qwen3-coder:30b` the same model file (`06c1097efce0`)**; 4 users logged in, load
+0.2. Tunnel rebuilt (keepalives), preflight in `../SigmaAssistant-c45` (`46da793`, no edits) passed — tunnel, model,
+context 262,144, 828 tests, smoke CITABLE. **Disclosed for the comparison:** cases 1–6 of both arms ran before the
+restart, cases 7–60 after it; both arms see each server state equally (paired by case), but answers depend on the
+server's state (P-B), so the two segments are reported apart as well as together. Both arms resumed together with the
+same commands.
