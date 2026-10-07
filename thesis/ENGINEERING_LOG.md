@@ -5809,3 +5809,11 @@ case each was on was not written). The Spark itself was fine (no new reboot, up 
 HTTP 200 on the machine): an outage on the VPN–Spark path, recovered by 16:24. The Change 46 check's regeneration hit
 the same outage (below). Tunnel rebuilt; both arms resumed together ~16:30 with the same commands (A 47 to go, B 49) —
 the frozen code passed its preflight at 15:05. Cases are paired by `rule_id` at the end, so the arms need not be in step.
+**Found in this live check and fixed: a generation with no rules was saved as a version.** The regeneration for version
+3 ran during the 16:05–16:20 outage: generation failed twice ("APIConnectionError"), 0 rules, and the error text was
+saved as "Version 3 · with your corrections: …". Now **no rules, no version** (`review_sessions.record_result`,
+`generation_failure`: `pre_review_rules` present and empty; the reason is the last recorded generation error): the
+versions stay as they were, the analysis and the corrections are kept, and the screen says "The rules could not be
+written (…). The analysis and your corrections are kept - regenerate to try again." — on regeneration and on the first
+pass (the analysis then waits to be generated from). Tests first (3, seen to fail); 869 pass. The live check's session
+keeps its version-3 record as it was saved (the evidence).

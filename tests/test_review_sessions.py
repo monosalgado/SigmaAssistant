@@ -212,3 +212,36 @@ def analysis_message_for(state):
     msg = analysis_message("a1", {"state": state, "pipeline_metadata": {}, "context": {}})
     msg["status"] = GENERATED
     return msg
+
+
+# --- found in the live check (2026-10-07): a regeneration that failed on a connection error (0 rules, "Generation
+# error: APIConnectionError") was saved as version 3. No rules, no version: the versions stay as they were, the
+# analysis and the corrections are kept, and the browser is told to try again. ---------------------------------------
+
+from backend.review_sessions import record_result  # noqa: E402
+
+FAILED = {"rule": "\nGeneration error: APIConnectionError: Connection error.", "context": {},
+          "pipeline_metadata": {"pre_review_rules": [], "generations": [
+              {"rules": 0, "ids_replaced": 0, "parse_error": "APIConnectionError: Connection error."}]}}
+
+
+def test_a_regeneration_with_no_rules_is_not_a_version():
+    messages, _ = _first_pass([{"event": "checkpoint", "data": CHECKPOINT}, {"event": "result", "data": dict(RESULT)}])
+    start_generation(messages, "a1")
+    data = dict(FAILED)
+    assert record_result(messages, "a1", data) is None
+    assert [m.get("version") for m in messages if "version" in m] == [1] and messages[1]["status"] == GENERATED
+    assert data["retry_analysis_id"] == "a1" and "APIConnectionError" in data["generation_failed"]
+
+
+def test_a_regeneration_with_rules_is_the_next_version():
+    messages, _ = _first_pass([{"event": "checkpoint", "data": CHECKPOINT}, {"event": "result", "data": dict(RESULT)}])
+    start_generation(messages, "a1")
+    data = {"rule": "r", "context": {}, "pipeline_metadata": {"pre_review_rules": ["title: x"], "generations": []}}
+    assert record_result(messages, "a1", data) == 2 and data["version"] == 2
+
+
+def test_a_first_pass_with_no_rules_keeps_the_analysis_to_generate_again():
+    messages, out = _first_pass([{"event": "checkpoint", "data": CHECKPOINT}, {"event": "result", "data": dict(FAILED)}])
+    assert messages[1]["status"] == AWAITING and not [m for m in messages if "version" in m]
+    assert out[-1][1]["retry_analysis_id"] == "a1"

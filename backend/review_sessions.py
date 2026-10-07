@@ -112,6 +112,30 @@ def saved_analysis_metadata(messages: list, analysis_id: str) -> dict:
     return messages[_find(messages, analysis_id)]["pipeline_metadata"]
 
 
+def generation_failure(result: dict):
+    """Why a generation wrote no rules (its last recorded error), or None if it wrote some. "No rules" means the result
+    says so (`pre_review_rules` present and empty, M1); a record without the field is taken as it is."""
+    meta = result.get("pipeline_metadata") or {}
+    if "pre_review_rules" in meta and not meta["pre_review_rules"]:
+        errors = [g.get("parse_error") for g in meta.get("generations") or [] if isinstance(g, dict) and g.get("parse_error")]
+        return errors[-1] if errors else "no rules were written"
+    return None
+
+
+def record_result(messages: list, analysis_id: str, data: dict):
+    """A generation's result: the next version - or, with no rules, nothing: the versions stay as they were, the
+    analysis and the corrections are kept, and the browser is told to try again (`retry_analysis_id`). Found in the
+    live check, 2026-10-07: a regeneration that failed on a connection error was saved as a version."""
+    failure = generation_failure(data)
+    if failure:
+        abandon_generation(messages, analysis_id)
+        data["retry_analysis_id"] = analysis_id
+        data["generation_failed"] = failure
+        return None
+    data["version"] = finish_generation(messages, analysis_id, data)
+    return data["version"]
+
+
 def analysis_message(analysis_id: str, checkpoint: dict) -> dict:
     """The session message for an analysis saved on the way to the rules (Change 46): no chat text of its own."""
     return dict(checkpoint_message(analysis_id, checkpoint), content="", status=GENERATING)
@@ -129,7 +153,7 @@ def first_pass_events(messages: list, events, analysis_id: str):
             saved = True
             continue
         if kind == "result":
-            if saved and data.get("pipeline_metadata") is not None:
+            if saved and data.get("pipeline_metadata") is not None and not generation_failure(data):
                 data["version"] = finish_generation(messages, analysis_id, data)
                 data["analysis_id"] = analysis_id
                 data["analysis_metadata"] = saved_analysis_metadata(messages, analysis_id)

@@ -450,11 +450,12 @@ def generate_stream(request: GenerateRequest):
                 event_type = event.get("event", "stage")
                 data = event.get("data", {})
                 if event_type == "result":
-                    data["version"] = review_sessions.finish_generation(messages, request.analysis_id, data)
-                    data["analysis_id"] = request.analysis_id
-                    data["analysis_metadata"] = review_sessions.saved_analysis_metadata(messages, request.analysis_id)
-                    data["corrections"] = messages[-1]["corrections"]
-                    data["carry_review"] = messages[-1]["carry_review"]
+                    # No rules (e.g. a connection error): not a version - the analysis and the corrections are kept
+                    if review_sessions.record_result(messages, request.analysis_id, data) is not None:
+                        data["analysis_id"] = request.analysis_id
+                        data["analysis_metadata"] = review_sessions.saved_analysis_metadata(messages, request.analysis_id)
+                        data["corrections"] = messages[-1]["corrections"]
+                        data["carry_review"] = messages[-1]["carry_review"]
                     save_sessions()
                     finished = True
                     data["session_id"] = request.session_id

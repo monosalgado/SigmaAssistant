@@ -777,7 +777,10 @@ level: medium`;
                         loadSessions();
                     } else if (data.retry_analysis_id) {
                         // The analysis was saved but generation failed: it can be generated from again
-                        appendMessage('assistant', data.rule);
+                        appendMessage('assistant', data.generation_failed
+                            ? `The rules could not be written (${data.generation_failed}). The analysis is kept - ` +
+                              'generate to try again.'
+                            : data.rule);
                         await switchSession(currentSessionId);
                     } else if (data.rule) {
                         appendMessage('assistant', data.rule);
@@ -1050,7 +1053,10 @@ level: medium`;
                 } else if (event === 'result') {
                     progress.remove();
                     if (data.retry_analysis_id) {   // the analysis is kept; the review stays open
-                        appendMessage('assistant', data.rule || 'No rules were generated.');
+                        appendMessage('assistant', data.generation_failed
+                            ? `The rules could not be written (${data.generation_failed}). The analysis and your ` +
+                              'corrections are kept - regenerate to try again.'
+                            : (data.rule || 'No rules were generated.'));
                         return;
                     }
                     appendVersionLabel(data.version, data.corrections);
