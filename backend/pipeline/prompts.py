@@ -75,7 +75,7 @@ RULE_GENERATION = """You are an expert Sigma rule author. Generate detection rul
 ### Log Source for the First Rule (recommended by the analysis stage)
 {first_rule_logsource}
 
-### Candidate patterns (proposed by the attack-vector stage, each with where it would be seen and the quote it came from; use those the report supports — one marked inferred_from_class is a general pattern of the vulnerability class, not something this report shows)
+### Payload Signatures (strings/patterns a real attacker MUST produce — prefer these in detection)
 {payload_signatures}
 
 ### Strings that must NOT drive detection (researcher/patch workflow artifacts)
@@ -117,8 +117,8 @@ RULE_GENERATION = """You are an expert Sigma rule author. Generate detection rul
 
 ### Instructions
 1. Generate one or more Sigma rules that detect the described attack behavior. **The FIRST rule should use the log source given in "Log Source for the First Rule" above**, unless the evidence above shows that this log source cannot observe the described behaviour; in that case choose the log source that can, and state the reason in that rule's `description`.
-2. **At least one rule MUST target the PRIMARY ATTACK VECTOR** — i.e. match on the attacker-controlled input, entry point, or candidate patterns. If the primary vector is a network request (HTTP/WebSocket/SMB/DNS), the logsource of that rule must match the telemetry where that traffic is observed. Initial-access detection is MANDATORY when an exploit is described. This rule does not have to be the first rule.
-3. Prefer the candidate patterns whose quote shows they come from the report over other strings from the text; use one marked inferred_from_class only where the report describes that behaviour.
+2. **At least one rule MUST target the PRIMARY ATTACK VECTOR** — i.e. match on the attacker-controlled input, entry point, or payload signatures. If the primary vector is a network request (HTTP/WebSocket/SMB/DNS), the logsource of that rule must match the telemetry where that traffic is observed. Initial-access detection is MANDATORY when an exploit is described. This rule does not have to be the first rule.
+3. Prefer the supplied "Payload Signatures" as detection criteria over arbitrary strings from the text. These are the patterns a real attacker cannot avoid.
 4. **NEVER** use any string from "Strings that must NOT drive detection" as a detection criterion. Those are patch-analysis / researcher-workflow artifacts and would never fire in a real attack.
 5. **FIELD VALIDITY — DERIVE EVERY FIELD NAME FROM THE SIGMA LOGSOURCE TAXONOMY ABOVE.** Every field you put in `detection:` MUST be a field that the taxonomy block describes as existing for the chosen (category, product, service) triple. General rules that always apply:
     - A field is valid only if it is documented in the retrieved taxonomy for the logsource you choose. If the taxonomy does not confirm a field exists for that logsource, DO NOT use it — pick a different logsource or a different indicator.
@@ -318,13 +318,13 @@ evidence so that does not happen.
 - `cwe_hint`: Best-matching CWE ID as a string like `"CWE-78"`, or empty string if unsure.
 - `cvss_attack_vector`: One of `AV:N` (network), `AV:A` (adjacent network), `AV:L` (local), `AV:P` (physical), `unknown`.
 
-### 3. Payload signatures (what rules should match)
-- `payload_signatures`: List of 0-8 concrete, observable strings/patterns that would appear in telemetry DURING EXPLOITATION — only patterns the text or the PoC shows. Each item has:
+### 3. Payload signatures (REQUIRED — what rules should match)
+- `payload_signatures`: List of 1-8 concrete, observable strings/patterns that would appear in telemetry DURING EXPLOITATION. Each item has:
   - `pattern`: The literal string or simple regex.
   - `where`: Where this pattern would be observed. One of `request_uri`, `request_body`, `request_header`, `response_body`, `response_header`, `process_cmdline`, `file_content`, `network_payload`, `dns_query`, `other`.
-  - `derived_from`: Short quote (<=120 chars) from the input text or PoC that justifies this pattern. A pattern you know from the vulnerability class but the text does not show (e.g. generic deserialization magic bytes) gets `"inferred_from_class"` — never a quote the text does not contain.
+  - `derived_from`: Short quote (<=120 chars) from the input text or PoC that justifies this pattern. If derived from vuln class (e.g. generic deserialization magic bytes), write `"inferred_from_class"`.
 
-These drive the actual detection logic. Prefer patterns a real attacker cannot avoid producing, not patterns that only appear in the specific PoC transcript. An empty list is right when the text shows no concrete pattern.
+These drive the actual detection logic. Prefer patterns that real attackers MUST produce, not patterns that only appear in the specific PoC transcript.
 
 ### 4. Telemetry surfaces (REQUIRED)
 - `primary_telemetry`: Where the attacker activity this text describes would be most directly visible. For an exploit against a network service, that is where the exploit request arrives (e.g. `webserver_access_log`); when the text describes malware, an intrusion or activity on a host rather than an exploit request, it is usually host telemetry (`process_creation`, `file_event`, `registry_event`). Decide from what the text actually describes. One of `web_proxy`, `webserver_access_log`, `waf`, `network_ids`, `firewall`, `dns`, `process_creation`, `file_event`, `registry_event`, `cloud_audit`, `email_gateway`, `auth_log`, `other`.

@@ -80,8 +80,8 @@ def format_coverage_feedback(coverage_check: dict) -> str:
         )
     if missed:
         lines.append(
-            "- These candidate patterns were not used by any rule. Use each one the report supports; "
-            "leave out one that is too generic or that the report does not show:"
+            "- These payload signatures were NOT referenced in any rule; at least one rule "
+            "MUST literally contain each of them:"
         )
         for m in missed[:10]:
             lines.append(f"    - `{m}`")

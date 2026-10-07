@@ -18,4 +18,4 @@ def test_the_runtime_blocks_are_the_ones_code_adds():
     blocks = runtime_blocks()
     assert set(blocks) == {"kill-chain block (2+ stages)", "coverage retry block (all gaps)"}
     assert "MANDATORY" in blocks["kill-chain block (2+ stages)"]
-    assert "leave out" in blocks["coverage retry block (all gaps)"]   # Change 48 replaced "MUST literally contain"
+    assert "MUST literally" in blocks["coverage retry block (all gaps)"]

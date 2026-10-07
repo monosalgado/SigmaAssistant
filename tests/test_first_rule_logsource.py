@@ -141,5 +141,5 @@ def test_the_generation_stage_puts_the_recommendation_in_its_prompt():
              "confidence": 0.9, "reasoning": "a DLL is side-loaded"}]},
     })
     prompt = client.prompts[0]
-    head = prompt.split("### Candidate patterns")[0]
+    head = prompt.split("### Payload Signatures")[0]
     assert "category: image_load" in head and "a DLL is side-loaded" in head
