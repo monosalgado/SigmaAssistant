@@ -257,109 +257,117 @@ class ReviewStage(PipelineStage):
         return context
 
     def _validate_rule(self, yaml_content: str, rule_index: int) -> list:
-        """Deterministic Sigma validation via pySigma (no LLM).
-
-        Three phases:
-          1. Parse — structural violations of the Sigma spec raise here.
-          2. Condition resolution — catches identifiers referenced in
-             `condition:` that were never defined in `detection:`. This is
-             NOT caught by parsing or by any of the 31 validators.
-          3. Validator suite — the 31 pySigma core validators.
-        """
-        prefix = f"rule[{rule_index}]"
-
-        # --- 1. Parse -------------------------------------------------------
-        # The exception surface is not unified: malformed YAML raises
-        # yaml.YAMLError, rule problems raise SigmaError, and a non-mapping
-        # document leaks a bare AttributeError from inside pySigma.
-        try:
-            collection = SigmaCollection.from_yaml(yaml_content)
-        except yaml.YAMLError as e:
-            return [{
-                "severity": "error",
-                "field": prefix,
-                "message": f"Invalid YAML syntax: {e}",
-            }]
-        except SigmaError as e:
-            return [{
-                "severity": "error",
-                "field": prefix,
-                "message": f"Invalid Sigma rule: {e}",
-            }]
-        except Exception as e:
-            return [{
-                "severity": "error",
-                "field": prefix,
-                "message": f"Could not parse as a Sigma rule: {e}",
-            }]
-
-        if not collection.rules:
-            return [{
-                "severity": "error",
-                "field": prefix,
-                "message": "Document contains no Sigma rule",
-            }]
-
-        issues = []
-
-        # --- 2. Condition resolution ----------------------------------------
-        for rule in collection.rules:
-            for condition in getattr(rule.detection, "parsed_condition", []):
-                try:
-                    condition.parse()
-                except SigmaError as e:
-                    issues.append({
-                        "severity": "error",
-                        "field": f"{prefix}.detection.condition",
-                        "message": f"Condition could not be resolved: {e}",
-                    })
-                except Exception as e:
-                    issues.append({
-                        "severity": "error",
-                        "field": f"{prefix}.detection.condition",
-                        "message": f"Condition could not be resolved: {e}",
-                    })
-
-        # --- 3. Validator suite ---------------------------------------------
-        # A fresh SigmaValidator per call: instances keep state across
-        # validate_rules(), and reuse makes the cross-rule validators
-        # (duplicate title, identifier collision) fire as false positives.
-        #
-        # Some core validators re-parse the condition themselves, so a malformed
-        # condition already reported in phase 2 raises again here. Uncaught, it
-        # escapes the stage and the orchestrator and discards every rule in the
-        # response, the valid ones included. Recorded as its own issue so that
-        # an empty validator result is never mistaken for a clean one.
-        validator = SigmaValidator(CORE_VALIDATORS.values())
-        try:
-            validator_issues = validator.validate_rules(collection.rules)
-        except Exception as e:
-            issues.append({
-                "severity": "error",
-                "field": f"{prefix}.validators",
-                "message": f"Validator suite could not run: {type(e).__name__}: {e}",
-            })
-            return issues
-
-        for issue in validator_issues:
-            issues.append({
-                "severity": _SEVERITY_MAP.get(issue.severity, "warning"),
-                "field": f"{prefix}.{type(issue).__name__}",
-                "message": self._render_issue(issue),
-            })
-
-        return issues
+        """Deterministic Sigma validation via pySigma (no LLM): `validate_rule_text` (Change 47 moved it out unchanged)."""
+        return validate_rule_text(yaml_content, f"rule[{rule_index}]")
 
     @staticmethod
     def _render_issue(issue) -> str:
-        """Human-readable message for a pySigma validation issue.
+        return render_issue(issue)
 
-        `severity` and `description` are ClassVars so dataclass_fields()
-        returns only `rules` plus any issue-specific detail fields.
-        """
-        details = " ".join(
-            f"{f.name}={getattr(issue, f.name)}"
-            for f in dataclass_fields(issue)
-            if f.name != "rules"
-        )
-        return f"{issue.description} ({details})" if details else issue.description
+
+def validate_rule_text(yaml_content: str, prefix: str = "rule[0]") -> list:
+    """Deterministic Sigma validation via pySigma (no LLM) - the pipeline's review stage and, since Change 47,
+    the analyst's YAML editor (`backend/rule_check.py`) share it.
+
+    Three phases:
+      1. Parse — structural violations of the Sigma spec raise here.
+      2. Condition resolution — catches identifiers referenced in
+         `condition:` that were never defined in `detection:`. This is
+         NOT caught by parsing or by any of the 31 validators.
+      3. Validator suite — the 31 pySigma core validators.
+    """
+    # --- 1. Parse -------------------------------------------------------
+    # The exception surface is not unified: malformed YAML raises
+    # yaml.YAMLError, rule problems raise SigmaError, and a non-mapping
+    # document leaks a bare AttributeError from inside pySigma.
+    try:
+        collection = SigmaCollection.from_yaml(yaml_content)
+    except yaml.YAMLError as e:
+        return [{
+            "severity": "error",
+            "field": prefix,
+            "message": f"Invalid YAML syntax: {e}",
+        }]
+    except SigmaError as e:
+        return [{
+            "severity": "error",
+            "field": prefix,
+            "message": f"Invalid Sigma rule: {e}",
+        }]
+    except Exception as e:
+        return [{
+            "severity": "error",
+            "field": prefix,
+            "message": f"Could not parse as a Sigma rule: {e}",
+        }]
+
+    if not collection.rules:
+        return [{
+            "severity": "error",
+            "field": prefix,
+            "message": "Document contains no Sigma rule",
+        }]
+
+    issues = []
+
+    # --- 2. Condition resolution ----------------------------------------
+    for rule in collection.rules:
+        for condition in getattr(rule.detection, "parsed_condition", []):
+            try:
+                condition.parse()
+            except SigmaError as e:
+                issues.append({
+                    "severity": "error",
+                    "field": f"{prefix}.detection.condition",
+                    "message": f"Condition could not be resolved: {e}",
+                })
+            except Exception as e:
+                issues.append({
+                    "severity": "error",
+                    "field": f"{prefix}.detection.condition",
+                    "message": f"Condition could not be resolved: {e}",
+                })
+
+    # --- 3. Validator suite ---------------------------------------------
+    # A fresh SigmaValidator per call: instances keep state across
+    # validate_rules(), and reuse makes the cross-rule validators
+    # (duplicate title, identifier collision) fire as false positives.
+    #
+    # Some core validators re-parse the condition themselves, so a malformed
+    # condition already reported in phase 2 raises again here. Uncaught, it
+    # escapes the stage and the orchestrator and discards every rule in the
+    # response, the valid ones included. Recorded as its own issue so that
+    # an empty validator result is never mistaken for a clean one.
+    validator = SigmaValidator(CORE_VALIDATORS.values())
+    try:
+        validator_issues = validator.validate_rules(collection.rules)
+    except Exception as e:
+        issues.append({
+            "severity": "error",
+            "field": f"{prefix}.validators",
+            "message": f"Validator suite could not run: {type(e).__name__}: {e}",
+        })
+        return issues
+
+    for issue in validator_issues:
+        issues.append({
+            "severity": _SEVERITY_MAP.get(issue.severity, "warning"),
+            "field": f"{prefix}.{type(issue).__name__}",
+            "message": render_issue(issue),
+        })
+
+    return issues
+
+
+def render_issue(issue) -> str:
+    """Human-readable message for a pySigma validation issue.
+
+    `severity` and `description` are ClassVars so dataclass_fields()
+    returns only `rules` plus any issue-specific detail fields.
+    """
+    details = " ".join(
+        f"{f.name}={getattr(issue, f.name)}"
+        for f in dataclass_fields(issue)
+        if f.name != "rules"
+    )
+    return f"{issue.description} ({details})" if details else issue.description

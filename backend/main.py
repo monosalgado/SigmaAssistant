@@ -15,6 +15,7 @@ import json
 # New Imports for Rules & Translation
 import backend.saved_rules as saved_rules
 import backend.review_sessions as review_sessions
+from backend.rule_check import check_rule
 from backend.pipeline.analyst_review import ReviewError, logsource_choices
 from backend.pipeline.orchestrator import LOGSOURCE_TABLE
 from backend.translation import LLMTranslator
@@ -130,6 +131,9 @@ class RuleCreateRequest(BaseModel):
 class RuleUpdateRequest(BaseModel):
     content: str
     title: Optional[str] = None
+
+class RuleCheckRequest(BaseModel):
+    content: str
 
 class TranslateRequest(BaseModel):
     rule: str
@@ -487,14 +491,20 @@ def get_rules():
 
 @app.post("/rules")
 def create_rule(req: RuleCreateRequest):
-    return saved_rules.create_rule(req.content, req.title)
+    # Change 47: saved as the analyst wrote it, with the same check the editor shows
+    return dict(saved_rules.create_rule(req.content, req.title), check=check_rule(req.content))
 
 @app.put("/rules/{rule_id}")
 def update_rule(rule_id: str, req: RuleUpdateRequest):
     rule = saved_rules.update_rule(rule_id, req.content, req.title)
     if not rule:
         raise HTTPException(status_code=404, detail="Rule not found")
-    return rule
+    return dict(rule, check=check_rule(req.content))
+
+@app.post("/validate_rule")
+def validate_rule(req: RuleCheckRequest):
+    """Change 47: the edited rule checked as the analyst types - pySigma and SigmaHQ's log sources, no model."""
+    return check_rule(req.content)
 
 @app.delete("/rules/{rule_id}")
 def delete_rule(rule_id: str):

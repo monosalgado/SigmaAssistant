@@ -5669,3 +5669,33 @@ restarts it once the Spark answers. Nothing read.
 **Confirmed (user, 2026-10-07, from the lab):** "the spark is down, they are working on it." The run resumes when it
 is back — after a preflight; whether it was restarted or changed is recorded then (answers depend on the server's state,
 P-B), and the 6 cases per arm already run were on the server as it was before the outage.
+
+---
+
+## 2026-10-07 — Change 47 (the assistant): edit a rule's YAML, checked on every edit — design, fixed before the code
+
+User (the Spark down): "do the YAML editing with instant validation". The design's Phase C (`ASSISTANT_DESIGN.md` §4, §6,
+decision 3: "pySigma validation itself is automatic on every edit — no button"). No model call, so it works and is fully
+checkable without the Spark.
+**The check** (`backend/rule_check.py`, `check_rule(text)`): the **pipeline's own deterministic validation** — pySigma
+parse, condition resolution, the 31 core validators (the body of `ReviewStage._validate_rule`, moved unchanged to
+`stage_review.validate_rule_text` so the pipeline and the editor share one check) — plus **one warning**: the rule's log
+source is not one SigmaHQ's rules use (`sigma_logsource.on_table`; the former plan step 2.5). Returns valid (no error),
+the issues (error / warning, message), the title and the log source. Nothing is changed in the rule — the check reports.
+**API:** `POST /validate_rule {content}` → the check. Saving (`POST /rules`, `PUT /rules/{id}`) runs the same check and
+returns it with the rule; an invalid rule is still saved (the analyst decides), and says so.
+**Screen:** (1) every generated rule gets **"Edit"** next to Save / Download: an editor under the rule, checked as you
+type (on a short pause), with "Save to library"; (2) the Library's editor gets the same live check.
+Tests first, offline; the screen checked in the browser (no Spark needed).
+**Change 47 built (tests first, 6, seen to fail; 847 pass):** `ReviewStage._validate_rule`'s body moved unchanged to
+`stage_review.validate_rule_text` (the 16 existing validation tests pass unchanged; a test pins that the editor and the
+pipeline give identical results); `backend/rule_check.py` adds the SigmaHQ-log-source warning; `POST /validate_rule`;
+`POST /rules` and `PUT /rules/{id}` return the check with the rule (an invalid rule is still saved and the screen says
+so). Screen: "Edit" on every generated rule (an editor under it, checked 0.4 s after typing stops, an older answer never
+replaces a newer one; Save to library / Download / Close); the Library editor checked on load and as you type.
+**Checked in the browser, offline (nothing saved):** under a 5-rule message the editor opened "Valid Sigma rule";
+typing a condition with an undefined selection and a misspelled category gave "Not valid · 1 error · 1 warning" with
+both messages; the Library editor: valid on load → 2 errors after breaking the condition → valid again when restored.
+**Found while checking and fixed (CSS only):** the generated-rule list's rows stuck out of the message (the inherited
+`flex-wrap: wrap` let each row take its full natural width, so long titles never ended in "…" and the buttons fell
+under the Analysis panel — before Change 47 too); the full title now shows on hover. Cache tags bumped.

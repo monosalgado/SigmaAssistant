@@ -234,11 +234,90 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Change 47: a rule's YAML is checked as it is edited - pySigma and SigmaHQ's log sources, no model.
+    // A short pause after typing, then POST /validate_rule; the rule itself is never changed.
+    function renderCheck(panel, out) {
+        panel.replaceChildren();
+        if (!out) return;
+        const n = (k, w) => `${out[k]} ${w}${out[k] === 1 ? '' : 's'}`;
+        panel.appendChild(out.valid
+            ? el('div', 'check-ok', out.warnings ? `Valid Sigma rule · ${n('warnings', 'warning')}` : 'Valid Sigma rule')
+            : el('div', 'check-bad', `Not valid · ${n('errors', 'error')}` + (out.warnings ? ` · ${n('warnings', 'warning')}` : '')));
+        (out.issues || []).forEach(i => panel.appendChild(el('div', `check-issue is-${i.severity}`, i.message)));
+    }
+
+    function liveCheck(textarea, panel) {
+        let timer = null;
+        let latest = 0;
+        const run = async () => {
+            const asked = ++latest;
+            panel.classList.add('is-checking');
+            try {
+                const res = await fetch('/validate_rule', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: textarea.value })
+                });
+                const out = await res.json();
+                if (asked === latest) renderCheck(panel, out);   // an older answer never replaces a newer one
+            } catch (e) {
+                if (asked === latest) { panel.replaceChildren(); panel.appendChild(el('div', 'check-bad', `Could not check: ${e.message}`)); }
+            } finally {
+                if (asked === latest) panel.classList.remove('is-checking');
+            }
+        };
+        textarea.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(run, 400); });
+        return run;
+    }
+
+    const ruleCheckPanel = document.getElementById('rule-check');
+    const checkLibraryRule = ruleEditor && ruleCheckPanel ? liveCheck(ruleEditor, ruleCheckPanel) : () => {};
+
+    // Every generated rule can be edited under it, checked as it is typed, and saved to the library.
+    function openRuleEditor(anchor, yaml) {
+        const next = anchor.nextElementSibling;
+        if (next && next.classList.contains('rule-edit')) { next.remove(); return; }
+        const box = el('div', 'rule-edit');
+        const area = document.createElement('textarea');
+        area.className = 'rule-edit-text';
+        area.spellcheck = false;
+        area.value = yaml;
+        area.rows = Math.min(30, Math.max(8, yaml.split('\n').length + 1));
+        const panel = el('div', 'rule-check');
+        panel.setAttribute('aria-live', 'polite');
+        const bar = el('div', 'rule-edit-actions');
+        const save = el('button', 'mini-btn', 'Save to library');
+        const dl = el('button', 'mini-btn', 'Download .yml');
+        const close = el('button', 'mini-btn', 'Close');
+        const saved = el('span', 'rule-edit-saved', '');
+        save.onclick = async () => {
+            const title = (area.value.match(/^title:\s*(.+)$/m) || [])[1];
+            const res = await fetch('/rules', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: area.value, title: title ? title.trim() : 'Edited rule' })
+            });
+            const rule = await res.json();
+            const c = rule.check || {};
+            saved.textContent = c.valid === false ? `Saved - not valid (${c.errors} error${c.errors === 1 ? '' : 's'})` : 'Saved to the library';
+            loadRules();
+        };
+        dl.onclick = () => triggerYmlDownload(area.value);
+        close.onclick = () => box.remove();
+        [save, dl, close].forEach(b => { b.type = 'button'; bar.appendChild(b); });
+        bar.appendChild(saved);
+        box.append(area, panel, bar);
+        anchor.after(box);
+        liveCheck(area, panel)();
+        area.focus();
+    }
+
     function loadRuleIntoEditor(rule) {
         currentRuleId = rule.id;
         editorTitle.innerText = rule.title;
         ruleEditor.value = rule.content;
         translationOutput.value = '';
+        checkLibraryRule();
 
         Array.from(ruleList.children).forEach(child => {
             child.classList.remove('active');
@@ -285,13 +364,15 @@ level: medium`;
             alert("Created new rule!");
         } else {
             const content = ruleEditor.value;
-            await fetch(`/rules/${currentRuleId}`, {
+            const res = await fetch(`/rules/${currentRuleId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content: content })
             });
+            const saved = await res.json();
             await loadRules();
-            alert("Saved!");
+            const c = saved.check || {};
+            alert(c.valid === false ? `Saved - but not a valid Sigma rule (${c.errors} error${c.errors === 1 ? '' : 's'}).` : "Saved!");
         }
     }
 
@@ -303,6 +384,7 @@ level: medium`;
         editorTitle.innerText = "Select a Rule";
         ruleEditor.value = "";
         translationOutput.value = "";
+        renderCheck(ruleCheckPanel, null);
         await loadRules();
     }
 
@@ -396,6 +478,7 @@ level: medium`;
                     const ruleLabel = document.createElement('span');
                     ruleLabel.className = 'rule-pick-name';
                     ruleLabel.innerText = ruleTitle;
+                    ruleLabel.title = ruleTitle;   // the whole title on hover when the row shortens it
                     ruleRow.appendChild(ruleLabel);
 
                     const saveBtn = document.createElement('button');
@@ -409,6 +492,12 @@ level: medium`;
                     dlBtn.className = 'mini-btn';
                     dlBtn.onclick = () => triggerYmlDownload(yaml);
                     ruleRow.appendChild(dlBtn);
+
+                    const editBtn = document.createElement('button');
+                    editBtn.innerText = 'Edit';
+                    editBtn.className = 'mini-btn';
+                    editBtn.onclick = () => openRuleEditor(ruleRow, yaml);
+                    ruleRow.appendChild(editBtn);
 
                     rulesActionsDiv.appendChild(ruleRow);
                 });
@@ -436,6 +525,13 @@ level: medium`;
                 downloadBtn.className = 'mini-btn';
                 downloadBtn.onclick = () => downloadRuleAsYml(text);
                 actionsDiv.appendChild(downloadBtn);
+                if (yamlBlocks.length === 1) {
+                    const editBtn = document.createElement('button');
+                    editBtn.innerText = 'Edit';
+                    editBtn.className = 'mini-btn';
+                    editBtn.onclick = () => openRuleEditor(actionsDiv, yamlBlocks[0]);
+                    actionsDiv.appendChild(editBtn);
+                }
                 content.appendChild(actionsDiv);
             }
 
