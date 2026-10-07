@@ -86,7 +86,12 @@ on to generation: **version 1 of the rules is the automated path's output** (pin
 rules and, under them, what the pipeline understood; corrections regenerate from the saved analysis — **only the rules
 are written again** — as version 2, 3, …; every version is kept and labelled with the corrections behind it. Before
 Change 46, `analyse_for_review` stopped at the checkpoint and the review came before any rule; that path stays in the
-API (`review: true`). The controls and their rules are the same in both: The analyst (front end: the Analysis panel) can **confirm or reject** each technique, indicator
+API (`review: true`). **Live check 2026-10-07 (sudo CVE-2019-14287): version 1 automatic; T1548.004 rejected →
+version 2 without it, "Checked: … follow your review".** Each correction round starts from the saved analysis (earlier
+corrections are not carried over); the analyst can reject or restore, not add a value.
+**Change 47 (2026-10-07): every rule can be edited as YAML**, under the rule or in the Library, and is checked as it is
+typed by the pipeline's own validation (pySigma: parse, condition, 31 core validators — one shared function) plus a
+warning for a log source no SigmaHQ rule uses; no model call. The controls and their rules are the same in both: The analyst (front end: the Analysis panel) can **confirm or reject** each technique, indicator
 and attack pattern, **restore** an excluded string, **choose the log source** from SigmaHQ's table (validated —
 `/logsource_choices`), and add a **note**. `apply_review` (`analyst_review.py`) applies it: rejected items do not
 reach generation; one decision per string (copies of a rejected string are rejected with it, exact match); a choice
