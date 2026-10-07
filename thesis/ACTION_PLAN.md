@@ -3,6 +3,15 @@
 Created 2026-09-23. **This file decides what gets worked on.** Anything not in the
 current phase goes to the Inbox or the Parking lot, not into the code.
 
+**Update 2026-10-07 (read first):** pipeline quality (2026-10-05/06): Change 42 (ATT&CK query) **kept without a
+confirmation run** (user), Change 43 removed, Change 44 bundled, #7 measuring (cut answers' ends recorded). **Change 45 —
+local web enrichment** (Ollama web search, a checked digest agent; the user's idea) built; its two-arm tuning run
+(web off vs saved web answers, S5vu primary, plan in the log) is **paused at 6 of 60 per arm** — the Spark went down
+2026-10-06 ~16:10; resume with the same commands (memory `web-enrichment`). **Change 46 — the assistant shows the rules
+first; the analyst's corrections regenerate after** (user, 2026-10-07; design `ASSISTANT_DESIGN.md` §11) built offline;
+**its live check (one real first pass + one regeneration) waits for the Spark.** Not now (user): YAML editing, "ask to
+revise a rule".
+
 **Current state (reviewed 2026-10-04):** Phases 1 and 2 complete (held-out S3 0.455). The analyst
 review (Change 34) is merged into `main` (2026-09-28). Since then: the professor's questions (P-B, the May
 rerun), better log-source picks (R7: Change 38 tried and removed), detection values (R8: S5v, the detection
