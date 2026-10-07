@@ -5656,3 +5656,13 @@ corrections and their check; button "Regenerate with my corrections". Cache tags
 old Change 34 session whose analysis was generated now opens with the corrections and the regenerate button; the version
 label rendered (inserted by hand, not saved). **Not yet checked live:** a real first pass and a regeneration (needs the
 Spark).
+
+---
+
+## 2026-10-07 — Change 45 run: the Spark still unreachable in the morning
+
+09:44 EDT, user on the VPN: the VPN works (USF DNS answers through `utun4`, address 10.247.157.39 — the same as while
+the run worked yesterday), but the Spark (10.246.14.123) answers neither SSH nor ping, as since ~16:10 yesterday. From
+outside, a stopped machine and a firewall that drops our traffic look the same (September: weeks lost to a DROP rule
+on a machine that was up) — the user is asking whoever runs the Spark. The run stays at 6 of 60 per arm; a watcher
+restarts it once the Spark answers. Nothing read.
