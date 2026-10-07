@@ -5666,3 +5666,6 @@ the run worked yesterday), but the Spark (10.246.14.123) answers neither SSH nor
 outside, a stopped machine and a firewall that drops our traffic look the same (September: weeks lost to a DROP rule
 on a machine that was up) — the user is asking whoever runs the Spark. The run stays at 6 of 60 per arm; a watcher
 restarts it once the Spark answers. Nothing read.
+**Confirmed (user, 2026-10-07, from the lab):** "the spark is down, they are working on it." The run resumes when it
+is back — after a preflight; whether it was restarted or changed is recorded then (answers depend on the server's state,
+P-B), and the 6 cases per arm already run were on the server as it was before the outage.
