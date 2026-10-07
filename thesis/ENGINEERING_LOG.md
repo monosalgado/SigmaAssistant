@@ -5817,3 +5817,25 @@ versions stay as they were, the analysis and the corrections are kept, and the s
 written (…). The analysis and your corrections are kept - regenerate to try again." — on regeneration and on the first
 pass (the analysis then waits to be generated from). Tests first (3, seen to fail); 869 pass. The live check's session
 keeps its version-3 record as it was saved (the evidence).
+
+---
+
+## 2026-10-07 — Change 48: the two-arm run's plan (tuning set) — fixed before the run
+
+User: "go with your recommendation" — Change 48 makes the labels honest; **it is kept if its mechanism moves and
+nothing gets worse** (not on a score gain, which would be a bonus).
+**Arms** (frozen worktrees; same night, together; the 60 tuning cases, `--sample 60 --seed 0`, **`--no-web-enrich`** —
+the web stage is tested separately (Change 45); `run_resilient`; one run each):
+- **A** — branch `c48-before` (never merged): this plan's commit with Change 48's wording taken back (`prompts.py`,
+  `domain_knowledge.py` as before `95eb07d`; its tests as before) → `../SigmaAssistant-c48A`, `c48A_tuning60.jsonl`.
+- **B** — this plan's commit (Change 48 in) → `../SigmaAssistant-c48B`, `c48B_tuning60.jsonl`.
+The arms' `backend/` must differ only in Change 48's wording (checked with `git diff` before the run).
+**Gate — keep Change 48 if both hold:**
+1. **Mechanism:** the payload signatures **not in the report that a rule uses** (`signature_grounding.py`, summed over
+   the cases) are **fewer in B than in A**.
+2. **No harm:** none of **S3u, S5u, S5vu, S1, S4** has a paired 95% CI (`compare_arms.py`, bootstrap 10,000, seed 0)
+   **entirely below 0** (B − A).
+**Reported, not gating:** signatures not in the report (count, share), marked `inferred_from_class`, used shares;
+coverage regenerations (rows with `generation_retried`); rules per case; seconds; tokens; the rest of `compare_arms.py`.
+**Expectation, written before the run:** fewer unsupported signatures used and more marked inferred; the scores within
+run-to-run noise. **When:** after the Change 45 run frees the Spark, on the user's go.
