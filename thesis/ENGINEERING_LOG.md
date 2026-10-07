@@ -5699,3 +5699,32 @@ both messages; the Library editor: valid on load → 2 errors after breaking the
 **Found while checking and fixed (CSS only):** the generated-rule list's rows stuck out of the message (the inherited
 `flex-wrap: wrap` let each row take its full natural width, so long titles never ended in "…" and the buttons fell
 under the Analysis panel — before Change 47 too); the full title now shows on hover. Cache tags bumped.
+
+---
+
+## 2026-10-07 — #6 (honest labels, fewer imperatives): measured on today's prompts and runs (post-hoc, offline)
+
+User: "do … the second step". The prompt review (2026-09-26, `PROMPT_REVIEW.md` P2, P3) found model-made inputs handed
+on as facts and many competing capitalised orders; re-measured on today's code, two new tools (tests first, each seen
+to fail):
+**Capitalised orders** (`eval/prompt_imperatives.py`, 2 tests): `RULE_GENERATION` **19** (MUST 10, NOT 5, NEVER 2,
+MANDATORY 1, AT LEAST 1); `ATTACK_VECTOR_EXTRACTION` 9 (REQUIRED 6, MUST 2, NOT 1); the blocks code adds — kill-chain
+(2+ stages) 3 ("MANDATORY", "AT LEAST"), coverage retry 3 ("MUST literally contain each of them"); analysis 1, review 1;
+all 36. The labels in question, verbatim: "Payload Signatures (strings/patterns a real attacker MUST produce — prefer
+these in detection)"; the attack-vector stage's "payload_signatures … (REQUIRED …) List of 1-8"; the retry's "at least
+one rule MUST literally contain each of them".
+**Payload signatures vs the report** (`eval/signature_grounding.py`, 4 tests; the text the pipeline read, PoC files
+included; regex escapes, defanging, case and doubled backslashes ignored — the doubled-backslash rule was added after
+reading the first output, where real Windows paths had counted as absent; numbers below are after it). Six runs of
+today's pipeline (`c42A/B/C_tuning60`, `c41A_confirm_r1–r3`):
+- **not in the report: 41, 41, 37, 46, 40, 44 signatures (15–18%)**; marked `inferred_from_class` (as the prompt asks
+  for a pattern from general knowledge): **0, 0, 1, 0, 0, 1**.
+- **used by a rule** (the pipeline's coverage record): not in the report **25/41, 26/41, 25/37, 33/46, 33/40, 32/44
+  (61–83%)**; in the report 114/158, 126/157, 118/161, 162/194, 162/194, 160/195 (72–84%); regex "in parts" 9–15 of
+  26–35 (35–48%).
+Read by hand (18 random "not in the report", `c42B`): generic class-level patterns presented as the attacker's —
+`cmd /c`, `macro`, `npm install`, `$(`, a lone backtick, `<script.*>.*<\/script>`, `\$\{.*\}`, `java.lang.String`,
+`Content-Type: application/octet-stream` — several used by rules; and some specifics not in the text.
+**Reading:** about one signature in six is not in the report, the stage almost never says so, and the rule writer uses
+those as readily as the supported ones — consistent with labels that present every signature as what an attacker
+"MUST produce". Post-hoc; a design (honest labels; ordered instructions) is drafted for the user before any change.
