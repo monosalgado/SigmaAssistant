@@ -744,7 +744,8 @@ level: medium`;
 
         // Use SSE streaming for text-only requests. Change 46: the pipeline runs to the rules; the analyst's
         // corrections come after, from the saved analysis.
-        const pipelineDiv = createPipelineProgress(ANALYSIS_STAGES.concat(GENERATION_STAGES));
+        // No "Check Against Your Review" on the first pass: there is no review yet.
+        const pipelineDiv = createPipelineProgress(ANALYSIS_STAGES.concat(GENERATION_STAGES.filter(st => st.id !== 'analyst_check')));
         chatHistory.appendChild(pipelineDiv);
         chatHistory.scrollTop = chatHistory.scrollHeight;
 

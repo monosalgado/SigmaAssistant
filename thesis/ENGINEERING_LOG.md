@@ -5766,3 +5766,24 @@ that split the generation prompt at the old heading "### Payload Signatures" (`t
 `test_first_rule_logsource.py`) and the order counter's check of the retry block (`test_prompt_imperatives.py`).
 Capitalised orders (`prompt_imperatives.py`): 36 → 31 (generation 19 → 18, attack vector 9 → 7, retry 3 → 1). Not
 measured yet; the Change 45 run has the Spark tonight (its frozen worktree does not include Change 48).
+
+---
+
+## 2026-10-07 — Change 46: live check (one real report, one correction) — passed
+
+User: "do the live check now". Web app from `main` (`abfd380`'s backend, loaded before Change 48), the Spark shared with
+the Change 45 run; report https://www.openwall.com/lists/oss-security/2019/10/14/1 (sudo CVE-2019-14287).
+**First pass:** progress through every stage in the new order (PoC, then web enrichment); **the live web stage: one
+search, "4 pages read of 5 results; 5 findings kept"**; then **"Version 1 · automatic"**: 3 rules, all
+`process_creation / linux`; the corrections panel opened ("Regenerate with my corrections"). The analysis listed
+**T1548.004 "Elevated Execution with Prompt"** (a macOS technique; the right one for sudo is T1548.003), and version 1's
+review note said it "retained T1548.004 which correctly maps to bypassing runas restrictions".
+**Correction:** T1548.004 rejected → regenerate. Only generation ran (no new analysis); one coverage regeneration
+followed (as the pipeline does). **"Version 2 · with your corrections: rejected 1 technique"**: 3 rules tagged
+`attack.t1548`, `attack.t1068` — none T1548.004; the panel: "Checked: the log source and techniques follow your review."
+Version 1 stays above.
+**Observed, for the user:** (1) a new correction round starts from the saved analysis with no corrections pre-filled — a
+version 3 would need T1548.004 rejected again (as built: each round = saved analysis + that round's corrections);
+(2) rejecting a wrong technique does not add the right one — adding values is not built. **Fixed:** the first pass's
+progress list no longer shows "Check Against Your Review" (it only runs after corrections). A session with the two
+versions was saved in `data/sessions.json` (the live check's own).
