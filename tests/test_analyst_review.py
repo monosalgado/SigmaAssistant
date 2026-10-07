@@ -275,3 +275,38 @@ def test_nothing_is_linked_when_nothing_is_rejected():
     assert len(out["extraction"]["indicators"]) == 4
     assert out["analyst_review"]["indicators"]["linked"] == []
     assert out["analyst_review"]["patterns"]["linked"] == []
+
+
+# --- carrying the corrections into the next round (user 2026-10-07: "carry corrections forward") -------------------
+# Each version records its corrections by value (`analyst_review`); the next round's controls refer to the saved
+# analysis by position. `review_from_record` maps the record back, so a new round starts with the last one's
+# corrections marked. Round trip: apply a review, take its record, map it back - the same review.
+
+from backend.pipeline.analyst_review import review_from_record  # noqa: E402
+
+LINUX = {"category": "process_creation", "product": "linux", "service": None}
+
+
+@pytest.mark.parametrize("review", [
+    {},
+    {"techniques": {"0": "rejected", "1": "confirmed"}},
+    {"indicators": {"1": "rejected"}, "patterns": {"0": "confirmed"}},
+    {"excluded": {"0": "restored", "1": "restored"}},
+    {"logsource": LINUX, "note": "Linux hosts only"},
+    {"patterns": {"0": "rejected"}, "techniques": {"1": "rejected"}, "logsource": LINUX},
+])
+def test_a_review_survives_the_round_trip_through_its_record(review):
+    record = apply_review(_context(), review, TABLE)["analyst_review"]
+    assert review_from_record(record, _context()) == review
+
+
+def test_copies_rejected_with_a_string_are_not_turned_into_decisions_of_their_own():
+    ctx = _context()
+    ctx["extraction"]["indicators"].append({"value": "sudo -u#-1", "type": "command_line"})
+    record = apply_review(ctx, {"patterns": {"0": "rejected"}}, TABLE)["analyst_review"]
+    assert record["indicators"]["linked"] == ["sudo -u#-1"]
+    assert review_from_record(record, ctx) == {"patterns": {"0": "rejected"}}
+
+
+def test_no_record_gives_an_empty_review():
+    assert review_from_record(None, _context()) == {}

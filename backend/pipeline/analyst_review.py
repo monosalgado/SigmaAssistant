@@ -192,6 +192,30 @@ def apply_review(context: dict, review: dict, table: dict) -> dict:
     return out
 
 
+def review_from_record(record, context: dict) -> dict:
+    """The review a version's record (`analyst_review`) stands for, by position in the saved analysis - so the next
+    correction round starts with these corrections marked (user, 2026-10-07: "carry corrections forward"). Copies
+    rejected with a string (`linked`) are not decisions of their own; `apply_review` derives them again."""
+    if not record:
+        return {}
+    out = {}
+    for kind, (path, statuses) in _LISTS.items():
+        labels = [_label(kind, item) for item in (context.get(path[0]) or {}).get(path[1]) or []]
+        decided = {}
+        for status in sorted(statuses):
+            for label in (record.get(kind) or {}).get(status) or []:
+                pos = next((i for i, l in enumerate(labels) if l == label and str(i) not in decided), None)
+                if pos is not None:
+                    decided[str(pos)] = status
+        if decided:
+            out[kind] = decided
+    if record.get("logsource"):
+        out["logsource"] = {k: record["logsource"].get(k) for k in ("category", "product", "service")}
+    if record.get("note"):
+        out["note"] = record["note"]
+    return out
+
+
 # --- The rules against the review (design P4) -------------------------------------------------
 
 # Departures that get one rewrite: unambiguous decisions. A rejected string used in a detection is

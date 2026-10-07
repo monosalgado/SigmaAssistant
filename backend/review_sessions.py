@@ -16,6 +16,8 @@ message list; `backend/main.py` saves the sessions.
 
 from __future__ import annotations
 
+from backend.pipeline.analyst_review import review_from_record
+
 AWAITING, GENERATING, GENERATED = "awaiting_review", "generating", "generated"
 
 READY_TEXT = ("The analysis is ready. Check what the model understood in the Analysis panel - "
@@ -86,6 +88,8 @@ def finish_generation(messages: list, analysis_id: str, result: dict) -> int:
         "version": version,
         # The corrections behind this version, in words, for the screen and a reload (None: automatic).
         "corrections": corrections_summary(msg["review"]) if msg["review"] else None,
+        # The same corrections by position in the saved analysis: the next round starts with them marked.
+        "carry_review": review_from_record(msg["review"], msg.get("state") or {}) if msg["review"] else None,
     })
     return version
 

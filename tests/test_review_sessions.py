@@ -80,7 +80,7 @@ def test_finishing_appends_the_rules_and_records_the_review():
     assert messages[4]["review"] == {"note": "Linux only"}
     assert messages[-1] == {"role": "assistant", "content": result["rule"], "context": result["context"],
                             "pipeline_metadata": result["pipeline_metadata"], "analysis_id": "a1", "version": 1,
-                            "corrections": "note: Linux only"}
+                            "corrections": "note: Linux only", "carry_review": {"note": "Linux only"}}
 
 
 def test_a_failed_generation_can_be_retried():
@@ -195,3 +195,20 @@ def test_the_saved_analysis_panel_data_is_found_by_id():
     from backend.review_sessions import saved_analysis_metadata
     messages, _ = _first_pass([{"event": "checkpoint", "data": CHECKPOINT}, {"event": "result", "data": dict(RESULT)}])
     assert saved_analysis_metadata(messages, "a1") == CHECKPOINT["pipeline_metadata"]
+
+
+def test_each_version_keeps_its_corrections_by_position_to_carry_into_the_next_round():
+    # User 2026-10-07: "carry corrections forward" - the next round starts with these marked (review_from_record).
+    state = {"ttp_mapping": {"mappings": [{"technique_id": "T1548.004"}, {"technique_id": "T1068"}]}}
+    messages = [{"role": "user", "content": "u"}, analysis_message_for(state)]
+    start_generation(messages, "a1")
+    finish_generation(messages, "a1", {"rule": "v", "context": {}, "pipeline_metadata": {"analyst_review": {
+        "techniques": {"confirmed": [], "rejected": ["T1548.004"]}, "logsource": None, "note": ""}}})
+    assert messages[-1]["carry_review"] == {"techniques": {"0": "rejected"}}
+
+
+def analysis_message_for(state):
+    from backend.review_sessions import analysis_message
+    msg = analysis_message("a1", {"state": state, "pipeline_metadata": {}, "context": {}})
+    msg["status"] = GENERATED
+    return msg

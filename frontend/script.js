@@ -204,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await startReview(lastAnalysis.analysis_id, lastAnalysis.context, lastAnalysis.pipeline_metadata);
         } else if (lastAnalysis && lastAnalysis.status === 'generated' && last && last.analysis_id === lastAnalysis.analysis_id) {
             await startReview(lastAnalysis.analysis_id, last.context,
-                panelMeta(last.pipeline_metadata, lastAnalysis.pipeline_metadata), true);
+                panelMeta(last.pipeline_metadata, lastAnalysis.pipeline_metadata), true, last.carry_review);
         } else {
             if (last) renderContext(last.context, last.pipeline_metadata || null);
             updateReviewBar();
@@ -872,10 +872,16 @@ level: medium`;
         chatHistory.appendChild(label);
     }
 
-    async function startReview(analysisId, context, meta, after = false) {
+    // prefill: the last version's corrections by position in the saved analysis (`carry_review`), so a new round
+    // starts with them marked (user, 2026-10-07: "carry corrections forward").
+    async function startReview(analysisId, context, meta, after = false, prefill = null) {
         await loadLogsourceChoices();
+        const p = prefill || {};
         review = {
-            analysisId, after, techniques: {}, indicators: {}, patterns: {}, excluded: {}, logsource: null, note: '',
+            analysisId, after, carried: Object.keys(p).length > 0,
+            techniques: Object.assign({}, p.techniques), indicators: Object.assign({}, p.indicators),
+            patterns: Object.assign({}, p.patterns), excluded: Object.assign({}, p.excluded),
+            logsource: p.logsource || null, note: p.note || '',
             values: {
                 patterns: ((meta && meta.attack_vector && meta.attack_vector.payload_signatures) || []).map(p => p.pattern),
                 indicators: ((meta && meta.indicators) || []).map(i => i.value),
@@ -1050,7 +1056,8 @@ level: medium`;
                     appendVersionLabel(data.version, data.corrections);
                     appendMessage('assistant', data.rule || 'No rules were generated.');
                     // Change 46: every version is kept; the analyst can correct again, from the saved analysis
-                    startReview(review.analysisId, data.context, panelMeta(data.pipeline_metadata, data.analysis_metadata), true);
+                    startReview(review.analysisId, data.context, panelMeta(data.pipeline_metadata, data.analysis_metadata), true,
+                        data.carry_review);
                     loadSessions();
                 }
             });
@@ -1120,7 +1127,8 @@ level: medium`;
             root.appendChild(el('p', 'an-review-intro',
                 'The rules were written from what the pipeline understood, shown below. If something is wrong, ' +
                 'correct it - reject what is wrong, restore a string that was wrongly excluded, change the log ' +
-                'source - and regenerate. Only the rules are written again; the analysis stays. Every version is kept.'));
+                'source - and regenerate. Only the rules are written again; the analysis stays. Every version is kept.' +
+                (review.carried ? ' Your corrections from the last version are already marked - change them or keep them.' : '')));
         } else if (review) {
             root.appendChild(el('p', 'an-review-intro',
                 'Confirm what is right, reject what is wrong, and change the log source if needed - then ' +

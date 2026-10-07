@@ -5787,3 +5787,19 @@ version 3 would need T1548.004 rejected again (as built: each round = saved anal
 (2) rejecting a wrong technique does not add the right one — adding values is not built. **Fixed:** the first pass's
 progress list no longer shows "Check Against Your Review" (it only runs after corrections). A session with the two
 versions was saved in `data/sessions.json` (the live check's own).
+
+---
+
+## 2026-10-07 — Change 46 follow-up: the corrections are carried into the next round
+
+User: "carry corrections forward". Each version records its corrections by value (`analyst_review`); the controls refer
+to the saved analysis by position. `analyst_review.review_from_record(record, saved analysis)` maps them back (copies
+rejected with a string are not decisions of their own — `apply_review` derives them again); each saved version keeps
+the result (`carry_review`) and `/generate_stream` returns it; the screen starts the next round with them marked and
+says so ("Your corrections from the last version are already marked"). Tests first (9, each seen to fail; among them a
+**round trip** — apply a review, take its record, map it back: the same review — for each kind of correction); one
+older test pinning a saved version's exact contents updated. 866 pass.
+**Live check** (the sudo session, the Spark shared with the Change 45 run): T1548.004 rejected and a note → **version 3
+"with your corrections: rejected 1 technique; note: Linux hosts only"** (saved `carry_review`:
+`{"techniques": {"0": "rejected"}, "note": "Linux hosts only"}`); the next round opened with T1548.004 rejected and the
+note filled — **and the same after a page reload**. Versions saved before this change carry nothing (no `carry_review`).

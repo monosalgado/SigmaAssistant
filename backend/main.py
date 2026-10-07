@@ -454,6 +454,7 @@ def generate_stream(request: GenerateRequest):
                     data["analysis_id"] = request.analysis_id
                     data["analysis_metadata"] = review_sessions.saved_analysis_metadata(messages, request.analysis_id)
                     data["corrections"] = messages[-1]["corrections"]
+                    data["carry_review"] = messages[-1]["carry_review"]
                     save_sessions()
                     finished = True
                     data["session_id"] = request.session_id
