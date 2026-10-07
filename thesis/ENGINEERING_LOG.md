@@ -5603,3 +5603,11 @@ model, context, 828 tests, smoke CITABLE); both arms from `46da793`, together, i
 (web off)", "C45 arm B (web on, saved)"); B's config records the saved file and its SHA-256 (matches the plan). Two
 stuck background wait loops of mine (`until ! pgrep -f …` matching their own command line) were stopped first; they
 only slept.
+**Run interrupted (disclosed):** ~16:06–16:20 EDT the connection to the Spark dropped mid-case (APIConnectionError);
+both arms stopped at the same case (7 of 60, `76bc1601`; its row not written) after **6 rows each, 0 errors**, and
+`run_resilient` gave up when the tunnel could not be rebuilt within its window. At 20:58 the user reconnected the VPN:
+the VPN interface is up (utun4) and routes to the Spark, but the Spark's SSH port did not answer for several minutes —
+the arms are resumed together (same commands) as soon as it answers. No row or score was read.
+At 21:33 the Spark still did not answer (SSH port, ping), while USF's DNS servers answered through the VPN — so the VPN
+works and the Spark itself was unreachable. **User: "lets just stop for today"** — the arms stay at 6 of 60 each and
+resume together tomorrow with the same commands (the run plan above is unchanged).
