@@ -115,7 +115,7 @@ def test_the_generation_stage_uses_the_committed_table():
             {"category": "webserver", "product": None, "service": None,
              "confidence": 0.9, "reasoning": "the exploit is an HTTP request"}]},
     })
-    head = client.prompts[0].split("### Payload Signatures")[0]
+    head = client.prompts[0].split("### Candidate patterns")[0]
     assert "no `product` and no `service`" in head
 
 

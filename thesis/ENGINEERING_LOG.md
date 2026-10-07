@@ -5735,3 +5735,34 @@ context 262,144, 828 tests, smoke CITABLE. **Disclosed for the comparison:** cas
 restart, cases 7–60 after it; both arms see each server state equally (paired by case), but answers depend on the
 server's state (P-B), so the two segments are reported apart as well as together. Both arms resumed together with the
 same commands.
+
+---
+
+## 2026-10-07 — Change 48 (#6 A): honest labels for the payload signatures — design, fixed before the code
+
+User: "A alone first" (the ordered instructions, B, come later as their own change). From the measurement above: one
+signature in six is not in the report, the stage almost never marks it inferred, and the rule writer uses those as
+readily as the supported ones. Wording only — no code path changes (the formatter already shows each signature's quote
+or `inferred_from_class`; an empty list is already handled: "No explicit payload signatures identified."):
+1. **Attack-vector prompt, §3:** "Payload signatures (REQUIRED …) List of 1-8" → **0–8**; only patterns the text or the
+   PoC shows; a pattern known from the vulnerability class but not shown in the text gets `derived_from:
+   "inferred_from_class"`; an empty list is right when the text shows no concrete pattern; "real attackers MUST
+   produce" → "a real attacker cannot avoid producing" (plain words). The other "REQUIRED" field headers stay (they name
+   required output fields, not claims about the content; B).
+2. **Rule writer's prompt:** the heading "Payload Signatures (strings/patterns a real attacker MUST produce — prefer
+   these in detection)" → **"Candidate patterns (proposed by the attack-vector stage, each with where it would be seen
+   and the quote it came from; use those the report supports — one marked inferred_from_class is a general pattern of
+   the vulnerability class, not something this report shows)"**; instruction 3 → prefer the candidates whose quote shows
+   they come from the report; use an inferred one only where the report describes that behaviour. Instruction 2's
+   "payload signatures" → "candidate patterns" (its MUST stays: B).
+3. **Coverage retry block:** "at least one rule MUST literally contain each of them" → **"use each one the report
+   supports; leave out one that is too generic or that the report does not show"**. The retry's trigger (code) is
+   unchanged.
+**Measured later** (a two-arm tuning run, plan fixed before it — the Change 45 run has the Spark tonight): mechanism —
+signatures not in the report and their use by rules (`signature_grounding.py`; expected: fewer used), signatures marked
+`inferred_from_class` (expected: more); primary and guards fixed in that plan.
+**Change 48 built (tests first, 4, seen to fail; 857 pass):** the three wordings as designed. Updated with it: two tests
+that split the generation prompt at the old heading "### Payload Signatures" (`test_first_rule_absent_fields.py`,
+`test_first_rule_logsource.py`) and the order counter's check of the retry block (`test_prompt_imperatives.py`).
+Capitalised orders (`prompt_imperatives.py`): 36 → 31 (generation 19 → 18, attack vector 9 → 7, retry 3 → 1). Not
+measured yet; the Change 45 run has the Spark tonight (its frozen worktree does not include Change 48).
