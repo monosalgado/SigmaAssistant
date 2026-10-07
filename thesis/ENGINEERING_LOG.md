@@ -5803,3 +5803,9 @@ older test pinning a saved version's exact contents updated. 866 pass.
 "with your corrections: rejected 1 technique; note: Linux hosts only"** (saved `carry_review`:
 `{"techniques": {"0": "rejected"}, "note": "Linux hosts only"}`); the next round opened with T1548.004 rejected and the
 note filled — **and the same after a page reload**. Versions saved before this change carry nothing (no `carry_review`).
+**Run interrupted again (disclosed):** ~16:05–16:20 EDT the tunnel dropped and could not be rebuilt within
+`run_resilient`'s 10-minute window; both arms gave up (A after 13 rows, B after 11; 0 errors in any written row; the
+case each was on was not written). The Spark itself was fine (no new reboot, up 5 h 07 min at 16:25; Ollama serving,
+HTTP 200 on the machine): an outage on the VPN–Spark path, recovered by 16:24. The Change 46 check's regeneration hit
+the same outage (below). Tunnel rebuilt; both arms resumed together ~16:30 with the same commands (A 47 to go, B 49) —
+the frozen code passed its preflight at 15:05. Cases are paired by `rule_id` at the end, so the arms need not be in step.
