@@ -5842,3 +5842,15 @@ run-to-run noise. **When:** after the Change 45 run frees the Spark, on the user
 **Arms ready:** A `e3d0ec0` (branch `c48-before`) at `../SigmaAssistant-c48A`, B `579e185` at `../SigmaAssistant-c48B`
 (data links as the other arms). Checked: A's `backend/` differs from B's by exactly Change 48's lines (the patch of
 `95eb07d`, reversed); tests from each arm's own folder — A 865 pass (Change 48's 4 tests absent), B 869 pass. Not started.
+
+## 2026-10-07 — Change 45 run: third interruption (Spark unreachable from ~20:00); paused
+
+**Run interrupted a third time (disclosed):** the last rows were written at 19:53 (B) and 19:54 (A); the next case of
+each arm then failed on every LLM call ("Connection error"), and `run_resilient`'s tunnel rebuild (10 × 60 s) gave up
+on both. Rows so far: **A 43/60, B 36/60, 0 errors in any written row**; the case each was on was not written
+(A `32b5db62…`, B `e710a880…`), so a rerun resumes there. Checked 22:08: the USF VPN is up (utun4, route to the Spark
+through it) but the Spark (10.246.14.123) answers neither SSH nor ping — the same picture as 2026-10-06 evening, when
+the Spark itself turned out to be down. Cause not known yet (the user will ask the lab). **On return:** preflight in
+`../SigmaAssistant-c45`; record whether the Spark was restarted or changed (Ollama version, model id `06c1097efce0`);
+then rerun the same two commands together. If it was restarted, the rows after it are a third segment, reported apart
+as well as together (as cases 1–6 vs the rest). No scores read.
