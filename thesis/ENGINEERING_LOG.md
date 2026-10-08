@@ -5883,3 +5883,15 @@ run every call's `prompt_tokens` is checked against the cap (a prompt longer tha
 
 **The Change 48 run** (planned 2026-10-07, not started) runs the same way: its two arms interleaved one case at a time,
 not in parallel.
+
+## 2026-10-08 — The Spark is back at a new address; the Change 45 run resumes (one case at a time)
+
+**The Spark (server state, recorded per P-B):** it came back at a **new IP, 10.246.15.39** (user), host name now
+`dgx-spark-idr-101` (was `spark-0454`). Same machine: its SSH host key (ed25519) has the same fingerprint as the old
+address's (`SHA256:t1LpNb…167DE`), checked before trusting it; the new address was added to `known_hosts` and `.env`'s
+`SPARK_SSH_HOST` changed (the only place the code reads it). **Restarted 2026-10-08 09:19:51** (its clock); Ollama
+**0.34.1**, `qwen3-coder:30b` id **`06c1097efce0`** — both unchanged; context still **262,144** (the lab's ~128K cap is
+not in place yet). Preflight in `../SigmaAssistant-c45` (frozen code) **passed at ~10:50**: tunnel, model, context,
+828 tests, 2-case smoke CITABLE (`eval/results/c45_resume2.preflight.log`, local).
+**Resumed** with the interleaved loop fixed in the entry before this one (one tab; B to case 43, then A and B one case
+at a time to 60). The rows from here are the third segment (after the 10-08 restart).
