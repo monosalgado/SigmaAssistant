@@ -22,6 +22,7 @@ import threading
 from collections import deque
 
 from backend.telemetry import TELEMETRY, extract_gemini_usage, extract_openai_usage
+from backend.token_count import count_tokens
 
 
 # ---------------------------------------------------------------------------
@@ -36,6 +37,20 @@ OUTPUT_TOKEN_LIMIT = 16384
 OUTPUT_LIMIT_RETRIES = 2
 # A cut answer's last characters are kept in its call record (#7, 2026-10-05): what it was writing when it ran out.
 CUT_TAIL_CHARS = 2000
+
+# ---------------------------------------------------------------------------
+# Request ceiling (Change 49, 2026-10-08)
+# ---------------------------------------------------------------------------
+# All three Spark halts came during a call with a long prompt (28,099 and 31,324 tokens, and a larger one). A request
+# over the ceiling is not sent. 30,000 sits above every call the other stages have made (largest 29,347), so it changes
+# nothing that has run; the web digest, which went far above it, is sent in pieces of <= 16,000.
+PROMPT_TOKEN_CEILING = 30_000
+# The chat template's role markers around the messages (counted generously).
+TEMPLATE_ALLOWANCE_TOKENS = 64
+
+
+class PromptTooLarge(Exception):
+    """The request was over PROMPT_TOKEN_CEILING and was not sent."""
 
 
 class OutputLimitReached(Exception):
@@ -341,6 +356,18 @@ class OllamaLLMClient(LLMClient):
                 "content": "You must respond with valid JSON only. Do not include any text, explanation, or markdown outside the JSON object.",
             })
         messages.append({"role": "user", "content": prompt})
+
+        # Change 49: counted before it is sent; over the ceiling it is refused, recorded and never retried.
+        tokens = sum(count_tokens(m["content"]) for m in messages) + TEMPLATE_ALLOWANCE_TOKENS
+        if tokens > PROMPT_TOKEN_CEILING:
+            error = (f"prompt of {tokens} tokens is over the {PROMPT_TOKEN_CEILING}-token ceiling; not sent "
+                     "(Change 49)")
+            TELEMETRY.record(
+                backend="ollama", tier="economy", model=self.model_name,
+                operation="generate", latency_s=0.0, prompt_chars=len(prompt),
+                ok=False, error=error, refused=True,
+            )
+            raise PromptTooLarge(error)
 
         # Tier is always "economy": HybridLLMClient only routes economy calls here.
         for _attempt in range(1 + OUTPUT_LIMIT_RETRIES):

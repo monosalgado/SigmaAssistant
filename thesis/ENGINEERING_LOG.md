@@ -5962,3 +5962,22 @@ what matters, and code still checks every string against its whole page:
 absent). **Then, before any run:** a live check on the Spark with small prompts only — our count against Ollama's
 `prompt_tokens` — and the run plan in its own entry. The Change 45 run's B arm is redone from its start with Change 49
 (its 45 rows used the one-call digest); A does not use the web stage.
+
+## 2026-10-08 — Change 49 built (tests first): the web digest in pieces, a ceiling on every request, exact counts
+
+**Built as designed** (entry above): `backend/token_count.py` (Qwen's tokenizer; characters ÷ 2 without the file);
+`OllamaLLMClient.generate` refuses a request over **30,000 tokens** (system message + prompt + 64) before sending it
+(`PromptTooLarge`, telemetry `refused: true`); a stage does not retry a refusal (`base_stage.llm_call`); the harness's
+stop rule (`unmeasured_reason`) does not count one; the web digest runs in pieces of ≤ **16,000 tokens** with the
+report's first **6,000**, one numbering across pieces, long pages in parts, and `drop_known` after `check_digest`.
+**Tests:** 20 new (`test_token_count.py` 4, `test_prompt_ceiling.py` 6, `test_web_digest_pieces.py` 10), each file
+seen failing first (no code); two were wrong in the test itself and fixed there (a substring count that also matched
+the file path; the abstract stage class instantiated directly). One real hazard found by a test: without the explicit
+rule, a stage *retried* a refusal, because its token count ("34291") contains "429", which the retry rule reads as a
+rate limit (the test took 35 s of back-off). **Suite: 889 passed** (869 + 20).
+**Offline size check** (`eval/digest_piece_sizes.py`, committed; no request sent; the worst case — the corpus's
+longest text as the report, no page dropped as the case's own): over the 55 saved searches of
+`eval/web_snapshots/tuning60.jsonl`, **133 digest requests (2.4 per search, at most 11); largest 15,987 tokens, median
+13,911; none over 16,000** — against one request per search before, up to 94,661 tokens.
+**Still to do before any run:** the live check on the Spark (small prompts only: our count against Ollama's
+`prompt_tokens`), then the run plan.

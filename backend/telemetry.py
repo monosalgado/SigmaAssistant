@@ -98,6 +98,9 @@ class LLMCall:
     # The last characters of an answer cut at the output limit (#7, 2026-10-05): what the model was writing when
     # it ran out. None for every finished answer; answers themselves are not kept.
     cut_tail: Optional[str] = None
+    # Change 49: the request was over the token ceiling and was not sent (`ok` is False). A finding about the
+    # pipeline, not an outage.
+    refused: bool = False
 
 
 def extract_gemini_usage(response: Any) -> dict:
@@ -155,6 +158,7 @@ class LLMTelemetry:
         error: Optional[str] = None,
         output_limited: bool = False,
         cut_tail: Optional[str] = None,
+        refused: bool = False,
     ) -> None:
         usage = usage or {}
         call = LLMCall(
@@ -174,6 +178,7 @@ class LLMTelemetry:
             stage=_current_stage.get(),
             output_limited=output_limited,
             cut_tail=cut_tail if output_limited else None,
+            refused=refused,
         )
         with self._lock:
             self._calls.append(call)

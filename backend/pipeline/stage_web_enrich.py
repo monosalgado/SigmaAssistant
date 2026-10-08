@@ -3,9 +3,13 @@ Stage 2: Web Search Enrichment - search for additional CTI context.
 
 With a Gemini client: Google Search grounding, one call that searches and summarizes (the old path, kept).
 All-local (Change 45): Ollama's web search returns whole pages; code drops the case's own page (and, in the
-evaluation, rule pages), one model call (`WEB_DIGEST`) lists what the kept pages add about this attack, and code keeps
+evaluation, rule pages), the model (`WEB_DIGEST`) lists what the kept pages add about this attack, and code keeps
 only the strings it finds in their page. The kept items are appended to the text the attack-vector and analysis stages
 read, marked as coming from the web. Runs after the PoC stage, so the PoC stage reads only the report's own links.
+
+Change 49 (2026-10-08): all three Spark halts came during a one-call digest with a long prompt, so the pages are read
+in pieces of <= WEB_PIECE_MAX_TOKENS, each with the report's opening (WEB_REPORT_TOKENS); every page is still read in
+full, and a string the full report already contains is dropped by code.
 """
 
 from __future__ import annotations
@@ -18,12 +22,17 @@ from urllib.parse import urlparse
 from backend.llm_client import OutputLimitReached
 from backend.pipeline import prompts
 from backend.pipeline.base_stage import PipelineStage
+from backend.token_count import count_tokens, truncate_to_tokens
 
 # Detection-rule publishers (host, path prefix): the probe's list (2026-10-06) plus the mirror it found.
 RULE_SITES = (("github.com", "/sigmahq/"), ("sigma.nasbench.dev", ""), ("detection.fyi", ""), ("socprime.com", ""),
               ("uncoder.io", ""), ("research.splunk.com", ""), ("github.com", "/splunk/security_content"),
               ("github.com", "/elastic/detection-rules"), ("sigma.controlassurance.com", ""))
 MIN_STRING_CHARS = 4
+# Change 49: a digest piece's whole prompt (below the halted 28,099 and 31,324; near the other stages' median of
+# ~9-11k), and the report's opening it shows (the whole report took up to ~25k on its own).
+WEB_PIECE_MAX_TOKENS = 16_000
+WEB_REPORT_TOKENS = 6_000
 WEB_HEADER = ("--- Web search: what other pages add about this attack (from the web, not from the report; "
               "each string was found in its page) ---")
 
@@ -128,6 +137,84 @@ def complete_items(text: str) -> list:
         items.append(item)
 
 
+def _fit(chunk: str, room: int) -> list:
+    """`chunk` as is if it fits `room` tokens, else halved at a line break until each half fits."""
+    if count_tokens(chunk) <= room or "\n" not in chunk:
+        return [chunk]
+    lines = chunk.split("\n")
+    mid = len(lines) // 2
+    return _fit("\n".join(lines[:mid]), room) + _fit("\n".join(lines[mid:]), room)
+
+
+def _split_text(text: str, room: int) -> list:
+    """`text` in consecutive chunks of <= `room` tokens: whole lines where they fit, a longer line cut at token
+    boundaries. Nothing is left out."""
+    chunks, current, used = [], [], 0
+    for line in text.split("\n"):
+        n = count_tokens(line) + 1                      # + the line break
+        if n > room:
+            if current:
+                chunks.append("\n".join(current))
+                current, used = [], 0
+            rest = line
+            while rest:
+                part = truncate_to_tokens(rest, room - 1) or rest[:1]
+                chunks.append(part)
+                rest = rest[len(part):]
+            continue
+        if used + n > room and current:
+            chunks.append("\n".join(current))
+            current, used = [], 0
+        current.append(line)
+        used += n
+    if current:
+        chunks.append("\n".join(current))
+    # The lines' counts add up to an estimate of a chunk's; each chunk is checked exactly.
+    return [piece for chunk in chunks for piece in _fit(chunk, room)]
+
+
+def page_blocks(pages: list, room: int) -> list:
+    """Each kept page as one block `[n] title / URL / text` of <= `room` tokens, or, if longer, in parts
+    `[n] title (part k of m)` - (page number, block) pairs in page order. The numbering is the pages', so a citation
+    means the same page whichever piece it comes from."""
+    blocks = []
+    for n, page in enumerate(pages, 1):
+        title, url, content = page.get("title", ""), page["url"], page.get("content") or ""
+        whole = f"[{n}] {title}\nURL: {url}\n{content}"
+        if count_tokens(whole) <= room:
+            blocks.append((n, whole))
+            continue
+        head_room = room - count_tokens(f"[{n}] {title} (part 999 of 999)\nURL: {url}\n")
+        chunks = _split_text(content, max(head_room, 1))
+        blocks.extend((n, f"[{n}] {title} (part {k} of {len(chunks)})\nURL: {url}\n{chunk}")
+                      for k, chunk in enumerate(chunks, 1))
+    return blocks
+
+
+def drop_known(items: list, report_text: str) -> tuple:
+    """After `check_digest`: drop a string the report already contains (the digest is for what it does not say; the
+    model saw only its opening) and an item whose strings were all dropped, and an item whose strings all appear in an
+    item already kept from the same page (a page read in parts can give the same item twice). An item with no strings
+    is kept. Returns (kept items, dropped records)."""
+    known = _squash(report_text)
+    kept, dropped, seen = [], [], {}
+    for item in items:
+        strings = item.get("strings") or []
+        new = [s for s in strings if _squash(s) not in known]
+        record = {"finding": item.get("finding"), "sources": item.get("sources")}
+        if strings and not new:
+            dropped.append({**record, "strings": strings, "reason": "every string is already in the report"})
+            continue
+        dropped.extend({**record, "string": s, "reason": "already in the report"} for s in strings if s not in new)
+        page_seen = seen.setdefault(item.get("source"), set())
+        if new and all(_squash(s) in page_seen for s in new):
+            dropped.append({**record, "strings": new, "reason": "duplicate of an item already kept from this page"})
+            continue
+        page_seen.update(_squash(s) for s in new)
+        kept.append({**item, "strings": new})
+    return kept, dropped
+
+
 def digest_block(items: list) -> str:
     lines = [WEB_HEADER]
     for item in items:
@@ -228,27 +315,58 @@ class WebEnrichStage(PipelineStage):
             print(f"[{self.name}] No page to read ({len(records)} results; error: {result.get('error')})")
             return context
 
-        pages = "\n\n".join(f"[{i}] {p.get('title', '')}\nURL: {p['url']}\n{p.get('content') or ''}"
-                            for i, p in enumerate(kept_pages, 1))
-        prompt = prompts.WEB_DIGEST.format(report=self.source_text(preprocessed["combined_text"]), pages=pages)
-        error, cut = None, False
-        try:
-            answer = self.parse_json(self.llm_call(prompt, temperature=0.0, json_mode=True, economy=True))
-            items = answer.get("items", []) if isinstance(answer, dict) else []
-        except Exception as e:  # cut: keep its complete items; unreadable: no digest. The pipeline goes on.
-            error, cut = f"{type(e).__name__}: {e}"[:300], isinstance(e, OutputLimitReached)
-            items = complete_items(getattr(e, "partial", "")) if cut else []
-            print(f"[{self.name}] Digest {'cut' if cut else 'failed'}: {e}; {len(items)} complete items kept to check")
+        # Change 49: the report's opening plus as many pages (or parts of a page) as fit WEB_PIECE_MAX_TOKENS.
+        report = self.source_text(preprocessed["combined_text"])
+        report_part = truncate_to_tokens(report, WEB_REPORT_TOKENS)
+        report_total = count_tokens(report)
+        if report_part != report:
+            print(f"[{self.name}] The digest sees the report's first {WEB_REPORT_TOKENS} tokens (of {report_total})")
+
+        def render(blocks):
+            return prompts.WEB_DIGEST.format(report=report_part, pages="\n\n".join(b for _, b in blocks))
+
+        room = WEB_PIECE_MAX_TOKENS - count_tokens(render([])) - 8        # - the separators between blocks
+        pieces, current = [], []
+        for block in page_blocks(kept_pages, room):
+            if current and count_tokens(render(current + [block])) > WEB_PIECE_MAX_TOKENS:
+                pieces.append(current)
+                current = []
+            current.append(block)
+        if current:
+            pieces.append(current)
+
+        items, records = [], []
+        for piece in pieces:
+            prompt = render(piece)
+            record = {"pages": sorted({n for n, _ in piece}), "tokens": count_tokens(prompt), "error": None,
+                      "cut": False, "proposed": 0}
+            try:
+                answer = self.parse_json(self.llm_call(prompt, temperature=0.0, json_mode=True, economy=True))
+                found = answer.get("items", []) if isinstance(answer, dict) else []
+            except Exception as e:  # cut: keep its complete items; unreadable: none. The other pieces go on.
+                record["error"], record["cut"] = f"{type(e).__name__}: {e}"[:300], isinstance(e, OutputLimitReached)
+                found = complete_items(getattr(e, "partial", "")) if record["cut"] else []
+                print(f"[{self.name}] Digest piece (pages {record['pages']}) {'cut' if record['cut'] else 'failed'}: "
+                      f"{e}; {len(found)} complete items kept to check")
+            found = found if isinstance(found, list) else []
+            record["proposed"] = len(found)
+            items.extend(found)
+            records.append(record)
+
         kept, dropped = check_digest(items, kept_pages)
-        enrichment["digest"] = {"error": error, "cut": cut, "proposed": len(items) if isinstance(items, list) else 0,
-                                "kept": kept, "dropped": dropped}
+        kept, known = drop_known(kept, preprocessed["combined_text"])
+        dropped += known
+        errors = [r["error"] for r in records if r["error"]]
+        enrichment["digest"] = {"error": errors[0] if errors else None, "cut": any(r["cut"] for r in records),
+                                "proposed": len(items), "kept": kept, "dropped": dropped, "pieces": records,
+                                "report_tokens": count_tokens(report_part), "report_tokens_total": report_total}
         if kept:
             block = digest_block(kept)
             preprocessed["combined_text"] += "\n\n" + block
             preprocessed["segments"].append(block[:1000])
             enrichment["additional_context"] = block
-        print(f"[{self.name}] {len(kept_pages)} pages read; digest kept {len(kept)} of "
-              f"{enrichment['digest']['proposed']} items, {len(dropped)} dropped")
+        print(f"[{self.name}] {len(kept_pages)} pages read in {len(pieces)} piece(s); digest kept {len(kept)} of "
+              f"{len(items)} items, {len(dropped)} dropped")
         return context
 
     def _build_search_query(self, preprocessed: dict) -> str:
