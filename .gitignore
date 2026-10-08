@@ -23,6 +23,7 @@ data/sessions.json
 data/saved_rules.json
 data/web_cache.jsonl
 data/sigma/
+data/tokenizer/
 *.sqlite3
 *.bin
 

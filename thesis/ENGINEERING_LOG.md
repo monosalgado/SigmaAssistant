@@ -5921,3 +5921,44 @@ runs). So: every halt came during a long-prompt call; the same call succeeds whe
 request at a time did not prevent it. Consistent with the lab's power/firmware reading (reading a long prompt is the
 heaviest sustained GPU load). Rows kept; nothing resumed — the Spark is down, and the next step is the user's and the
 lab's (run as is, or shorten the digest's input; the latter would be a change to Change 45).
+
+## 2026-10-08 — Change 49: smaller requests to the Spark (the web digest in pieces; a ceiling on every request) — design, fixed before the code
+
+**Why:** all three Spark halts came during a web-digest call with a long prompt (entry above); the user: "it is
+definitively our issue, we are breaking the spark and we need to stop that." User's choices: **split the web summary +
+a ceiling** (over the strict option, ~16k on every step, which would change every stage and void the comparisons), and
+**exact token counts** (download approved: Qwen's `tokenizer.json`, 7,032,399 bytes, from
+`huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct` at commit `b2cff64`; its git blob hash matches the server's etag
+`90c73275…`; kept in `data/tokenizer/`, gitignored; read by the `tokenizers` library already installed).
+
+**1. Counting (`backend/token_count.py`):** `count_tokens(text)` with that tokenizer. If the file is missing, a
+conservative estimate — characters ÷ 2 (every call recorded so far has ≥ 2.0 characters per token; web pages run at
+~2.3, prose ~3.9) — and a printed warning, so a missing file makes the limits stricter, never looser.
+
+**2. The ceiling (`OllamaLLMClient.generate`):** before anything is sent, the request (system message + prompt + a
+64-token allowance for the chat template) is counted; **over 30,000 tokens it is not sent** — a `PromptTooLarge` error,
+recorded in the telemetry as a refused call (`refused: true`), never retried. 30,000 sits above every call the other
+stages have made (largest 29,347, generation, `c45A`), so it changes nothing that has run so far; it stops anything
+bigger. A refusal is a finding about the pipeline, not an outage: the harness's stop rule (`unmeasured_reason`) does
+not count refused calls, the stage fails as on any failed call, and the case's row records it.
+
+**3. The web digest in pieces (`WebEnrichStage`):** every kept page is still read in full, the model still decides
+what matters, and code still checks every string against its whole page:
+- each piece's prompt is ≤ **16,000 tokens** (well below the halted 28,099 and 31,324; near the other stages' median
+  of ~9–11k): the report's opening — its first **6,000 tokens** (the whole report took up to ~25k on its own; the
+  opening says which attack it is) — plus as many pages as fit;
+- the pages keep one numbering across pieces (`[1]`…`[n]`), so an item's citation means the same page in any piece;
+  a page too long for one piece is split at line breaks into parts (`[n] … (part k of m)`), a line too long at a token
+  boundary;
+- each piece is one call; a cut answer keeps its complete items, a failed piece is recorded and the others go on;
+- the items of all pieces are checked together against the whole pages (`check_digest`, unchanged); then, since the
+  model now sees only the report's opening, **code drops a string the full report already contains** (reason "already
+  in the report": the digest is for what the report does not say) and an item whose strings were all dropped; an item
+  whose strings all appear in an item already kept from the same page is dropped as a duplicate;
+- recorded: per piece the page numbers, its token count, error, cut and items proposed; the report tokens shown; the
+  totals as before (`proposed`, `kept`, `dropped`, `error`, `cut`), so `web_effect.py` reads it unchanged.
+
+**Tests first, seen to fail; offline** (a stand-in counter and client; the tokenizer test skips if the file is
+absent). **Then, before any run:** a live check on the Spark with small prompts only — our count against Ollama's
+`prompt_tokens` — and the run plan in its own entry. The Change 45 run's B arm is redone from its start with Change 49
+(its 45 rows used the one-call digest); A does not use the web stage.
