@@ -5904,3 +5904,20 @@ if the Spark changes (the lab's context cap, a restart) or halts partway, mostly
 fewer pairs are complete until both arms finish. Still one request at a time. The loop is stopped right after a B row
 is written (no case lost) and replaced by the original two commands run one after the other (no `--limit`). Any
 server change during the rest of the run is recorded with the time and the rows it falls between.
+
+## 2026-10-08 — Change 45 run: fourth stop (the Spark halted again ~11:27, one request at a time) — all three halts during a large web-digest call
+
+**What happened:** with only arm B running (one request at a time), the last row was written 11:25:52 (B 45/60; A 43/60;
+0 errors); the next case (`bd3b3fff…`, the Commvault report) failed from its web-digest call on, and the tunnel could
+not be rebuilt. 11:57: the Spark (10.246.15.39) answers neither SSH nor ping; USF DNS answers (the VPN is up).
+
+**Pattern (operational, read from the run's own log `c45B_tuning60.log` and rows, ad-hoc query; not a thesis measure):**
+the call in flight at each of the three halts was a **web-digest call**: 10-06 (case `76bc1601`, 3CX), 10-07 20:00
+(`e710a880`, AMOS), 10-08 11:27 (`bd3b3fff`, Commvault). The 10-07 16:05 outage, when the Spark did *not* halt (a
+network-path fault), happened during a review call. The two halted digests that were later redone went through
+(prompts 28,099 and 31,324 tokens — ranks 39 and 42 of the 45 digests done; the other stages' calls in this run max out
+at 27,457, median 8,811); the Commvault digest reads two ~70,000-character pages (its size is an estimate until it
+runs). So: every halt came during a long-prompt call; the same call succeeds when repeated (not one bad input); and one
+request at a time did not prevent it. Consistent with the lab's power/firmware reading (reading a long prompt is the
+heaviest sustained GPU load). Rows kept; nothing resumed — the Spark is down, and the next step is the user's and the
+lab's (run as is, or shorten the digest's input; the latter would be a change to Change 45).
