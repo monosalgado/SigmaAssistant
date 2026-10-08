@@ -5854,3 +5854,32 @@ the Spark itself turned out to be down. Cause not known yet (the user will ask t
 `../SigmaAssistant-c45`; record whether the Spark was restarted or changed (Ollama version, model id `06c1097efce0`);
 then rerun the same two commands together. If it was restarted, the rows after it are a third segment, reported apart
 as well as together (as cases 1–6 vs the rest). No scores read.
+
+## 2026-10-08 — The Spark: one request at a time from now on (lab's advice); the Change 45 run resumes interleaved — fixed before it resumes
+
+**The lab's finding (relayed by the user, 2026-10-08):** the Spark's logs show no software fault at either halt
+(2026-10-06 ~16:05, 2026-10-07 ~20:00) — no out-of-memory, no GPU error, no overheating — but the sustained
+web-enrichment runs look like the trigger of a power/firmware-level halt. Their scale-down while they look for the real
+fix: cap Ollama's context (now 256K, the server's setting; our code sets none) to ~128K, and send one request at a time.
+**User's decision:** one request at a time. (The context cap is the lab's to set on the server.)
+
+**What "one request at a time" means here:** the pipeline already makes its LLM calls one after another (checked: no
+threads, pools or `gather` in `backend/`, `eval/run_eval.py` or `eval/run_resilient.py`, in `main` and in the C45
+worktree), so it is one `run_eval` process talking to the Spark at any moment — never two arms at once (until now each
+two-arm run had its arms in parallel: two requests at a time; the C42/43 run three), and no use of the web app while a
+run is going.
+
+**The Change 45 run's remaining cases** (A 43/60, B 36/60; checked: each file holds exactly the first 43 / 36 cases of
+the `--sample 60 --seed 0` order) run **interleaved, one case at a time**: B alone up to case 43, then case 44 of A,
+case 44 of B, case 45 of A, … to 60 — the same commands as before plus `--limit k` (cases are taken in the sample's
+order and resume skips the saved ones), one shell loop in one tab that stops if a run gives up. Interleaving keeps the
+two arms on the same cases in the same hours, which is what "same night, together" was for, and if the Spark halts
+again the saved pairs stay balanced. **Disclosed:** rows from here were made with the arms not sharing the server;
+per-case times (`elapsed_s`) of this part are not comparable with the earlier part (time is not a measure of this
+run). The Spark halted, so it was restarted: the rows after the resume are a further segment (before the 10-07 11:18
+restart, between, after), reported apart as well as together. If the lab caps the context, the preflight's `ollama ps`
+records it; the largest call so far (94,661 prompt + 16,384 output tokens = 111,045) fits in 131,072, and after the
+run every call's `prompt_tokens` is checked against the cap (a prompt longer than the context would be cut silently).
+
+**The Change 48 run** (planned 2026-10-07, not started) runs the same way: its two arms interleaved one case at a time,
+not in parallel.
