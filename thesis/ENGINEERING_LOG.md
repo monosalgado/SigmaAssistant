@@ -5895,3 +5895,12 @@ not in place yet). Preflight in `../SigmaAssistant-c45` (frozen code) **passed a
 828 tests, 2-case smoke CITABLE (`eval/results/c45_resume2.preflight.log`, local).
 **Resumed** with the interleaved loop fixed in the entry before this one (one tab; B to case 43, then A and B one case
 at a time to 60). The rows from here are the third segment (after the 10-08 restart).
+
+## 2026-10-08 — Change 45 run: the order changed to all of B, then all of A (user's choice)
+
+The interleaving fixed above costs ~1–2 min of start-up on the laptop per switch (~50 min over the 34 switches); the
+user chose **all of B (to case 60), then all of A (44–60)** over blocks of 6 or one case at a time, knowing the cost:
+if the Spark changes (the lab's context cap, a restart) or halts partway, mostly A's last cases are affected, and
+fewer pairs are complete until both arms finish. Still one request at a time. The loop is stopped right after a B row
+is written (no case lost) and replaced by the original two commands run one after the other (no `--limit`). Any
+server change during the rest of the run is recorded with the time and the rows it falls between.
