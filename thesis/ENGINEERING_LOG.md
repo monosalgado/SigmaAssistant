@@ -731,7 +731,7 @@ written without contradicting the artefact.
 
 ### What unblocked it
 The lab Spark was reachable again after the admin restored access. Its address had
-changed (`10.246.27.160` -> `10.246.14.123`); `uptime` reported 35 days, which
+changed (address redacted); `uptime` reported 35 days, which
 retrospectively **falsifies the earlier diagnosis that the host was powered off**.
 A firewall DROP and a dead host produce an identical signature from the client
 side, and I asserted the wrong one. Recorded here because the same ambiguity will
@@ -740,7 +740,7 @@ recur.
 Ollama is not exposed on the network; port 11434 is reachable only through an SSH
 tunnel, which does not persist between sessions and must be re-established:
 ```
-ssh -N -f -o ExitOnForwardFailure=yes -L 11434:localhost:11434 dsalgado@10.246.14.123
+ssh -N -f -o ExitOnForwardFailure=yes -L 11434:localhost:11434 <user>@<spark-address>
 ```
 
 ### Result
@@ -5661,8 +5661,8 @@ Spark).
 
 ## 2026-10-07 — Change 45 run: the Spark still unreachable in the morning
 
-09:44 EDT, user on the VPN: the VPN works (USF DNS answers through `utun4`, address 10.247.157.39 — the same as while
-the run worked yesterday), but the Spark (10.246.14.123) answers neither SSH nor ping, as since ~16:10 yesterday. From
+09:44 EDT, user on the VPN: the VPN works (USF DNS answers through `utun4`, the same VPN address as while
+the run worked yesterday), but the Spark answers neither SSH nor ping, as since ~16:10 yesterday. From
 outside, a stopped machine and a firewall that drops our traffic look the same (September: weeks lost to a DROP rule
 on a machine that was up) — the user is asking whoever runs the Spark. The run stays at 6 of 60 per arm; a watcher
 restarts it once the Spark answers. Nothing read.
@@ -5849,7 +5849,7 @@ run-to-run noise. **When:** after the Change 45 run frees the Spark, on the user
 each arm then failed on every LLM call ("Connection error"), and `run_resilient`'s tunnel rebuild (10 × 60 s) gave up
 on both. Rows so far: **A 43/60, B 36/60, 0 errors in any written row**; the case each was on was not written
 (A `32b5db62…`, B `e710a880…`), so a rerun resumes there. Checked 22:08: the USF VPN is up (utun4, route to the Spark
-through it) but the Spark (10.246.14.123) answers neither SSH nor ping — the same picture as 2026-10-06 evening, when
+through it) but the Spark answers neither SSH nor ping — the same picture as 2026-10-06 evening, when
 the Spark itself turned out to be down. Cause not known yet (the user will ask the lab). **On return:** preflight in
 `../SigmaAssistant-c45`; record whether the Spark was restarted or changed (Ollama version, model id `06c1097efce0`);
 then rerun the same two commands together. If it was restarted, the rows after it are a third segment, reported apart
@@ -5886,9 +5886,9 @@ not in parallel.
 
 ## 2026-10-08 — The Spark is back at a new address; the Change 45 run resumes (one case at a time)
 
-**The Spark (server state, recorded per P-B):** it came back at a **new IP, 10.246.15.39** (user), host name now
-`dgx-spark-idr-101` (was `spark-0454`). Same machine: its SSH host key (ed25519) has the same fingerprint as the old
-address's (`SHA256:t1LpNb…167DE`), checked before trusting it; the new address was added to `known_hosts` and `.env`'s
+**The Spark (server state, recorded per P-B):** it came back at a **new IP address** (user), and a new host name.
+Same machine: its SSH host key (ed25519) has the same fingerprint as the old
+address's, checked before trusting it; the new address was added to `known_hosts` and `.env`'s
 `SPARK_SSH_HOST` changed (the only place the code reads it). **Restarted 2026-10-08 09:19:51** (its clock); Ollama
 **0.34.1**, `qwen3-coder:30b` id **`06c1097efce0`** — both unchanged; context still **262,144** (the lab's ~128K cap is
 not in place yet). Preflight in `../SigmaAssistant-c45` (frozen code) **passed at ~10:50**: tunnel, model, context,
@@ -5909,7 +5909,7 @@ server change during the rest of the run is recorded with the time and the rows 
 
 **What happened:** with only arm B running (one request at a time), the last row was written 11:25:52 (B 45/60; A 43/60;
 0 errors); the next case (`bd3b3fff…`, the Commvault report) failed from its web-digest call on, and the tunnel could
-not be rebuilt. 11:57: the Spark (10.246.15.39) answers neither SSH nor ping; USF DNS answers (the VPN is up).
+not be rebuilt. 11:57: the Spark answers neither SSH nor ping; USF DNS answers (the VPN is up).
 
 **Pattern (operational, read from the run's own log `c45B_tuning60.log` and rows, ad-hoc query; not a thesis measure):**
 the call in flight at each of the three halts was a **web-digest call**: 10-06 (case `76bc1601`, 3CX), 10-07 20:00
@@ -5981,3 +5981,10 @@ longest text as the report, no page dropped as the case's own): over the 55 save
 13,911; none over 16,000** — against one request per search before, up to 94,661 tokens.
 **Still to do before any run:** the live check on the Spark (small prompts only: our count against Ollama's
 `prompt_tokens`), then the run plan.
+
+## 2026-10-10 — Lab machine details removed from this log (user's request)
+
+The repository is public; at the user's request the Spark's network addresses, host names, the SSH user name, the VPN
+address and the host-key fingerprint were removed from eight lines of earlier entries (2026-09-13, 2026-10-07,
+2026-10-08), replaced by neutral words ("a new IP address", `<user>@<spark-address>`). Only those details changed; no
+result, plan or decision in those entries was touched. They remain in the earlier commits of the repository's history.
