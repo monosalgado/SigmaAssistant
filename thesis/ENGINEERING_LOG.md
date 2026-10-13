@@ -6040,3 +6040,18 @@ in `WEB_TELEMETRY` (old runs' counts unchanged: their labels are never `webserve
 the 58 rows S3 scores (the tool's population for every measure): **the top pick follows the guess in 42 of the 47**
 cases whose guess has Sigma terms. (The design entry's 44 of 50 was an ad-hoc count over all 60 rows; this is the
 committed figure to cite.) Suite: 893 pass.
+
+**Built (each on its own branch off `70b010e`; nothing merged into `main`):**
+- **Change 50** — branch `c50-guess-not-shown`, `a8e7231`: `format_vector_summary(..., telemetry=False)` for the analysis
+  and rule-writer prompts; the taxonomy query drops the guess. Tests first (`test_change50_guess_not_shown.py`, 6:
+  4 seen to fail, 2 hold what must not change — the ATT&CK search query byte-identical, the guess still asked for).
+  No existing test changed; 899 pass.
+- **Change 51** — branch `c51-sigma-menu`, `abd2871`: §4 of `ATTACK_VECTOR_EXTRACTION` asks for a SigmaHQ log source
+  from the two tables (a category, or `product/service`, `/service` when the product is "(none)"), the examples'
+  six telemetry values translated as designed, `describe_telemetry` reads menu values, `primary_telemetry_on_table`
+  recorded. Tests first (`test_change51_sigma_menu.py`, 6, seen to fail; one pins `main`'s prompt outside §4 and the
+  telemetry fields by SHA-256). Two existing tests pinned the old vocabulary and were updated to the new one
+  (`test_attack_vector_prompt.py`: the web example is `webserver`; `test_telemetry_vocabulary.py`: the prompt lists
+  no labels of its own, the 13 old ones stay described for old rows); 899 pass. The step's instructions grow from
+  ~1,200 to ~2,900 tokens plus the tables (~1,700), well under the 30,000 ceiling.
+**Next:** the run plan (arms, comparison point, gate) in its own entry; no run until the lab clears the Spark.
