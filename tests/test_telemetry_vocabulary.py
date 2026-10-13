@@ -42,9 +42,10 @@ def _telemetry_line(label) -> str:
 
 
 def test_every_label_the_stage_may_choose_is_covered():
-    vocabulary = _vocabulary()
-    assert len(vocabulary) == 13
-    assert vocabulary == set(SIGMA_CATEGORY_FOR_TELEMETRY) | set(TELEMETRY_IN_WORDS)
+    # Change 51: the stage now writes its guess from SigmaHQ's menu (`test_change51_sigma_menu.py`), so the prompt
+    # lists no labels of its own; the 13 old labels stay described, for rows written before it.
+    assert _vocabulary() <= {"webserver", "process_creation", "file_event", "registry_event"}
+    assert len(set(SIGMA_CATEGORY_FOR_TELEMETRY) | set(TELEMETRY_IN_WORDS)) == 13
     assert not set(SIGMA_CATEGORY_FOR_TELEMETRY) & set(TELEMETRY_IN_WORDS)
 
 
