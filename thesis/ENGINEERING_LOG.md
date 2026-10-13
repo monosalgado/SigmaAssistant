@@ -5988,3 +5988,48 @@ The repository is public; at the user's request the Spark's network addresses, h
 address and the host-key fingerprint were removed from eight lines of earlier entries (2026-09-13, 2026-10-07,
 2026-10-08), replaced by neutral words ("a new IP address", `<user>@<spark-address>`). Only those details changed; no
 result, plan or decision in those entries was touched. They remain in the earlier commits of the repository's history.
+
+## 2026-10-12 — Changes 50 and 51: the attack-vector step's log-source guess (two alternatives) — design, fixed before the code
+
+**Why (post-hoc, latest full run `c42B_tuning60`; the counting tool is committed with this work before any run):**
+the attack-vector step names where the attack would be seen (`primary_telemetry`) from 13 labels of the pipeline's own
+(added 2026-05-14 in `f457855`, "where the initial exploit would be visible"; 7 map to a Sigma category). The
+analysis step's top log-source pick has the same category as that guess in **44 of the 50** cases where the guess is a
+Sigma category; the guess alone matches the human rule's category in 24 of 60, the analysis's top pick in 25 — the
+analysis mostly repeats it. Almost every wrong first rule is the analysis's pick (`diagnose_logsource.py`:
+followed_wrong 21, ranked_low 10 of 33; the rule writer follows the top pick in 53 of 58). The guess reaches three
+log-source decisions: the analysis prompt (the summary line "Primary telemetry: …", under "anchor everything to this"),
+the rule writer's prompt (the same summary) and the rule writer's field-taxonomy lookup query (`stage_generate.py`).
+**User (2026-10-12):** test both parked options, "not the current again" (what the two are compared against is
+decided in the run plan).
+
+**Change 50 — the guess stops steering** (branch `c50-guess-not-shown`, off `main`):
+- `AttackVectorStage.format_vector_summary(attack_vector, telemetry=True)`; the analysis prompt and the rule writer's
+  prompt get the summary **without** the "Primary telemetry" line; the rule writer's taxonomy query drops the guess.
+- Unchanged on purpose: the attack-vector prompt and answer (the guess is still made and recorded, and shown to the
+  analyst in the web app as "Seen in"), the analysis's ATT&CK search query (built with the line, byte-identical to
+  today — it is not a log-source decision), every other line of the summary, the "anchor" heading.
+- The analysis step, which has SigmaHQ's full menu, becomes the only place the log source is chosen.
+
+**Change 51 — the first step picks from SigmaHQ's menu** (branch `c51-sigma-menu`, off `main`):
+- `ATTACK_VECTOR_EXTRACTION` §4: `primary_telemetry` and `secondary_telemetry` are written as SigmaHQ log sources
+  from the same two tables the analysis gets (`format_category_table`, `format_service_table`) — a category name, or
+  `product/service` for the second table — instead of the 13 labels. The sentence's guidance is kept, its example
+  names translated (`webserver_access_log` → `webserver`; host: `process_creation`, `file_event`, `registry_event`).
+- The three worked examples change only in these two fields: A `process_creation`, [`registry_event`, `file_event`]
+  (`email_gateway` has no SigmaHQ log source); B `webserver`, [`process_creation`, `zeek/http`] (for `network_ids`);
+  C `process_creation`, [`file_event`, `linux/auditd`] (for `auth_log`).
+- `describe_telemetry` shows a menu value in Sigma's terms (a category; or product and service); a value not on the
+  menu is shown as such. Code records whether the guess is on the menu (`primary_telemetry_on_table`); it does not
+  enforce it (the model decides, code checks and records).
+- Everything downstream unchanged: the guess still reaches the analysis and the rule writer as today, now in Sigma's
+  vocabulary.
+
+**Measures, added to `eval/diagnose_logsource.py` first (tests first, on `main`):** *follows the guess* — the
+analysis's top pick has the guess's category (or, for a `product/service` guess, its product and service); the web
+counts also read Sigma's web names (`webserver`, `proxy`), which Change 51's guesses use. Both are post-hoc
+(defined after looking at `c42B`, named here before any run of 50 or 51).
+
+**Then:** each change on its own branch, tests first, full suite; nothing merged into `main` before a run. The run
+plan (arms, comparison point, gate) in its own entry before any run; **no run until the lab clears the Spark** (the
+user's word).
