@@ -229,3 +229,51 @@ def test_first_rule_follows_the_top_suggestion():
     assert first_rule_follows_top(_scored_row(pc, gold, top=("process_creation", "linux", None))) is False
     assert first_rule_follows_top(_scored_row(("Process_Creation", "Windows", None), gold, top=pc)) is True
     assert first_rule_follows_top(_scored_row(pc, gold)) is None
+
+
+# --- Changes 50/51 (2026-10-12, post-hoc, named before any run of either): does the analysis follow the guess? ---
+
+from eval.diagnose_logsource import guess_in_sigma_terms, top_follows_guess  # noqa: E402
+
+
+def test_the_guess_in_sigmas_terms():
+    # Today's labels: the 7 with a Sigma category map to it; the 6 without one have none.
+    assert guess_in_sigma_terms("webserver_access_log") == {"category": "webserver"}
+    assert guess_in_sigma_terms("process_creation") == {"category": "process_creation"}
+    assert guess_in_sigma_terms("network_ids") is None and guess_in_sigma_terms("other") is None
+    # Change 51's guesses are written from SigmaHQ's menu: a category, or product/service.
+    assert guess_in_sigma_terms("registry_set") == {"category": "registry_set"}
+    assert guess_in_sigma_terms("Windows/Security") == {"product": "windows", "service": "security"}
+    assert guess_in_sigma_terms(None) is None and guess_in_sigma_terms("") is None
+
+
+def _follow_row(telemetry, top):
+    return {"pipeline": {"attack_vector": {"primary_telemetry": telemetry},
+                         "logsource_suggestions": [top] if top else []}}
+
+
+def test_the_top_pick_follows_the_guess():
+    assert top_follows_guess(_follow_row("webserver_access_log", {"category": "webserver"})) is True
+    assert top_follows_guess(_follow_row("process_creation", {"category": "file_event",
+                                                              "product": "windows"})) is False
+    assert top_follows_guess(_follow_row("windows/security", {"category": None, "product": "windows",
+                                                              "service": "security"})) is True
+    assert top_follows_guess(_follow_row("windows/security", {"category": "process_creation",
+                                                              "product": "windows"})) is False
+    # Not applicable: no guess in Sigma's terms, or no pick.
+    assert top_follows_guess(_follow_row("waf", {"category": "webserver"})) is None
+    assert top_follows_guess(_follow_row("process_creation", None)) is None
+
+
+def test_sigmas_web_names_count_as_web_telemetry():
+    # Change 51's guesses use Sigma's names; today's labels never were `webserver` or `proxy`.
+    assert is_web_telemetry("webserver") and is_web_telemetry("proxy")
+    assert is_web_telemetry("webserver_access_log") and not is_web_telemetry("process_creation")
+
+
+def test_the_summary_counts_the_follows():
+    rows = [_row("webserver", "webserver", ["webserver"], telemetry="webserver_access_log"),
+            _row("process_creation", "file_event", ["file_event"], telemetry="process_creation"),
+            _row("process_creation", "process_creation", ["process_creation"], telemetry="waf")]
+    s = summarise([diagnose_case(r) for r in rows])
+    assert s["top_follows_guess"] == 1 and s["guess_in_sigma_terms"] == 2

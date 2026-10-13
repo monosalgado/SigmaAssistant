@@ -6033,3 +6033,10 @@ counts also read Sigma's web names (`webserver`, `proxy`), which Change 51's gue
 **Then:** each change on its own branch, tests first, full suite; nothing merged into `main` before a run. The run
 plan (arms, comparison point, gate) in its own entry before any run; **no run until the lab clears the Spark** (the
 user's word).
+
+**Measure committed (Changes 50/51, `eval/diagnose_logsource.py`; tests first, 4 new, seen to fail):**
+`guess_in_sigma_terms`, `top_follows_guess` ("analysis top pick follows the attack-vector guess") and Sigma's web names
+in `WEB_TELEMETRY` (old runs' counts unchanged: their labels are never `webserver`/`proxy`). On `c42B_tuning60`, over
+the 58 rows S3 scores (the tool's population for every measure): **the top pick follows the guess in 42 of the 47**
+cases whose guess has Sigma terms. (The design entry's 44 of 50 was an ad-hoc count over all 60 rows; this is the
+committed figure to cite.) Suite: 893 pass.

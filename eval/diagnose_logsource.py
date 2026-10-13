@@ -57,13 +57,16 @@ import yaml
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
+from backend.pipeline.stage_attack_vector import (  # noqa: E402
+    SIGMA_CATEGORY_FOR_TELEMETRY, TELEMETRY_IN_WORDS)
 from eval.scorers import _norm, score_logsource, strip_code_fences  # noqa: E402
 
 BUCKETS = ("right_suggested", "right_rescued", "overridden",
            "ranked_low", "followed_wrong", "wrong_elsewhere")
 OFFERED = 3  # suggestions the generation prompt shows
 WEB_CATEGORIES = {"webserver", "proxy"}
-WEB_TELEMETRY = {"webserver_access_log", "web_proxy", "waf"}
+# Today's labels, and (Changes 50/51, post-hoc) Sigma's own web names, which Change 51's guesses use.
+WEB_TELEMETRY = {"webserver_access_log", "web_proxy", "waf", "webserver", "proxy"}
 
 
 def bucket(gold: Optional[str], rule: Optional[str], suggestions: list) -> str:
@@ -88,6 +91,35 @@ def is_web_category(category: Optional[str]) -> bool:
 
 def is_web_telemetry(telemetry: Optional[str]) -> bool:
     return _norm(telemetry) in WEB_TELEMETRY
+
+
+def guess_in_sigma_terms(telemetry: Optional[str]) -> Optional[dict]:
+    """The attack-vector step's log-source guess in Sigma's terms (Changes 50/51, post-hoc): one of today's labels
+    that has a Sigma category becomes it, one that has none gives None; a guess written from SigmaHQ's menu (Change
+    51) is a category, or `product/service`."""
+    label = _norm(telemetry)
+    if not label or label in TELEMETRY_IN_WORDS:
+        return None
+    if label in SIGMA_CATEGORY_FOR_TELEMETRY:
+        return {"category": SIGMA_CATEGORY_FOR_TELEMETRY[label]}
+    if "/" in label:
+        product, service = (part.strip() or None for part in label.split("/", 1))
+        return {"product": product, "service": service}
+    return {"category": label}
+
+
+def top_follows_guess(row: dict) -> Optional[bool]:
+    """Does the analysis's top pick follow the attack-vector step's guess? The guess's category, or - for a
+    `product/service` guess - its product and service. None when the guess has no Sigma terms or there is no pick."""
+    pipeline = row.get("pipeline") or {}
+    guess = guess_in_sigma_terms((pipeline.get("attack_vector") or {}).get("primary_telemetry"))
+    suggestions = pipeline.get("logsource_suggestions") or []
+    if guess is None or not suggestions or not isinstance(suggestions[0], dict):
+        return None
+    top = suggestions[0]
+    if "category" in guess:
+        return _norm(top.get("category")) == guess["category"]
+    return (_norm(top.get("product")), _norm(top.get("service"))) == (guess["product"], guess["service"])
 
 
 def gold_in_any_rule(gold: Optional[str], rules_yaml: list) -> bool:
@@ -219,6 +251,7 @@ def diagnose_case(row: dict) -> Optional[dict]:
         # post-hoc
         "rule_is_telemetry_label": _norm(rule) is not None and _norm(rule) == _norm(telemetry),
         "top_exact": top_suggestion_exact(row),
+        "top_follows_guess": top_follows_guess(row),
     }
 
 
@@ -235,6 +268,9 @@ def summarise(diagnoses: list, known_categories: Optional[set] = None) -> dict:
                                         sum(1 for d in wrong if d["rule"] is not None
                                             and d["rule"] not in known_categories)),
         "top_exact": sum(1 for d in ds if d.get("top_exact")),
+        # Changes 50/51 (post-hoc, named before any run of either)
+        "guess_in_sigma_terms": sum(1 for d in ds if d.get("top_follows_guess") is not None),
+        "top_follows_guess": sum(1 for d in ds if d.get("top_follows_guess")),
     }
     return {
         **post_hoc,
@@ -300,6 +336,8 @@ def main(argv: list) -> int:
           f"  (top suggestion's service: {dict(Counter(_top_service(r) for r in rows if diagnose_case(r)))})")
     cp = sum(1 for r in rows if diagnose_case(r) and top_category_and_product_right(r))
     print(f"  top suggestion's category AND product right       : {cp} / {n}")
+    print(f"  analysis top pick follows the attack-vector guess  : {s['top_follows_guess']} / "
+          f"{s['guess_in_sigma_terms']}  (cases whose guess has Sigma terms; Changes 50/51)")
     sv = sum(1 for r in rows if diagnose_case(r) and top_service_right(r))
     print(f"\nChange 25 measure: top suggestion's service = gold's  : {sv} / {n}")
     fr = sum(1 for r in rows if diagnose_case(r) and first_rule_follows_top(r))
