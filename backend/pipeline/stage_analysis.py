@@ -62,7 +62,8 @@ class AnalysisStage(PipelineStage):
 
         # 2. Pull attack-vector anchor context (may be empty on error/skip)
         attack_vector = context.get("attack_vector", {})
-        attack_vector_summary = AttackVectorStage.format_vector_summary(attack_vector)
+        # Change 50: without the attack-vector step's log-source guess - this stage chooses the log source.
+        attack_vector_summary = AttackVectorStage.format_vector_summary(attack_vector, telemetry=False)
         incidental_blacklist = AttackVectorStage.format_incidental_blacklist(attack_vector)
 
         # 3. Single LLM call for combined analysis (ECONOMY → Spark)

@@ -155,9 +155,12 @@ class AttackVectorStage(PipelineStage):
     # --- Helpers consumed by downstream stages ---
 
     @staticmethod
-    def format_vector_summary(attack_vector: dict) -> str:
+    def format_vector_summary(attack_vector: dict, telemetry: bool = True) -> str:
         """Compact human-readable anchor line for downstream prompts.
-        Returns empty string if the stage produced nothing useful."""
+        Returns empty string if the stage produced nothing useful.
+
+        `telemetry=False` leaves out the log-source guess (Change 50): the prompts that choose the log source get
+        the summary without it, so the analysis step - which has SigmaHQ's menu - is the only place it is chosen."""
         if not attack_vector or not attack_vector.get("initial_access_vector"):
             return "No primary attack vector identified. Analyze the text conservatively."
 
@@ -169,7 +172,10 @@ class AttackVectorStage(PipelineStage):
             f"- Entry point: {attack_vector.get('entry_point') or 'n/a'}",
             f"- Attacker-controlled input: {attack_vector.get('attacker_controlled_input') or 'n/a'}",
             f"- Preconditions: {attack_vector.get('preconditions', 'unknown')}",
-            f"- Primary telemetry: {describe_telemetry(attack_vector.get('primary_telemetry'))}",
+        ]
+        if telemetry:
+            parts.append(f"- Primary telemetry: {describe_telemetry(attack_vector.get('primary_telemetry'))}")
+        parts += [
             f"- Kill-chain stages evidenced: {', '.join(attack_vector.get('kill_chain_stages', [])) or 'n/a'}",
             f"- Extractor confidence: {attack_vector.get('confidence', 0.0):.2f}",
         ]

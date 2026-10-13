@@ -129,7 +129,8 @@ class GenerateStage(PipelineStage):
 
         # Attack vector (may be empty)
         attack_vector = context.get("attack_vector", {})
-        attack_vector_summary = AttackVectorStage.format_vector_summary(attack_vector)
+        # Change 50: without the attack-vector step's log-source guess - the analysis step chose the log source.
+        attack_vector_summary = AttackVectorStage.format_vector_summary(attack_vector, telemetry=False)
         payload_signatures_text = AttackVectorStage.format_payload_signatures(attack_vector)
         incidental_blacklist = AttackVectorStage.format_incidental_blacklist(attack_vector)
 
@@ -157,12 +158,10 @@ class GenerateStage(PipelineStage):
             context["rag_sysmon"] = []
 
         # --- RAG: Sigma logsource taxonomy (NEW — replaces LOGSOURCE_FIELDS dict) ---
-        # Query is constructed from whatever the pipeline has inferred about
-        # the log source: primary source string, first few suggestions, and the
-        # attack-vector stage's primary telemetry hint. Fully generic.
+        # Query is constructed from the analysis stage's log-source choice: its primary source string and first few
+        # suggestions. Fully generic. (Change 50: no longer the attack-vector stage's guess.)
         taxonomy_query_parts = [
             logsource_info.get("primary_source") or "",
-            attack_vector.get("primary_telemetry") or "",
         ]
         for sug in (logsource_info.get("suggestions") or [])[:3]:
             taxonomy_query_parts.append(
