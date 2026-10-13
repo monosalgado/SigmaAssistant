@@ -6058,3 +6058,17 @@ committed figure to cite.) Suite: 893 pass.
 **Correction (same day):** the sizes above were not measured. Measured (`backend.token_count`): `main`'s
 attack-vector instructions are **2,849 tokens**; Change 51's are 2,871 plus the two tables (1,681), **~4,550** — still
 well under the 30,000 ceiling.
+
+## 2026-10-13 — The lab cleared the Spark; its state recorded (no request sent)
+
+User: the lab gave the clear to use the Spark again ("Don't start nothing yet"). Checked without any model request:
+the VPN works; the Spark answers at the same address with the same host key; tunnel rebuilt (HTTP 200). **Server
+state (P-B):** restarted **2026-10-13 15:51**; Ollama **0.34.1**; `qwen3-coder:30b` id **`06c1097efce0`** (both
+unchanged); **the lab changed Ollama's settings**: `OLLAMA_CONTEXT_LENGTH=131072` (was 262,144 — the cap they
+proposed), `OLLAMA_NUM_PARALLEL=2`, `OLLAMA_MAX_LOADED_MODELS=1` (only one model in memory: another user's model
+would unload ours). At 19:34: no model loaded, no connection to Ollama, the GPU idle.
+**For the runs:** our largest possible request (30,000 in + 16,384 out ≈ 46,400 tokens, Change 49) fits 131,072;
+the preflight's context check (≥ 32,768) passes on this value. Runs from now on are a new server-state segment
+(another context size; restarts since the last runs) — one more reason the comparison point for Changes 50/51 is a
+same-day run, not an old one. Still one request at a time. Not done yet, waiting for the user: the preflight (its
+smoke run sends requests) and Change 49's live check with small prompts.
