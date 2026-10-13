@@ -6055,3 +6055,6 @@ committed figure to cite.) Suite: 893 pass.
   no labels of its own, the 13 old ones stay described for old rows); 899 pass. The step's instructions grow from
   ~1,200 to ~2,900 tokens plus the tables (~1,700), well under the 30,000 ceiling.
 **Next:** the run plan (arms, comparison point, gate) in its own entry; no run until the lab clears the Spark.
+**Correction (same day):** the sizes above were not measured. Measured (`backend.token_count`): `main`'s
+attack-vector instructions are **2,849 tokens**; Change 51's are 2,871 plus the two tables (1,681), **~4,550** — still
+well under the 30,000 ceiling.
