@@ -6072,3 +6072,7 @@ the preflight's context check (≥ 32,768) passes on this value. Runs from now o
 (another context size; restarts since the last runs) — one more reason the comparison point for Changes 50/51 is a
 same-day run, not an old one. Still one request at a time. Not done yet, waiting for the user: the preflight (its
 smoke run sends requests) and Change 49's live check with small prompts.
+**Preflight passed (user: "Lets run the pre-run check"; one request at a time; nothing else running) on `main`
+`a7b64ae`:** tunnel; model (a 13-token request); context **131,072** (≥ 32,768); 893 tests; 2-case smoke CITABLE —
+7 requests per case, the largest prompt 12,382 tokens, none refused or failed, 140–147 s per case. The Spark answered
+throughout and after (HTTP 200). No run started.
