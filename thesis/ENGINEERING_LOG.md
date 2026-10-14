@@ -6097,3 +6097,19 @@ tests (written with the script, not seen failing first). Suite: 897 pass. Nothin
 **PASS:** the counts agree exactly apart from the chat template's fixed tokens — **13 with the JSON system message,
 8 without** — well inside the 64-token allowance. So the ceiling and the digest pieces mean what they say: a request
 the laptop counts at ≤ 30,000 is ≤ 30,000 − 51 on the Spark.
+
+## 2026-10-13 — Change 48 run: what changed since its plan (2026-10-07), fixed before it starts
+
+User: run order 48 → 50/51 → 45 (my recommendation: 50/51 are built on today's `main`, which includes Change 48; this
+is an ordinary run with no web requests, first after the lab's clearance); "all A then all B, start when checks pass".
+**Changes to the plan of 2026-10-07 (its arms, cases, gate and measures stand):**
+1. **Change 49's ceiling and counting added to both arms**, identically (the code and tests of `871804d`, applied to
+   each worktree; A `6895c64` on `c48-before`, B `f6ec6eb` on the new branch `c48-after`): the arms were frozen before
+   Change 49, so nothing guaranteed the 30,000-token limit told to the lab. Without web search the change is inert
+   unless a request would exceed 30,000 tokens (never seen: largest 29,347); a refusal would be recorded. Checked: the
+   arms' `backend/` still differs by exactly Change 48's patch (identical to `95eb07d`'s lines); each arm uses the
+   tokenizer file (linked into `data/tokenizer`); tests from each arm's folder — **A 885, B 889** (865/869 + 20).
+2. **One request at a time:** all of A, then all of B (B starts only if A ends cleanly), not the two together.
+3. **Server state:** the Spark restarted 2026-10-13 15:51; context now 131,072, `NUM_PARALLEL=2`,
+   `MAX_LOADED_MODELS=1` (entry above) — the same for both arms.
+**Preflights passed** (one after the other): A and B — tunnel, model, context 131,072, tests, 2-case smoke CITABLE.
