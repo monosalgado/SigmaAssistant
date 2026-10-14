@@ -6076,3 +6076,24 @@ smoke run sends requests) and Change 49's live check with small prompts.
 `a7b64ae`:** tunnel; model (a 13-token request); context **131,072** (≥ 32,768); 893 tests; 2-case smoke CITABLE —
 7 requests per case, the largest prompt 12,382 tokens, none refused or failed, 140–147 s per case. The Spark answered
 throughout and after (HTTP 200). No run started.
+
+## 2026-10-13 — Change 49's live check: the laptop counts requests exactly as the Spark does (+8/+13 template tokens)
+
+User: "run the small-prompt check". **Code:** `llm_client.request_messages` / `request_token_count` (the ceiling's own
+count, now shared; `generate` uses them — behaviour unchanged; a test first, seen to fail); `eval/check_token_count.py`
+sends 5 small requests through the pipeline's client, **one at a time**, each asking for a 6-token answer, and
+compares our count (without the 64-token allowance) with Ollama's `prompt_tokens`; its verdict function has 3 offline
+tests (written with the script, not seen failing first). Suite: 897 pass. Nothing else was sending.
+**Result (36 s; the Spark answered throughout and after):**
+
+| Request | Ours | Ollama | Ollama − ours |
+|---|---|---|---|
+| short sentence | 48 | 61 | 13 |
+| report slice (6,000 chars) | 1,621 | 1,634 | 13 |
+| dense web page slice (6,000 chars) | 1,865 | 1,878 | 13 |
+| report slice, no system message | 1,598 | 1,606 | 8 |
+| dense page, no system message | 1,842 | 1,850 | 8 |
+
+**PASS:** the counts agree exactly apart from the chat template's fixed tokens — **13 with the JSON system message,
+8 without** — well inside the 64-token allowance. So the ceiling and the digest pieces mean what they say: a request
+the laptop counts at ≤ 30,000 is ≤ 30,000 − 51 on the Spark.

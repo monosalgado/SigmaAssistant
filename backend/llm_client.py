@@ -53,6 +53,21 @@ class PromptTooLarge(Exception):
     """The request was over PROMPT_TOKEN_CEILING and was not sent."""
 
 
+JSON_SYSTEM_MESSAGE = ("You must respond with valid JSON only. Do not include any text, explanation, or markdown "
+                       "outside the JSON object.")
+
+
+def request_messages(prompt: str, json_mode: bool = True) -> list:
+    """The chat messages a request to the local model carries."""
+    messages = [{"role": "system", "content": JSON_SYSTEM_MESSAGE}] if json_mode else []
+    return messages + [{"role": "user", "content": prompt}]
+
+
+def request_token_count(prompt: str, json_mode: bool = True) -> int:
+    """A request's size as the ceiling counts it: every message, plus the template allowance (Change 49)."""
+    return sum(count_tokens(m["content"]) for m in request_messages(prompt, json_mode)) + TEMPLATE_ALLOWANCE_TOKENS
+
+
 class OutputLimitReached(Exception):
     """Every attempt stopped at OUTPUT_TOKEN_LIMIT: the model did not finish. `partial` is the last attempt's
     answer, so a stage can keep what was complete (Change 45: the web digest)."""
@@ -349,16 +364,10 @@ class OllamaLLMClient(LLMClient):
         fast: bool = False,
         economy: bool = False,
     ) -> str:
-        messages = []
-        if json_mode:
-            messages.append({
-                "role": "system",
-                "content": "You must respond with valid JSON only. Do not include any text, explanation, or markdown outside the JSON object.",
-            })
-        messages.append({"role": "user", "content": prompt})
+        messages = request_messages(prompt, json_mode)
 
         # Change 49: counted before it is sent; over the ceiling it is refused, recorded and never retried.
-        tokens = sum(count_tokens(m["content"]) for m in messages) + TEMPLATE_ALLOWANCE_TOKENS
+        tokens = request_token_count(prompt, json_mode)
         if tokens > PROMPT_TOKEN_CEILING:
             error = (f"prompt of {tokens} tokens is over the {PROMPT_TOKEN_CEILING}-token ceiling; not sent "
                      "(Change 49)")

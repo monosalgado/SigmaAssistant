@@ -106,3 +106,10 @@ def test_the_harness_does_not_stop_on_a_refused_call():
     failed = {"ok": False, "stage": "analysis", "error": "APIConnectionError: Connection error."}
     assert unmeasured_reason({"llm_calls": [{"ok": True}, refused]}) is None
     assert "1 of 3 LLM calls failed" in unmeasured_reason({"llm_calls": [{"ok": True}, refused, failed]})
+
+
+def test_the_request_count_is_the_one_the_ceiling_uses(one_token_per_char):
+    # Change 49's live check compares this count with Ollama's `prompt_tokens`, so it must be the ceiling's own.
+    from backend.llm_client import request_token_count
+    assert request_token_count("x" * 100) == 100 + len(JSON_SYSTEM) + llm_client.TEMPLATE_ALLOWANCE_TOKENS
+    assert request_token_count("x" * 100, json_mode=False) == 100 + llm_client.TEMPLATE_ALLOWANCE_TOKENS
