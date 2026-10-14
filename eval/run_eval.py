@@ -496,7 +496,8 @@ def unmeasured_reason(row: dict):
     succeeding is not, because that is a finding about the pipeline itself.
     """
     calls = row.get("llm_calls") or []
-    failed = [c for c in calls if not c.get("ok", True)]
+    # Change 49: a request refused at the token ceiling was never sent - a finding about the pipeline, not an outage.
+    failed = [c for c in calls if not c.get("ok", True) and not c.get("refused")]
     if not failed:
         return None
     stages = sorted({c.get("stage") or "unknown" for c in failed})

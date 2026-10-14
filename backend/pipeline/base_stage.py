@@ -5,6 +5,7 @@ from typing import Any, Callable, Optional
 import json
 import time
 
+from backend.llm_client import PromptTooLarge
 from backend.telemetry import stage_scope
 
 
@@ -102,6 +103,8 @@ class PipelineStage(ABC):
                         fast=fast,
                         economy=economy,
                     )
+            except PromptTooLarge:
+                raise  # Change 49: not sent; resending would be refused again (its token count can contain "429")
             except Exception as e:
                 err_str = str(e)
                 is_retryable = (
