@@ -6113,3 +6113,13 @@ is an ordinary run with no web requests, first after the lab's clearance); "all 
 3. **Server state:** the Spark restarted 2026-10-13 15:51; context now 131,072, `NUM_PARALLEL=2`,
    `MAX_LOADED_MODELS=1` (entry above) — the same for both arms.
 **Preflights passed** (one after the other): A and B — tunnel, model, context 131,072, tests, 2-case smoke CITABLE.
+
+## 2026-10-15 — Change 48 run: interrupted by the user's home network (10-13 ~22:10); resumed
+
+The user's home Wi-Fi went down on 2026-10-13; arm A stopped at case 20/60 (`24c4d154…`, its row not written; a review
+call got "Connection error") after **19 rows, 0 errors**; `run_resilient` gave up; arm B had not started (by design).
+2026-10-15 11:30: VPN up, the Spark reachable with the same host key, tunnel rebuilt (HTTP 200). **Server state
+unchanged since the run started** (restarted 10-13 15:51; Ollama 0.34.1; model `06c1097efce0`; context 131,072,
+`NUM_PARALLEL=2`, `MAX_LOADED_MODELS=1`), so no new segment. Seen: the model loaded and used minutes earlier by
+another user (we had sent nothing since 10-13); we keep sending one request at a time. Resumed with the same command
+(A from case 20, then all of B).
