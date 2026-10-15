@@ -697,6 +697,23 @@ about 1 in 10; a CVE search reaches neither. Whether the rules improve: the two-
 
 ---
 
+## 6.5g Honest labels for the attack patterns (Change 48) `[MEASURED]` 2026-10-15, tuning set
+
+**What changed:** the attack-vector stage's patterns were presented to the rule writer as strings "a real attacker MUST
+produce", 1–8 required, and the coverage retry ordered each missed one to "MUST literally" appear; 15–18% were not in
+the report and the rule writer used them as readily as supported ones (post-hoc, six runs). Change 48 calls them
+candidates, allows 0–8, asks the writer to use those the report supports, and lets the retry leave one out.
+**Run** (one per arm, same server state, gate fixed before the run — mechanism + no harm): patterns not in the report
+that a rule used **24 → 10**; none of S3u, S5u, S5vu, S1, S4 lower with a CI entirely below 0 → **kept**.
+**The cost to watch:** the rule writer used fewer candidates of every kind (supported ones 77% → 57%), and S5 (field
+names) fell 0.334 → 0.282 (−0.052 [−0.101, −0.005]; S5u −0.044, CI across 0) — within the size two identical runs have
+shown (+0.086), so not claimed as an effect. No pattern was marked `inferred_from_class` in either arm: the model
+leaves an unsupported pattern out rather than labelling it.
+**Claim:** fewer invented strings reach the rules, at no measured cost to the gated scores; a possible small cost in
+field coverage is disclosed. (log 2026-10-15)
+
+---
+
 ## 6.6 Smaller observations worth a sentence each
 
 - `[MEASURED]` Only **26.6%** (54/203) of the "quotes" the attack-vector stage gives as

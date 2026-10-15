@@ -6129,3 +6129,26 @@ mid-case 35 (after its generation, before review): the run log ends with no erro
 the terminal tab came back as a fresh shell — the desktop app's session restarted and closed the terminal panel's
 tabs with it. The Spark was untouched (no restart, same settings). Case 35 was not written; B resumed from it with the
 same command (~15:10).
+
+## 2026-10-15 — Change 48 run: result — the gate passes (mechanism and no harm); a lower detection score to watch
+
+**Runs:** `c48A_tuning60` (A, `6895c64`) and `c48B_tuning60` (B, `f6ec6eb`): 60/60 each, 0 errors, 0 refused, both
+**CITABLE** (`summarise.py`); one request at a time, A then B, one server state (two interruptions, logged above).
+**Gate 1 — mechanism** (`signature_grounding.py`): payload signatures **not in the report that a rule uses: A 24 → B
+10** — fewer in B: **passes**.
+**Gate 2 — no harm** (`compare_arms.py`, paired, bootstrap 10,000, seed 0; B − A): S3u −0.017 [−0.067, +0.033]; S5u
+−0.044 [−0.093, +0.004]; S5vu +0.010 [−0.029, +0.045]; S1 +0.033 [−0.033, +0.100]; S4 −0.035 [−0.130, +0.059] — **no
+CI entirely below 0: passes.** **Per the plan, Change 48 is kept** (it is already in `main`).
+**Reported, not gating:**
+- Signatures (A → B): 232 → 213; not in the report 38 (16%) → 24 (11%); in the report 165 → 169; in parts 29 → 20;
+  **`inferred_from_class` 0 → 0** (the expectation "more marked inferred" did not happen: the model drops unsupported
+  patterns rather than labelling them). Used by a rule: in the report 127/165 (77%) → 97/169 (57%); in parts 12 → 5;
+  not in the report 24/38 (63%) → 10/24 (42%) — **the rule writer uses fewer candidates of every kind**, not only the
+  unsupported ones.
+- **S5 (field names, rules that parse) 0.334 → 0.282, −0.052 [−0.101, −0.005] — the only CI entirely below 0**, with
+  S5u, its gating twin, at −0.044 [−0.093, +0.004]. Plausibly the same thing as the line above: fewer patterns used,
+  fewer of the human rule's fields. Context: two runs of identical code have moved S5 by +0.086 (CH7 50), so a
+  single-run change of this size is within run-to-run noise; it is a signal to watch, not a measured effect.
+- P 0.417 → 0.367 (−0.050 [−0.117, +0.017]); Pany 0.517 → 0.517; S4p, Tgold, Tgoldp lower, all CIs across 0; rules
+  per case 4.18 → 4.00; rows with a second generation 36 → 45; seconds 186 → 169; tokens +4,389 [−238, +8,969].
+**Next:** Changes 50/51 (built on `main`, which has Change 48) — their runs will show S5 with Change 48 again.
