@@ -6123,3 +6123,9 @@ unchanged since the run started** (restarted 10-13 15:51; Ollama 0.34.1; model `
 `NUM_PARALLEL=2`, `MAX_LOADED_MODELS=1`), so no new segment. Seen: the model loaded and used minutes earlier by
 another user (we had sent nothing since 10-13); we keep sending one request at a time. Resumed with the same command
 (A from case 20, then all of B).
+**2026-10-15 — second interruption (not the network):** arm A finished at 13:15 (**60/60, 0 errors, 0 refused**);
+arm B started on its own and saved 34 rows (0 errors) by 14:53. At ~14:56 B's process was stopped from outside,
+mid-case 35 (after its generation, before review): the run log ends with no error and no reconnection attempt, and
+the terminal tab came back as a fresh shell — the desktop app's session restarted and closed the terminal panel's
+tabs with it. The Spark was untouched (no restart, same settings). Case 35 was not written; B resumed from it with the
+same command (~15:10).
