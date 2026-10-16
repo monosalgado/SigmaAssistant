@@ -88,3 +88,17 @@ def test_the_run_records_the_thinking_steps(monkeypatch):
     assert run_config(agent, args, head_revision=lambda: "abc")["thinking_stages"] == ["analysis", "attack_vector"]
     monkeypatch.delenv("OLLAMA_THINK_STAGES")
     assert run_config(agent, args, head_revision=lambda: "abc")["thinking_stages"] is None
+
+
+def test_a_thinking_step_gets_the_larger_answer_limit(monkeypatch):
+    # User 2026-10-16: 32,768 for the thinking steps only - the thinking counts against the limit (longest seen 10,395).
+    monkeypatch.setenv("OLLAMA_THINK_STAGES", "analysis")
+    client = _client()
+    assert _sent(client, "analysis")["max_tokens"] == llm_client.THINKING_OUTPUT_TOKEN_LIMIT == 32_768
+    assert _sent(client, "review")["max_tokens"] == llm_client.OUTPUT_TOKEN_LIMIT == 16_384
+    monkeypatch.delenv("OLLAMA_THINK_STAGES")
+    assert _sent(client, "analysis")["max_tokens"] == 16_384          # unset: unchanged
+
+
+def test_the_largest_possible_request_still_fits_the_servers_context():
+    assert llm_client.PROMPT_TOKEN_CEILING + llm_client.THINKING_OUTPUT_TOKEN_LIMIT < 131_072

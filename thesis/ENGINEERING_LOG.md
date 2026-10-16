@@ -6325,3 +6325,10 @@ slower; with thinking on in the three steps, each of their answers carries 4–8
 reaches 10,395 of the 16,384 limit, and a report takes ~4.7× as long (estimate for 60 reports: ~3–3.5 h off, ~9–10 h
 on). Risk for a thinking run: answers over 16,384 would be cut (retried twice, then lost), penalising the thinking
 arm — so a thinking run needs a higher limit for the thinking steps. The Spark answered throughout.
+**User (after part 2):** a full run with **thinking on only** (no separate thinking-off run); **answer limit 32,768 for
+the thinking steps only** — built: `THINKING_OUTPUT_TOKEN_LIMIT = 32768` used when a call's stage may think, 16,384
+otherwise and whenever `OLLAMA_THINK_STAGES` is unset (tests first, 2 new, seen to fail; 919 pass); 30,000 + 32,768 <
+131,072. The user asked whether rule writing needs thinking ("the rule writing is not an issue on the qwen3"); my
+advice: leave it off — the errors arise before it (the guess, the log-source pick, the techniques; the writer follows
+the pick 53 of 58 and its rules are valid 58–60 of 60), and in part 2 it took 559 of the 1,179 seconds — pending the
+user's word.

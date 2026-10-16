@@ -33,6 +33,9 @@ from backend.token_count import count_tokens
 # answer that finished in the reference run (longest: 12,374 tokens), so it binds only
 # on answers that would not have finished anyway.
 OUTPUT_TOKEN_LIMIT = 16384
+# A step allowed to think (OLLAMA_THINK_STAGES) gets a larger limit: the thinking counts against it (qwen3.6 probe,
+# 2026-10-16: up to 8,236 thinking tokens, the longest answer 10,395). User: 32,768 for the thinking steps only.
+THINKING_OUTPUT_TOKEN_LIMIT = 32768
 # A cut answer is retried as often as the OpenAI client retries a timeout (2).
 OUTPUT_LIMIT_RETRIES = 2
 # A cut answer's last characters are kept in its call record (#7, 2026-10-05): what it was writing when it ran out.
@@ -392,6 +395,7 @@ class OllamaLLMClient(LLMClient):
         stages = thinking_stages()
         thinking_allowed = None if stages is None else current_stage() in stages
         extra = {} if thinking_allowed in (None, True) else {"extra_body": {"reasoning_effort": "none"}}
+        limit = THINKING_OUTPUT_TOKEN_LIMIT if thinking_allowed else OUTPUT_TOKEN_LIMIT
 
         # Tier is always "economy": HybridLLMClient only routes economy calls here.
         for _attempt in range(1 + OUTPUT_LIMIT_RETRIES):
@@ -401,7 +405,7 @@ class OllamaLLMClient(LLMClient):
                     model=self.model_name,
                     messages=messages,
                     temperature=temperature,
-                    max_tokens=OUTPUT_TOKEN_LIMIT,
+                    max_tokens=limit,
                     **extra,
                 )
             except Exception as exc:
@@ -434,7 +438,7 @@ class OllamaLLMClient(LLMClient):
             if not cut:
                 return content
         raise OutputLimitReached(
-            f"answer stopped at the {OUTPUT_TOKEN_LIMIT}-token output limit on "
+            f"answer stopped at the {limit}-token output limit on "
             f"{1 + OUTPUT_LIMIT_RETRIES} attempts", partial=content or "")
 
     def make_image_part(self, file_path: str, mime_type: str):
