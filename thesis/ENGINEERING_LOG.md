@@ -6358,3 +6358,6 @@ unset, and the preflight runs the tests in the run's environment. Fix, tests onl
 every test (the thinking tests set it themselves) — 919 pass with and without the setting in the shell. **Worktree
 moved to `8cad7ea`** (`backend/` and `eval/` identical to `0ad393a`: the run's code is unchanged). Noted: before the
 preflight another user's model (`glm-4.7-flash`) was loaded but idle (GPU 0%); ours replaced it.
+**Preflight 2 passed** (worktree `8cad7ea`, the run's settings): tunnel; model `qwen3.6:latest`; context 131,072; 919
+tests; smoke CITABLE — 2 reports in 708 s, thinking in AV (up to 7,067 tokens) and analysis (up to 6,049), none in
+generation (its longest answer 2,245), no cut or failed call, both first rules parse. Estimate for 60 reports: ~6 h.
