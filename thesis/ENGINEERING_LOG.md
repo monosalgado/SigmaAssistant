@@ -6361,3 +6361,7 @@ preflight another user's model (`glm-4.7-flash`) was loaded but idle (GPU 0%); o
 **Preflight 2 passed** (worktree `8cad7ea`, the run's settings): tunnel; model `qwen3.6:latest`; context 131,072; 919
 tests; smoke CITABLE — 2 reports in 708 s, thinking in AV (up to 7,067 tokens) and analysis (up to 6,049), none in
 generation (its longest answer 2,245), no cut or failed call, both first rules parse. Estimate for 60 reports: ~6 h.
+**Started 2026-10-16 09:23** (user: "push it and start the run"): the Spark idle (GPU 0%; `qwen3.6:latest` loaded by our
+preflight), detached (nohup, own session; PPID 1), `run_resilient` passes the environment on (`dict(os.environ, …)`).
+First row 09:30: model `qwen3.6:latest`, thinking `['analysis', 'attack_vector']`, code `8cad7ea`; 7 requests, thinking
+3,552 (AV) and 7,448 (analysis) tokens, nothing cut or failed, 430 s.
