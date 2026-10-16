@@ -277,3 +277,34 @@ def test_the_summary_counts_the_follows():
             _row("process_creation", "process_creation", ["process_creation"], telemetry="waf")]
     s = summarise([diagnose_case(r) for r in rows])
     assert s["top_follows_guess"] == 1 and s["guess_in_sigma_terms"] == 2
+
+
+# --- Changes 50/51 run plan (2026-10-15, before the run): is the guess on SigmaHQ's menu, and is it right? ---
+
+from eval.diagnose_logsource import guess_on_menu, guess_right  # noqa: E402
+
+MENU = {"with_category": [{"category": "process_creation", "products": ["windows"]},
+                          {"category": "webserver", "products": [None]}],
+        "without_category": [{"product": "windows", "service": "security"}]}
+
+
+def test_the_guess_on_the_menu():
+    assert guess_on_menu("process_creation", MENU) is True
+    assert guess_on_menu("webserver_access_log", MENU) is True          # today's label, read as Sigma's `webserver`
+    assert guess_on_menu("windows/security", MENU) is True
+    assert guess_on_menu("registry_set", MENU) is False                  # not on this small menu
+    assert guess_on_menu("waf", MENU) is None and guess_on_menu(None, MENU) is None
+
+
+def _gold_row(telemetry, gold):
+    fields = ("category", "product", "service")
+    return {"scores": {"logsource": {"per_field": {f: {"gold": g} for f, g in zip(fields, gold)}}},
+            "pipeline": {"attack_vector": {"primary_telemetry": telemetry}}}
+
+
+def test_the_guess_against_the_experts_log_source():
+    assert guess_right(_gold_row("webserver_access_log", ("webserver", None, None))) is True
+    assert guess_right(_gold_row("process_creation", ("file_event", "windows", None))) is False
+    assert guess_right(_gold_row("windows/security", (None, "windows", "security"))) is True
+    assert guess_right(_gold_row("windows/security", ("process_creation", "windows", None))) is False
+    assert guess_right(_gold_row("waf", ("webserver", None, None))) is None

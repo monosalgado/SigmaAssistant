@@ -122,6 +122,31 @@ def top_follows_guess(row: dict) -> Optional[bool]:
     return (_norm(top.get("product")), _norm(top.get("service"))) == (guess["product"], guess["service"])
 
 
+def guess_on_menu(telemetry: Optional[str], table: dict) -> Optional[bool]:
+    """Is the attack-vector guess one of SigmaHQ's log sources - a category, or a product/service pair (Changes 50/51
+    run plan)? None when the guess has no Sigma terms."""
+    guess = guess_in_sigma_terms(telemetry)
+    if guess is None:
+        return None
+    if "category" in guess:
+        return any(_norm(r["category"]) == guess["category"] for r in table["with_category"])
+    return any((_norm(r.get("product")), _norm(r.get("service"))) == (guess["product"], guess["service"])
+               for r in table["without_category"])
+
+
+def guess_right(row: dict) -> Optional[bool]:
+    """Does the attack-vector guess name the gold rule's log source - its category, or, for a product/service guess,
+    a gold with no category and that product and service (Changes 50/51 run plan)? None without Sigma terms."""
+    guess = guess_in_sigma_terms(((row.get("pipeline") or {}).get("attack_vector") or {}).get("primary_telemetry"))
+    if guess is None:
+        return None
+    gold = {f: _norm((row["scores"]["logsource"]["per_field"].get(f) or {}).get("gold"))
+            for f in ("category", "product", "service")}
+    if "category" in guess:
+        return guess["category"] == gold["category"]
+    return gold["category"] is None and (guess["product"], guess["service"]) == (gold["product"], gold["service"])
+
+
 def gold_in_any_rule(gold: Optional[str], rules_yaml: list) -> bool:
     gold = _norm(gold)
     for text in rules_yaml or []:
@@ -338,6 +363,16 @@ def main(argv: list) -> int:
     print(f"  top suggestion's category AND product right       : {cp} / {n}")
     print(f"  analysis top pick follows the attack-vector guess  : {s['top_follows_guess']} / "
           f"{s['guess_in_sigma_terms']}  (cases whose guess has Sigma terms; Changes 50/51)")
+    scored = [r for r in rows if diagnose_case(r)]
+    right = [guess_right(r) for r in scored]
+    print(f"  the guess names the gold's log source              : {sum(1 for g in right if g)} / {n}"
+          f"  ({sum(1 for g in right if g is None)} guesses with no Sigma terms)")
+    from backend.pipeline.sigma_logsource import load_logsource_table
+    table = load_logsource_table()
+    menu = [guess_on_menu(((r.get("pipeline") or {}).get("attack_vector") or {}).get("primary_telemetry"), table)
+            for r in scored]
+    print(f"  the guess is on SigmaHQ's menu                     : {sum(1 for m in menu if m)} / {n}"
+          f"  ({sum(1 for m in menu if m is None)} with no Sigma terms)")
     sv = sum(1 for r in rows if diagnose_case(r) and top_service_right(r))
     print(f"\nChange 25 measure: top suggestion's service = gold's  : {sv} / {n}")
     fr = sum(1 for r in rows if diagnose_case(r) and first_rule_follows_top(r))
