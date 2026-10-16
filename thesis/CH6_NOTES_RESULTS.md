@@ -714,6 +714,25 @@ field coverage is disclosed. (log 2026-10-15)
 
 ---
 
+## 6.5h The first guess anchors the log source — two ways to loosen it (Changes 50, 51; not merged) `[MEASURED]` 2026-10-16, tuning set
+
+**Finding that motivated it** (post-hoc, committed tool): the attack-vector stage's log-source guess, from 13 labels of
+the pipeline's own, is copied by the analysis stage's top pick in ~90% of cases (44 of 49 in today's pipeline); the
+guess alone is right about as often as the final pick. **Two alternatives**, one run each on the 60 tuning reports,
+against today's pipeline run the day before under the same server state (plan fixed before the runs):
+- **C50 — the guess is no longer shown to later stages:** copying falls to 65% (31 of 48); top pick right 26 of 60
+  (reference 22).
+- **C51 — the guess is written from SigmaHQ's menu:** on the menu 59 of 60; names log sources the old labels could not
+  in 8; the guess is right 24 of 60 (reference 19) but is still copied (81%); top pick right 24 of 60.
+**Result:** both mechanisms work; neither reaches the pre-set bar (top pick right ≥ 29 of 60, beyond the 22–26 that
+earlier runs reach by noise) → **not merged; a negative result**, like 6.5b. Detection-field gains against the
+reference (S5u +0.08, CIs above 0) are not claimed: the reference run was a low one on S5 (0.273 vs 0.317–0.351).
+**Claim:** the anchor is real and can be removed without measured harm, but the analysis stage's own choice is not
+better than its anchor — the log-source problem is in how the model chooses, not only in what it is shown. (log
+2026-10-16)
+
+---
+
 ## 6.6 Smaller observations worth a sentence each
 
 - `[MEASURED]` Only **26.6%** (54/203) of the "quotes" the attack-vector stage gives as
