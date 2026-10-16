@@ -6365,3 +6365,11 @@ generation (its longest answer 2,245), no cut or failed call, both first rules p
 preflight), detached (nohup, own session; PPID 1), `run_resilient` passes the environment on (`dict(os.environ, …)`).
 First row 09:30: model `qwen3.6:latest`, thinking `['analysis', 'attack_vector']`, code `8cad7ea`; 7 requests, thinking
 3,552 (AV) and 7,448 (analysis) tokens, nothing cut or failed, 430 s.
+**Progress note 2026-10-16 13:24 (counts only, no score read):** 34/60, 0 errors, 0 failed calls. **The analysis
+step's thinking ran to the 32,768-token limit with no answer** in 2 reports — `ad7085ac` (report 30) and `9a2d8b3e`
+(report 34; the case whose qwen3-coder analysis is also cut in some runs, #7) — 32,764 / 32,761 thinking tokens on each
+of the 3 attempts, ~540 s per attempt, ~30 min of continuous generation per report; their analysis is lost (scored
+as is: a model failure). At temperature 0 the retries repeat the same thinking, so they cannot help. Also: one
+rule-writing answer (no thinking) reached 16,384 once, the next attempt finished. User: "let it finish. Report 34 has
+always been an issue." **For later, only if qwen3.6 with thinking is kept:** a cap on the thinking itself, and no retry
+after a cut at temperature 0 (which would also save time with qwen3-coder).
