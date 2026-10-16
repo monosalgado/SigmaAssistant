@@ -6183,3 +6183,9 @@ the menu; rules per case, seconds, tokens.
 **Stage 2 (only for an option that passes):** confirmation set 2 (`eval/manifest_confirm2.jsonl`, 60 fresh, unused),
 today's pipeline vs the option, same day, one request at a time — its runs per arm and gate in its own entry first.
 **When:** after the preflights, on the user's go.
+**Preflights (one after the other):** C50 **passed** (tunnel, model, context 131,072, 899 tests, smoke CITABLE). C51
+**failed at the context step**: `qwen3-coder:30b` was not in `ollama ps` — at 22:02 the Spark had another user's model
+loaded (`qwen3.6:latest`, 26 GB, used minutes earlier); with `MAX_LOADED_MODELS=1` it had evicted ours. Not a code
+fault (C51's tests passed; C50's identical check passed minutes before). **Not started:** running now would make the
+Spark swap the two models back and forth (an 18 GB load per swap), slowing both users and loading the machine — the
+opposite of the lab's request. C51's preflight is repeated, and the run started, when the Spark is free.
