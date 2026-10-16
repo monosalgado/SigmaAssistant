@@ -6352,3 +6352,9 @@ Otherwise the pipeline stays on qwen3-coder, and the run is reported as the mode
 guess right, guess on the menu); thinking tokens per step, answers cut at the limit, failed calls, seconds and tokens
 per report (`model_probe_table.py`). Expected time ~6–6.5 h (from the probe; an estimate).
 **When:** after the preflight in the worktree (with these settings), the Spark checked idle, on the user's go.
+**Preflight 1 (in the worktree, with the run's settings): failed at the tests** — 1 of 919:
+`test_probe_determinism.py::test_the_probe_sends_exactly_what_the_pipeline_sends` assumes `OLLAMA_THINK_STAGES`
+unset, and the preflight runs the tests in the run's environment. Fix, tests only: `tests/conftest.py` unsets it for
+every test (the thinking tests set it themselves) — 919 pass with and without the setting in the shell. **Worktree
+moved to `8cad7ea`** (`backend/` and `eval/` identical to `0ad393a`: the run's code is unchanged). Noted: before the
+preflight another user's model (`glm-4.7-flash`) was loaded but idle (GPU 0%); ours replaced it.
