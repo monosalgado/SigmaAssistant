@@ -6152,3 +6152,34 @@ CI entirely below 0: passes.** **Per the plan, Change 48 is kept** (it is alread
 - P 0.417 → 0.367 (−0.050 [−0.117, +0.017]); Pany 0.517 → 0.517; S4p, Tgold, Tgoldp lower, all CIs across 0; rules
   per case 4.18 → 4.00; rows with a second generation 36 → 45; seconds 186 → 169; tokens +4,389 [−238, +8,969].
 **Next:** Changes 50/51 (built on `main`, which has Change 48) — their runs will show S5 with Change 48 again.
+
+## 2026-10-15 — Changes 50/51: the run plan (stage 1, screening on the tuning set) — fixed before the run
+
+User: order 48 → 50/51 → 45; "prepare the Change 50/51 run … one at a time"; the plan as drafted and shown 2026-10-13
+(thresholds below), with one improvement found while preparing it:
+**Reference — no extra run:** `c48B_tuning60` (Change 48's "with" arm, run 2026-10-15) has **exactly** the arms'
+base pipeline — `backend/` and `run_eval.py` of `c48-after` and of `70b010e` are identical (`git diff`: empty) —
+under the same server state (restart 10-13 15:51, context 131,072, `NUM_PARALLEL=2`, `MAX_LOADED_MODELS=1`). So each
+option is compared case by case with today's pipeline without running it again (the user: "not the current again");
+disclosed: a different day, one run each. Reference figures (`diagnose_logsource.py`, `compare_arms.py --manifest`):
+P 22/60, S3u 22/60; the analysis follows the guess 44 of 49; the guess names the gold's log source 19 of 59; on the
+menu 50 of 59.
+**Arms** (frozen worktrees off `70b010e`, with data links incl. `data/tokenizer`; the 60 tuning cases, `--sample 60
+--seed 0 --no-web-enrich`, `run_resilient`, one run each):
+- **C50** — `c50-guess-not-shown` `a8e7231` → `../SigmaAssistant-c50`, `c50_tuning60.jsonl`;
+- **C51** — `c51-sigma-menu` `abd2871` → `../SigmaAssistant-c51`, `c51_tuning60.jsonl`.
+**One request at a time:** all of C50, then all of C51 (C51 starts only if C50 ends cleanly); started under `nohup`,
+so a restart of the desktop app cannot stop it (2026-10-15 lesson).
+**Mechanism, fixed now:** C50 — the analysis follows the (still recorded) guess in **≤ 80%** of the cases with Sigma
+terms (reference 44/49 = 90%; earlier runs 88–92%). C51 — the guess is on SigmaHQ's menu in **≥ 90%** of scored cases,
+and names a log source none of the old labels could (outside their 7 categories) in **≥ 5** cases.
+**Screening rule for stage 2, fixed now:** an option goes on only if (1) its mechanism holds, (2) **P ≥ 29 of 60** (3
+above the best earlier run of today's log-source logic: those span 22–26, by noise alone), and (3) **S3u ≥ 21 of 60**
+(not below the worst earlier run). Both pass → the higher P (tie: S3u). Neither → a negative result, written up like
+Change 38; nothing merged.
+**Reported, not gating:** paired with CIs (`compare_arms.py --manifest`): C50 − reference, C51 − reference, C51 − C50
+on P, Pany, S3u, S5u, S5vu, S1, S4 and the rest; `diagnose_logsource.py` buckets, follows-guess, guess right, guess on
+the menu; rules per case, seconds, tokens.
+**Stage 2 (only for an option that passes):** confirmation set 2 (`eval/manifest_confirm2.jsonl`, 60 fresh, unused),
+today's pipeline vs the option, same day, one request at a time — its runs per arm and gate in its own entry first.
+**When:** after the preflights, on the user's go.
