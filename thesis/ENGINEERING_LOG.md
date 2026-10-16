@@ -6373,3 +6373,8 @@ as is: a model failure). At temperature 0 the retries repeat the same thinking, 
 rule-writing answer (no thinking) reached 16,384 once, the next attempt finished. User: "let it finish. Report 34 has
 always been an issue." **For later, only if qwen3.6 with thinking is kept:** a cap on the thinking itself, and no retry
 after a cut at temperature 0 (which would also save time with qwen3-coder).
+**Stopped 2026-10-16 15:09 by the user ("I need to go. We will resume later"):** the run's process group was ended
+(`kill -TERM`); **44/60 rows saved**, all readable, 0 errors; case 45 was in progress and not written. **Resume:** the same
+command in `../SigmaAssistant-q36` (`8cad7ea`) with `OLLAMA_MODEL=qwen3.6:latest
+OLLAMA_THINK_STAGES=attack_vector,analysis`, detached; it resumes at case 45. Check the server state first (a restart
+or a settings change starts a new segment, recorded).
