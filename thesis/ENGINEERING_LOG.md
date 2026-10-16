@@ -6235,3 +6235,29 @@ harm** (no guard lower with a CI below 0; S1 60/60). **Not claimed:** that it im
 of 60 vs the reference's 22, inside run-to-run noise). Merge `1c92676` (no file touched by both sides since
 `70b010e`); **906 tests pass**. CH4 notes updated (the attack-vector row: candidates 0–8, Change 48; the guess from the
 menu, Change 51); CH6 6.5h updated. Every run from here includes Change 51.
+
+## 2026-10-16 — A newer model (qwen3.6:latest): the probe's plan, part 1 — fixed before any request
+
+**User:** "I want to change the model to the qwen3.6 that is already on the spark" — decided as an experiment, **before
+the web run** (the web run measures whether web search helps the model we keep); "I would use the :latest too" (the
+other lab user runs `:latest`, so the two of us stop evicting each other's model under `MAX_LOADED_MODELS=1`).
+`qwen3.6:latest` on the Spark: `qwen35moe`, 36.0B, Q4_K_M, capabilities completion/vision/tools/**thinking**,
+Modelfile defaults **temperature 1, presence_penalty 1.5**, top_k 20, top_p 0.95 (`ollama show`). Ours today:
+`qwen3-coder:30b` (no thinking; repeat_penalty 1.05).
+**Open questions the probe answers before any pipeline run:** (1) does the model "think" through our
+OpenAI-compatible endpoint by default, how does the answer show it, and which request field turns it off (thinking
+makes requests much longer — the lab's concern — and counts against the 16,384-token answer limit)? (2) does a
+`presence_penalty` sent with the request override the Modelfile's 1.5 (a penalty on repeated words could distort our
+JSON, which repeats its keys)?
+**Part 1 — settings** (`eval/probe_model_settings.py`; raw HTTP to `/v1/chat/completions`, the endpoint the pipeline
+uses; **one request at a time**; temperature 0; `max_tokens` 4,096; the pipeline's JSON system message):
+- T1–T3, a tiny prompt (`{"ok": true}`): **T1** nothing extra; **T2** `"think": false`; **T3** `"reasoning_effort":
+  "none"`. Recorded: the answer, any reasoning (a `reasoning` field or `<think>` text), completion tokens, seconds.
+- J1–J3, a prompt whose JSON repeats its keys (15 objects with the same two keys), with the thinking setting found to
+  be off (else T1's): **J1, J2** no penalty sent (twice: are identical requests identical?), **J3**
+  `presence_penalty: 0`. If J1 = J2 and J3 differs, the request's value overrides the Modelfile's.
+- 6 requests, all small; the Spark checked free of other work first. Nothing in the pipeline changes.
+**Then:** part 2 — the pipeline on 2 reports (the preflight's sample) with `qwen3.6:latest` and the settings part 1
+finds, against qwen3-coder on the same 2 reports (tokens, thinking, cut answers, unreadable answers, seconds, valid
+rules) — after a small code change to send those settings (tests first), in its own log entry. Then one tuning-set run
+against `c51_tuning60` (today's `main` on qwen3-coder, same server state), its plan fixed first.
