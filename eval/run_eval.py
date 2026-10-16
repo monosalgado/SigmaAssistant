@@ -58,6 +58,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from backend.pipeline.sigma_logsource import _clean, load_logsource_table, on_table  # noqa: E402
+from backend.llm_client import thinking_stages  # noqa: E402
 from backend.pipeline.stage_preprocess import PreprocessStage  # noqa: E402
 from backend.telemetry import TELEMETRY, summarise_calls  # noqa: E402
 from eval.scorers import score_case  # noqa: E402
@@ -446,6 +447,8 @@ def run_config(agent, args, head_revision=_head_revision) -> dict:
         "min_chars": args.min_chars,
         "code": agent.code_revision if old else head_revision(),
         "code_path": old,
+        # Thinking per step (qwen3.6 probe, 2026-10-16): None = not set (nothing about thinking sent).
+        "thinking_stages": (sorted(thinking_stages()) if thinking_stages() is not None else None),
     }
 
 

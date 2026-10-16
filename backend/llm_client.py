@@ -21,7 +21,7 @@ import time
 import threading
 from collections import deque
 
-from backend.telemetry import TELEMETRY, extract_gemini_usage, extract_openai_usage
+from backend.telemetry import TELEMETRY, current_stage, extract_gemini_usage, extract_openai_usage
 from backend.token_count import count_tokens
 
 
@@ -61,6 +61,15 @@ def request_messages(prompt: str, json_mode: bool = True) -> list:
     """The chat messages a request to the local model carries."""
     messages = [{"role": "system", "content": JSON_SYSTEM_MESSAGE}] if json_mode else []
     return messages + [{"role": "user", "content": prompt}]
+
+
+def thinking_stages():
+    """The stages a thinking model may think in (`OLLAMA_THINK_STAGES`, comma-separated), or None when unset - then
+    nothing about thinking is sent and requests are as before (qwen3.6 probe, part 2, 2026-10-16)."""
+    raw = os.getenv("OLLAMA_THINK_STAGES")
+    if raw is None:
+        return None
+    return {name.strip() for name in raw.split(",") if name.strip()}
 
 
 def request_token_count(prompt: str, json_mode: bool = True) -> int:
@@ -378,6 +387,12 @@ class OllamaLLMClient(LLMClient):
             )
             raise PromptTooLarge(error)
 
+        # Thinking per step: a listed stage thinks (the model's default), any other is sent `reasoning_effort: "none"`
+        # (probe part 1: the field that turns it off here). Unset: nothing sent.
+        stages = thinking_stages()
+        thinking_allowed = None if stages is None else current_stage() in stages
+        extra = {} if thinking_allowed in (None, True) else {"extra_body": {"reasoning_effort": "none"}}
+
         # Tier is always "economy": HybridLLMClient only routes economy calls here.
         for _attempt in range(1 + OUTPUT_LIMIT_RETRIES):
             started = time.monotonic()
@@ -387,6 +402,7 @@ class OllamaLLMClient(LLMClient):
                     messages=messages,
                     temperature=temperature,
                     max_tokens=OUTPUT_TOKEN_LIMIT,
+                    **extra,
                 )
             except Exception as exc:
                 # Recorded before re-raising so that a Spark outage is visible in the
@@ -403,12 +419,17 @@ class OllamaLLMClient(LLMClient):
             choice = response.choices[0]
             content = choice.message.content
             cut = getattr(choice, "finish_reason", None) == "length"
+            usage = extract_openai_usage(response)
+            reasoning = getattr(choice.message, "reasoning", None)
+            if reasoning:
+                usage["thinking_tokens"] = count_tokens(str(reasoning))
             TELEMETRY.record(
                 backend="ollama", tier="economy", model=self.model_name,
                 operation="generate", latency_s=time.monotonic() - started,
                 prompt_chars=len(prompt), response_chars=len(content or ""),
-                usage=extract_openai_usage(response), output_limited=cut,
+                usage=usage, output_limited=cut,
                 cut_tail=(content or "")[-CUT_TAIL_CHARS:] if cut else None,
+                thinking_allowed=thinking_allowed,
             )
             if not cut:
                 return content

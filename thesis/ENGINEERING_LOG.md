@@ -6299,3 +6299,9 @@ the thinking — part 2 shows how close answers come).
 thinking tokens, seconds, answers cut at the limit, failed requests; per report: rules and valid rules. **Not read as
 quality** (2 reports). **Decides:** whether a 60-report run with thinking is reasonable (time, the answer limit, the
 Spark), and the plan of that run.
+**Built (tests first, seen to fail; the "unset sends nothing" test held throughout):** `thinking_stages()` and the
+per-call setting in `OllamaLLMClient.generate` (`extra_body: {"reasoning_effort": "none"}` for unlisted stages;
+`thinking_allowed` and `thinking_tokens` — the `reasoning` field counted with our tokenizer — recorded per call;
+`telemetry.current_stage()`); `run_config` records `thinking_stages`; `eval/model_probe_table.py` (per-step table).
+Tests: `test_thinking_stages.py` 6, `test_model_probe_table.py` 2; **917 pass**. The reference (qwen3-coder on the 2
+reports, C51's preflight smoke) is copied to `eval/results/probe_qwen36_ref_qwen3coder.jsonl`.

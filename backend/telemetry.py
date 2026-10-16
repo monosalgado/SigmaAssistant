@@ -60,6 +60,11 @@ from typing import Any, Iterator, Optional
 _current_stage: ContextVar[Optional[str]] = ContextVar("llm_stage", default=None)
 
 
+def current_stage() -> Optional[str]:
+    """The stage the current LLM call belongs to (None outside any stage)."""
+    return _current_stage.get()
+
+
 @contextmanager
 def stage_scope(name: str) -> Iterator[None]:
     """Attribute every LLM call made inside this block to stage `name`."""
@@ -101,6 +106,9 @@ class LLMCall:
     # Change 49: the request was over the token ceiling and was not sent (`ok` is False). A finding about the
     # pipeline, not an outage.
     refused: bool = False
+    # Thinking per step (qwen3.6 probe, 2026-10-16): whether this call's stage was allowed to think; None when the
+    # run sets no thinking stages (OLLAMA_THINK_STAGES unset). The thinking's size goes in `thinking_tokens`.
+    thinking_allowed: Optional[bool] = None
 
 
 def extract_gemini_usage(response: Any) -> dict:
@@ -159,6 +167,7 @@ class LLMTelemetry:
         output_limited: bool = False,
         cut_tail: Optional[str] = None,
         refused: bool = False,
+        thinking_allowed: Optional[bool] = None,
     ) -> None:
         usage = usage or {}
         call = LLMCall(
@@ -179,6 +188,7 @@ class LLMTelemetry:
             output_limited=output_limited,
             cut_tail=cut_tail if output_limited else None,
             refused=refused,
+            thinking_allowed=thinking_allowed,
         )
         with self._lock:
             self._calls.append(call)
