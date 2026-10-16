@@ -6261,3 +6261,20 @@ uses; **one request at a time**; temperature 0; `max_tokens` 4,096; the pipeline
 finds, against qwen3-coder on the same 2 reports (tokens, thinking, cut answers, unreadable answers, seconds, valid
 rules) — after a small code change to send those settings (tests first), in its own log entry. Then one tuning-set run
 against `c51_tuning60` (today's `main` on qwen3-coder, same server state), its plan fixed first.
+
+## 2026-10-16 — qwen3.6:latest probe, part 1: thinking is on by default; `reasoning_effort: "none"` turns it off; the JSON is unharmed
+
+`eval/probe_model_settings.py` (plan above; 6 requests, one at a time; 07:5x, the Spark idle — no model loaded, GPU
+0% — tunnel rebuilt). Output `eval/results/probe_qwen36_settings.jsonl`.
+- **Thinking is on by default** through the OpenAI-compatible endpoint: T1 (a 6-token answer) used **166 completion
+  tokens**; the reasoning comes back in a separate `reasoning` field (560 characters, "Thinking Process: 1. Analyze
+  User Input…"), the `content` stays the clean answer, and **`completion_tokens` counts the thinking** (so it counts
+  against the 16,384-token answer limit).
+- **`"think": false` does not turn it off** on this endpoint (T2: 166 tokens, the same reasoning). **`"reasoning_effort":
+  "none"` does** (T3: 6 tokens, no reasoning, 0.4 s).
+- **Presence penalty: no effect seen** — J1, J2 (no penalty sent) and J3 (`presence_penalty: 0`) gave identical answers,
+  each **valid JSON with all 15 repeated objects exactly as asked**. Identical requests were identical (J1 = J2). So
+  whether the request's value overrides the Modelfile's 1.5 is not shown, but the case it was a worry for — JSON that
+  repeats its keys — comes out intact with the Modelfile's defaults.
+**For part 2:** send `reasoning_effort: "none"` with every request to `qwen3.6:latest` (thinking off: requests as
+short as today's, the same answer limit); no penalty setting needed.
