@@ -308,3 +308,17 @@ def test_the_guess_against_the_experts_log_source():
     assert guess_right(_gold_row("windows/security", (None, "windows", "security"))) is True
     assert guess_right(_gold_row("windows/security", ("process_creation", "windows", None))) is False
     assert guess_right(_gold_row("waf", ("webserver", None, None))) is None
+
+
+def test_a_guess_beyond_the_old_labels():
+    # Change 51's mechanism (defined in its run plan, 2026-10-15, before the run): the guess is on SigmaHQ's menu and
+    # is a log source none of the old 13 labels could name - outside their 7 Sigma categories, or a product/service.
+    from eval.diagnose_logsource import guess_beyond_old_labels
+    menu = {"with_category": [{"category": "registry_set", "products": ["windows"]},
+                              {"category": "process_creation", "products": ["windows"]}],
+            "without_category": [{"product": "windows", "service": "security"}]}
+    assert guess_beyond_old_labels("registry_set", menu) is True
+    assert guess_beyond_old_labels("windows/security", menu) is True
+    assert guess_beyond_old_labels("process_creation", menu) is False        # an old label's category
+    assert guess_beyond_old_labels("image_load", menu) is False              # not on this menu
+    assert guess_beyond_old_labels("waf", menu) is False and guess_beyond_old_labels(None, menu) is False

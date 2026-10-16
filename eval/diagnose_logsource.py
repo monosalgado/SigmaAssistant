@@ -134,6 +134,15 @@ def guess_on_menu(telemetry: Optional[str], table: dict) -> Optional[bool]:
                for r in table["without_category"])
 
 
+def guess_beyond_old_labels(telemetry: Optional[str], table: dict) -> bool:
+    """Change 51's mechanism (its run plan, 2026-10-15): the guess is on SigmaHQ's menu and names a log source none of
+    the old 13 labels could - a category outside their 7, or a product/service pair."""
+    guess = guess_in_sigma_terms(telemetry)
+    if guess is None or not guess_on_menu(telemetry, table):
+        return False
+    return "category" not in guess or guess["category"] not in set(SIGMA_CATEGORY_FOR_TELEMETRY.values())
+
+
 def guess_right(row: dict) -> Optional[bool]:
     """Does the attack-vector guess name the gold rule's log source - its category, or, for a product/service guess,
     a gold with no category and that product and service (Changes 50/51 run plan)? None without Sigma terms."""
@@ -373,6 +382,9 @@ def main(argv: list) -> int:
             for r in scored]
     print(f"  the guess is on SigmaHQ's menu                     : {sum(1 for m in menu if m)} / {n}"
           f"  ({sum(1 for m in menu if m is None)} with no Sigma terms)")
+    beyond = sum(1 for r in scored if guess_beyond_old_labels(
+        ((r.get("pipeline") or {}).get("attack_vector") or {}).get("primary_telemetry"), table))
+    print(f"  the guess names a log source the old labels could not: {beyond} / {n}")
     sv = sum(1 for r in rows if diagnose_case(r) and top_service_right(r))
     print(f"\nChange 25 measure: top suggestion's service = gold's  : {sv} / {n}")
     fr = sum(1 for r in rows if diagnose_case(r) and first_rule_follows_top(r))

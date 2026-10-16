@@ -6193,3 +6193,33 @@ opposite of the lab's request. C51's preflight is repeated, and the run started,
 connection of ours). Tunnel rebuilt (it had dropped while idle); **C51's preflight repeated and passed** (tunnel,
 model, context 131,072, 899 tests, smoke CITABLE); C50's had passed at ~21:52 (same code, same server state). Run
 started detached (`nohup`, own session), all of C50 then all of C51, one request at a time.
+
+## 2026-10-16 — Changes 50/51 screening: both mechanisms work; neither option reaches the screening bar → not merged
+
+**Runs:** `c50_tuning60` (C50, `a8e7231`) and `c51_tuning60` (C51, `abd2871`), 60/60 each, 0 errors, 0 refused, both
+**CITABLE**; one request at a time, C50 then C51, detached, no interruption (2026-10-15 23:40 → 2026-10-16 06:03);
+same server state as the reference `c48B_tuning60` (identical base pipeline, run 2026-10-15).
+**Mechanism (plan thresholds) — both hold** (`diagnose_logsource.py`):
+- C50: the analysis follows the (still recorded) guess in **31 of 48** (65%; ≤ 80% required; reference 44/49 = 90%).
+- C51: the guess is on SigmaHQ's menu in **59 of 60** (≥ 90%); it names a log source the old labels could not in
+  **8** (≥ 5) — counted by `guess_beyond_old_labels`, defined in the plan before the run, **its code written after the
+  run** (tests first, seen to fail). The guess itself names the gold's log source in 24 of 60 (reference 19/59), and
+  the analysis follows it in 47 of 58 (81%).
+**Screening rule — neither passes:** P (top pick = gold) **C50 26 / 60, C51 24 / 60**, against the required **≥ 29**
+(S3u C50 26, C51 25 — both ≥ 21). **Per the plan: a negative result; nothing merged; stage 2 not run** (confirmation
+set 2 stays unused). The branches stay as the record.
+**Reported, not gating (paired, `compare_arms.py --manifest`, bootstrap 10,000, seed 0; one run each):**
+
+| B − A | P | S3u | S5u | S5 | S5vu | S4 | S1 | rules |
+|---|---|---|---|---|---|---|---|---|
+| C50 − ref | +0.067 [−0.017, +0.167] | +0.067 [−0.017, +0.167] | +0.078 [+0.004, +0.154] | +0.081 [+0.005, +0.160] | −0.007 | −0.049 | 0.000 | −0.15 |
+| C51 − ref | +0.033 [−0.050, +0.117] | +0.050 [+0.000, +0.117] | +0.076 [+0.021, +0.138] | +0.077 [+0.022, +0.140] | +0.003 | −0.027 | +0.017 | +0.38 [+0.05, +0.80] |
+| C51 − C50 | −0.033 | −0.017 | −0.002 | −0.002 | +0.010 | +0.021 | +0.017 | +0.53 [+0.15, +1.00] |
+
+**Reading, with the caveat that matters:** both options moved P and S3u up against the reference (+2 to +4 reports),
+inside the range earlier runs of today's log-source logic reach by noise (P 22–26, S3u 21–26). Their S5u/S5 gains have
+CIs above 0, but **the reference is a low S5 run**: S5u of the four runs on these reports — `c48A` 0.317, `c48B` (the
+reference) 0.273, C50 0.351, C51 0.349 — and two identical runs have differed by 0.086 (CH7 50); so the S5 gains are
+not claimed. What is shown: removing the guess from the later prompts cuts the analysis's copying of it from 90% to
+65% without measurable harm (C50); a guess from SigmaHQ's menu is right more often than the old label (24 vs 19 of
+60) and is still copied (81%) (C51) — the anchor moves, it does not go away. Neither shifts the picks beyond noise.
