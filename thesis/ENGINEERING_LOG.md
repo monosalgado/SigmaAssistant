@@ -6223,3 +6223,15 @@ reference) 0.273, C50 0.351, C51 0.349 — and two identical runs have differed 
 not claimed. What is shown: removing the guess from the later prompts cuts the analysis's copying of it from 90% to
 65% without measurable harm (C50); a guess from SigmaHQ's menu is right more often than the old label (24 vs 19 of
 60) and is still copied (81%) (C51) — the anchor moves, it does not go away. Neither shifts the picks beyond noise.
+
+## 2026-10-16 — Change 51 merged into `main` (user's decision, on design grounds)
+
+User, after the screening above ("I think that the list/table of the log source from sigmaHQ is definitively better
+than the previous list that we had"): **merge Change 51**; Change 50 stays on its branch as the record. This is a
+decision after the result, not a pass of the screening (as with Change 42): Change 51 is kept **for its design** — one
+vocabulary from the first stage to the rule, the guess a real SigmaHQ log source (59 of 60 vs ~50 of 59 with the old
+labels, 6 of which have no Sigma meaning), able to name sources the old labels could not (8) — with **no measured
+harm** (no guard lower with a CI below 0; S1 60/60). **Not claimed:** that it improves the final log-source pick (P 24
+of 60 vs the reference's 22, inside run-to-run noise). Merge `1c92676` (no file touched by both sides since
+`70b010e`); **906 tests pass**. CH4 notes updated (the attack-vector row: candidates 0–8, Change 48; the guess from the
+menu, Change 51); CH6 6.5h updated. Every run from here includes Change 51.

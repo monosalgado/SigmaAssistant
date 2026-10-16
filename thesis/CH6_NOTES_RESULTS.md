@@ -730,6 +730,8 @@ reference (S5u +0.08, CIs above 0) are not claimed: the reference run was a low 
 **Claim:** the anchor is real and can be removed without measured harm, but the analysis stage's own choice is not
 better than its anchor — the log-source problem is in how the model chooses, not only in what it is shown. (log
 2026-10-16)
+**Decision after the result (user, 2026-10-16):** Change 51 merged on design grounds — one vocabulary, the guess a real
+SigmaHQ log source, no measured harm; its effect on the final pick is not claimed. Change 50 not merged.
 
 ---
 
