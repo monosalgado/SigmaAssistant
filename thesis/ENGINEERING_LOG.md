@@ -6332,3 +6332,23 @@ otherwise and whenever `OLLAMA_THINK_STAGES` is unset (tests first, 2 new, seen 
 advice: leave it off — the errors arise before it (the guess, the log-source pick, the techniques; the writer follows
 the pick 53 of 58 and its rules are valid 58–60 of 60), and in part 2 it took 559 of the 1,179 seconds — pending the
 user's word.
+
+## 2026-10-16 — qwen3.6 with thinking: the full run's plan (tuning set) — fixed before the run
+
+**User:** thinking on for **the attack vector and the analysis** (rule writing left off, on my advice); answer limit
+32,768 for those two steps; decision rule **"better and no harm"**; thinking-on only (no thinking-off run).
+**Arm:** today's `main` (`0ad393a`) in a frozen worktree `../SigmaAssistant-q36` (data links incl. `data/tokenizer`),
+`OLLAMA_MODEL=qwen3.6:latest`, `OLLAMA_THINK_STAGES=attack_vector,analysis`; the 60 tuning cases (`--sample 60 --seed
+0 --no-web-enrich`), `run_resilient`, one request at a time, detached (nohup, own session) → `q36think_tuning60.jsonl`.
+**Reference (no extra run):** `c51_tuning60` — the same pipeline on `qwen3-coder:30b` (since `abd2871` `main` only
+added, for qwen3-coder, a behaviour-identical refactor and settings that do nothing when unset), same server state
+(restart 10-13 15:51; context 131,072). Disclosed: another day, one run each.
+**Decision rule — switch the pipeline's model to qwen3.6 with thinking (AV, analysis) only if both hold**
+(`compare_arms.py --manifest`, paired, bootstrap 10,000, seed 0; qwen3.6 − qwen3-coder):
+1. **Better:** at least one of **S3u, S5u, S5vu, S4, S1** higher with its 95% CI **entirely above 0**;
+2. **No harm:** none of them lower with its 95% CI **entirely below 0**.
+Otherwise the pipeline stays on qwen3-coder, and the run is reported as the model comparison.
+**Reported, not deciding:** P, Pany, the rest of `compare_arms.py`; `diagnose_logsource.py` (buckets, follows the guess,
+guess right, guess on the menu); thinking tokens per step, answers cut at the limit, failed calls, seconds and tokens
+per report (`model_probe_table.py`). Expected time ~6–6.5 h (from the probe; an estimate).
+**When:** after the preflight in the worktree (with these settings), the Spark checked idle, on the user's go.
