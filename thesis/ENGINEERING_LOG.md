@@ -6189,3 +6189,7 @@ loaded (`qwen3.6:latest`, 26 GB, used minutes earlier); with `MAX_LOADED_MODELS=
 fault (C51's tests passed; C50's identical check passed minutes before). **Not started:** running now would make the
 Spark swap the two models back and forth (an 18 GB load per swap), slowing both users and loading the machine — the
 opposite of the lab's request. C51's preflight is repeated, and the run started, when the Spark is free.
+**Started 2026-10-15 ~23:40 (user: "start the run now"):** at 23:31 the Spark was idle (no model loaded, GPU 0%, no
+connection of ours). Tunnel rebuilt (it had dropped while idle); **C51's preflight repeated and passed** (tunnel,
+model, context 131,072, 899 tests, smoke CITABLE); C50's had passed at ~21:52 (same code, same server state). Run
+started detached (`nohup`, own session), all of C50 then all of C51, one request at a time.
