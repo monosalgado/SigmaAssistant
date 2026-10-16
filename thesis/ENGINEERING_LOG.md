@@ -6278,3 +6278,24 @@ against `c51_tuning60` (today's `main` on qwen3-coder, same server state), its p
   repeats its keys — comes out intact with the Modelfile's defaults.
 **For part 2:** send `reasoning_effort: "none"` with every request to `qwen3.6:latest` (thinking off: requests as
 short as today's, the same answer limit); no penalty setting needed.
+
+## 2026-10-16 — qwen3.6 probe, part 2: thinking per step — plan, fixed before the code and any request
+
+**User:** "why do we have reasoning_effort in none? there are some parts that I would really like the model to
+reason" → thinking **on for the attack vector, the analysis and rule writing**; off for the PoC analysis, the web
+digest and the review (the user's choice of steps).
+**Code (tests first):** an optional setting `OLLAMA_THINK_STAGES` (comma-separated stage names). **Unset: nothing is
+sent — qwen3-coder runs are byte-identical to today.** Set: a request from a listed stage is sent as is (the model
+thinks by default, part 1), any other gets `reasoning_effort: "none"` (part 1: the field that turns it off). Each call
+records whether thinking was allowed and its thinking size (the `reasoning` field, counted with our tokenizer, in
+`thinking_tokens`); each run records the model and the stages (`run_config`). The model is chosen per run with
+`OLLAMA_MODEL=qwen3.6:latest` on the command line (`.env` unchanged). The answer limit stays 16,384 (it now includes
+the thinking — part 2 shows how close answers come).
+**Runs (the preflight's 2 reports, seed 7, `--no-web-enrich`, one request at a time, the Spark checked idle first):**
+(a) qwen3.6, thinking off everywhere (`OLLAMA_THINK_STAGES=` empty); (b) qwen3.6, thinking on in `attack_vector`,
+`analysis`, `generation`; reference: qwen3-coder on the same 2 reports — the smoke of C51's preflight
+(`smoke-20261016T033407Z.jsonl`, today's pipeline). ~28 requests.
+**Measured, per step (`eval/model_probe_table.py`, new, tests first):** requests, prompt tokens, answer tokens,
+thinking tokens, seconds, answers cut at the limit, failed requests; per report: rules and valid rules. **Not read as
+quality** (2 reports). **Decides:** whether a 60-report run with thinking is reasonable (time, the answer limit, the
+Spark), and the plan of that run.
