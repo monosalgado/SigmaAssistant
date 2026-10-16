@@ -21,6 +21,12 @@ from __future__ import annotations
 import json
 from backend.pipeline.base_stage import PipelineStage
 from backend.pipeline import prompts
+from backend.pipeline.sigma_logsource import format_category_table, format_service_table, load_logsource_table
+
+# Change 51: the guess is written from SigmaHQ's menu - the same two tables the analysis stage gets.
+_LOGSOURCE_TABLE = load_logsource_table()
+_LOGSOURCE_CATEGORIES = format_category_table(_LOGSOURCE_TABLE)
+_LOGSOURCE_SERVICES = format_service_table(_LOGSOURCE_TABLE)
 
 
 # The stage picks `primary_telemetry` from its own 13 labels (ATTACK_VECTOR_EXTRACTION),
@@ -49,6 +55,27 @@ TELEMETRY_IN_WORDS = {
 }
 
 
+def _menu_entry(label, table: dict):
+    """A guess on SigmaHQ's menu (Change 51): ("category", name) or ("service", product, service); None if not on it."""
+    label = str(label or "").strip().lower()
+    if not label:
+        return None
+    if "/" in label:
+        product, service = (part.strip() or None for part in label.split("/", 1))
+        if any(r.get("product") == product and r.get("service") == service for r in table["without_category"]):
+            return ("service", product, service)
+        return None
+    if any(r["category"] == label for r in table["with_category"]):
+        return ("category", label)
+    return None
+
+
+def telemetry_on_table(label, table: dict = None) -> bool:
+    """Is the guess one of SigmaHQ's log sources - a category, or a `product/service` pair (Change 51)? Recorded,
+    not enforced."""
+    return _menu_entry(label, table if table is not None else _LOGSOURCE_TABLE) is not None
+
+
 def describe_telemetry(label) -> str:
     """The attack-vector telemetry label in Sigma's terms, for downstream prompts."""
     if not label:
@@ -56,9 +83,15 @@ def describe_telemetry(label) -> str:
     label = str(label).strip().lower()
     if label in SIGMA_CATEGORY_FOR_TELEMETRY:
         return f"Sigma logsource category `{SIGMA_CATEGORY_FOR_TELEMETRY[label]}`"
+    entry = _menu_entry(label, _LOGSOURCE_TABLE)          # Change 51: a value from SigmaHQ's menu
+    if entry and entry[0] == "category":
+        return f"Sigma logsource category `{entry[1]}`"
+    if entry:
+        product = f"product `{entry[1]}`, " if entry[1] else ""
+        return f"Sigma logsource {product}service `{entry[2]}`"
     if label in TELEMETRY_IN_WORDS:
         return f"{TELEMETRY_IN_WORDS[label]} (no single Sigma logsource category)"
-    return f"{label.replace('_', ' ')} (not mapped to a Sigma logsource category)"
+    return f"{label.replace('_', ' ')} (not a SigmaHQ log source)"
 
 
 class AttackVectorStage(PipelineStage):
@@ -107,6 +140,8 @@ class AttackVectorStage(PipelineStage):
         prompt = prompts.ATTACK_VECTOR_EXTRACTION.format(
             text=self.source_text(combined_text),
             poc_behaviors=poc_text,
+            logsource_categories=_LOGSOURCE_CATEGORIES,
+            logsource_services=_LOGSOURCE_SERVICES,
         )
 
         try:
@@ -139,6 +174,8 @@ class AttackVectorStage(PipelineStage):
         except (TypeError, ValueError):
             normalized["confidence"] = 0.0
 
+        # Change 51: whether the guess is on SigmaHQ's menu - recorded, not enforced.
+        normalized["primary_telemetry_on_table"] = telemetry_on_table(normalized.get("primary_telemetry"))
         context["attack_vector"] = normalized
 
         # Log summary

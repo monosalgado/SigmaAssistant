@@ -327,8 +327,14 @@ evidence so that does not happen.
 These drive the actual detection logic. Prefer patterns a real attacker cannot avoid producing, not patterns that only appear in the specific PoC transcript. An empty list is right when the text shows no concrete pattern.
 
 ### 4. Telemetry surfaces (REQUIRED)
-- `primary_telemetry`: Where the attacker activity this text describes would be most directly visible. For an exploit against a network service, that is where the exploit request arrives (e.g. `webserver_access_log`); when the text describes malware, an intrusion or activity on a host rather than an exploit request, it is usually host telemetry (`process_creation`, `file_event`, `registry_event`). Decide from what the text actually describes. One of `web_proxy`, `webserver_access_log`, `waf`, `network_ids`, `firewall`, `dns`, `process_creation`, `file_event`, `registry_event`, `cloud_audit`, `email_gateway`, `auth_log`, `other`.
+- `primary_telemetry`: Where the attacker activity this text describes would be most directly visible. For an exploit against a network service, that is where the exploit request arrives (e.g. `webserver`); when the text describes malware, an intrusion or activity on a host rather than an exploit request, it is usually host telemetry (`process_creation`, `file_event`, `registry_event`). Decide from what the text actually describes. Write it as one of SigmaHQ's log sources from the two tables below: a category name from the first table, or, from the second table, the product and the service joined by a slash (`product/service`).
 - `secondary_telemetry`: List of additional log sources that would see follow-on activity (post-exploit). Same vocabulary as above.
+
+Log sources with a category (write the category name):
+{logsource_categories}
+
+Log sources without a category (write `product/service`; where the product is "(none)", write `/service`):
+{logsource_services}
 
 ### 5. Kill-chain coverage (REQUIRED)
 - `kill_chain_stages`: List of MITRE ATT&CK tactics evidenced in the text. Choose from: `reconnaissance`, `resource_development`, `initial_access`, `execution`, `persistence`, `privilege_escalation`, `defense_evasion`, `credential_access`, `discovery`, `lateral_movement`, `collection`, `command_and_control`, `exfiltration`, `impact`. The list MUST contain `initial_access` if the write-up describes an exploit.
@@ -374,7 +380,7 @@ Output (abbreviated):
     {{"pattern": "<run-key value>", "where": "other", "derived_from": "Run-key value <run-key value> for persistence"}}
   ],
   "primary_telemetry": "process_creation",
-  "secondary_telemetry": ["registry_event", "file_event", "email_gateway"],
+  "secondary_telemetry": ["registry_event", "file_event"],
   "kill_chain_stages": ["initial_access", "execution", "persistence"],
   "incidental_artifacts": [
     {{"value": "sandbox detonation", "reason": "the analysts' own analysis environment, not attacker activity"}}
@@ -401,8 +407,8 @@ Output (abbreviated):
     {{"pattern": "`", "where": "request_uri", "derived_from": "alternate bash substitution"}},
     {{"pattern": "Upgrade: websocket", "where": "request_header", "derived_from": "WebSocket handshake"}}
   ],
-  "primary_telemetry": "webserver_access_log",
-  "secondary_telemetry": ["process_creation", "network_ids"],
+  "primary_telemetry": "webserver",
+  "secondary_telemetry": ["process_creation", "zeek/http"],
   "kill_chain_stages": ["initial_access", "execution"],
   "incidental_artifacts": [
     {{"value": "<patch file>.nss", "reason": "vendor patch filename used during patch-diffing, not part of attack"}},
@@ -432,7 +438,7 @@ Output (abbreviated):
     {{"pattern": "PATH=", "where": "process_cmdline", "derived_from": "PATH hijack"}}
   ],
   "primary_telemetry": "process_creation",
-  "secondary_telemetry": ["file_event", "auth_log"],
+  "secondary_telemetry": ["file_event", "linux/auditd"],
   "kill_chain_stages": ["privilege_escalation", "execution"],
   "incidental_artifacts": [],
   "confidence": 0.9,

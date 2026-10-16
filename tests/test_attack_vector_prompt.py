@@ -40,7 +40,7 @@ def test_the_real_case_example_is_gone():
 def test_the_examples_are_balanced_one_web_two_host():
     telemetry = [e["primary_telemetry"] for e in _examples()]
     assert len(telemetry) == 3
-    assert telemetry.count("webserver_access_log") == 1
+    assert telemetry.count("webserver") == 1      # Change 51: Sigma's name (was `webserver_access_log`)
     assert sum(t in HOST for t in telemetry) == 2
 
 
