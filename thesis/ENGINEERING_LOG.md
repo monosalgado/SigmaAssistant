@@ -6305,3 +6305,23 @@ per-call setting in `OllamaLLMClient.generate` (`extra_body: {"reasoning_effort"
 `telemetry.current_stage()`); `run_config` records `thinking_stages`; `eval/model_probe_table.py` (per-step table).
 Tests: `test_thinking_stages.py` 6, `test_model_probe_table.py` 2; **917 pass**. The reference (qwen3-coder on the 2
 reports, C51's preflight smoke) is copied to `eval/results/probe_qwen36_ref_qwen3coder.jsonl`.
+
+## 2026-10-16 — qwen3.6 probe, part 2: result (2 reports; sizes and time, not quality)
+
+Runs 08:10–08:37, one request at a time, the Spark idle before: `probe_qwen36_off.jsonl` (thinking off everywhere),
+`probe_qwen36_think.jsonl` (thinking on for attack_vector, analysis, generation); reference
+`probe_qwen36_ref_qwen3coder.jsonl`. `eval/model_probe_table.py`:
+
+| | qwen3-coder | qwen3.6 off | qwen3.6 think |
+|---|---|---|---|
+| seconds, 2 reports | 252 | 401 (1.6×) | 1,179 (4.7×) |
+| requests / failed / cut | 12 / 0 / 0 | 12 / 0 / 0 | 14 / 0 / 0 |
+| rules; first rule parses | 6; 2/2 | 8; 2/2 | 8; 1/2 |
+| thinking tokens per request | – | – | AV 4,414–7,067; analysis 5,593–6,049; generation up to 8,236 |
+| longest answer (incl. thinking) | 2,339 | 3,487 | 10,395 |
+
+**Reading (2 reports — sizes and time only):** with thinking off, qwen3.6 sends requests of today's size and is ~1.6×
+slower; with thinking on in the three steps, each of their answers carries 4–8k tokens of thinking, the longest
+reaches 10,395 of the 16,384 limit, and a report takes ~4.7× as long (estimate for 60 reports: ~3–3.5 h off, ~9–10 h
+on). Risk for a thinking run: answers over 16,384 would be cut (retried twice, then lost), penalising the thinking
+arm — so a thinking run needs a higher limit for the thinking steps. The Spark answered throughout.
