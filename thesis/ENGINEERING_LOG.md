@@ -6470,3 +6470,8 @@ rule writer would have used is no longer listed).
 **Measure committed** (`eval/indicator_counts.py`, tests first, 2): on `c51_tuning60` — listed **1,690** (median 23.5 per
 report), used **479 (28%)**, hashes + IPs 217. (The design's 1,682 summed `indicator_use.given`; the tool counts the
 list itself — the committed figure. The gate's thresholds are unchanged.)
+**Built** on `c53-indicators` (`9fb59bd`, off `b2a7554`): the two sentences replaced as designed ("Extract ALL threat
+indicators" → what a rule could match on, only what the text shows, each value once, behaviour first; "Be thorough …
+implicitly referenced" → hashes and IPs only when nothing else); tests first (`test_change53_indicators.py`, 3: 2 seen to
+fail, 1 holds what must not change); **932 pass**; no existing test pinned the old wording. `backend/` differs from
+`main` only in `prompts.py` part 1.
