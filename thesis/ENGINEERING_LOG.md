@@ -6467,3 +6467,6 @@ bootstrap 10,000, seed 0):
 (and `9a2d8b3e`); seconds and tokens per report; prompt sizes of generation and review.
 **Expectation, written before:** shorter lists and a higher used share; S5vu within noise (the risk: an indicator the
 rule writer would have used is no longer listed).
+**Measure committed** (`eval/indicator_counts.py`, tests first, 2): on `c51_tuning60` — listed **1,690** (median 23.5 per
+report), used **479 (28%)**, hashes + IPs 217. (The design's 1,682 summed `indicator_use.given`; the tool counts the
+list itself — the committed figure. The gate's thresholds are unchanged.)
