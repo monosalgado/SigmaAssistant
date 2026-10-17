@@ -6437,3 +6437,33 @@ escapes and Windows paths handled — a test holds each); `AnalysisStage` uses i
 (`OutputLimitReached`), records `extraction.salvaged` (fields kept, indicators); the row records `analysis_salvaged`
 (`DIAGNOSIS_FIELDS`). Tests: `test_analysis_salvage.py` 8. **Suite: 927 pass.** The salvage changes nothing for an
 answer that finishes; the limit changes nothing for an answer under 16,384 tokens.
+
+## 2026-10-17 — Change 53: ask for the indicators a rule can use — design and run plan, fixed before the code
+
+**User:** "Do we really need so much indicators?" → "design the indicator change"; **no cap** (the model decides; code
+records), reference **`c51_tuning60`** (no extra run).
+**Why (post-hoc, `c51_tuning60`, the pipeline's own `indicator_use` record):** 1,682 indicators listed in 60 reports
+(median 23.5, max 101), **479 (28%) used by any rule**; used per report ~3–16 however many are listed; hashes 149 → 9
+used, IPs 68 → 3, "other" 118 → 10. The experts' rules for the 60 tuning reports match a hash field in **0**, an IP field
+in **1**, a domain/hostname field in 11. The analysis prompt asks to "Extract ALL threat indicators … BOTH explicitly
+mentioned AND implicitly referenced", lists them first, and long lists are what overflow (CH6 6.6).
+**Change (branch `c53-indicators` off `main`; `COMBINED_ANALYSIS` part 1 only):** "Extract ALL threat indicators from
+the text" and "Be thorough - extract BOTH explicitly mentioned AND implicitly referenced indicators" become: *extract
+the threat indicators a detection rule could match on — the attacker activity the text shows; list only what the text
+shows, not indicators you infer it implies, each distinct value once; behaviour first (processes, command lines, file
+paths, registry keys, URLs and request paths, domains, services); file hashes and IP addresses are rarely what a
+detection rule matches — list them only when the text gives nothing else for that part of the attack.* Unchanged: the
+type list, the four fields per indicator, the exclusion and attack-vector paragraph, parts 2–3, the answer's order.
+**Run:** one run, a frozen worktree of the branch, the 60 tuning cases, `--sample 60 --seed 0 --no-web-enrich`, one
+request at a time, detached → `c53_tuning60.jsonl`. **Reference `c51_tuning60`**: the same pipeline before Change 52
+— which can only change answers cut at 16,384: in `c51` that is **1 report (`c601f20d`, one analysis attempt cut, the
+retry finished)**, disclosed.
+**Gate — keep Change 53 if both hold** (`eval/indicator_counts.py`, new, tests first; `compare_arms.py`, paired,
+bootstrap 10,000, seed 0):
+1. **Mechanism:** median indicators listed per report **≤ 17** (75% of the reference's 23.5) **and** the share used by
+   a rule **above 28%**.
+2. **No harm:** none of **S3u, S5u, S5vu, S1, S4** lower with its 95% CI entirely below 0.
+**Reported, not gating:** hashes and IPs listed; indicators by type (listed → used); analyses cut / lost / salvaged
+(and `9a2d8b3e`); seconds and tokens per report; prompt sizes of generation and review.
+**Expectation, written before:** shorter lists and a higher used share; S5vu within noise (the risk: an indicator the
+rule writer would have used is no longer listed).
