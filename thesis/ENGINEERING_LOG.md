@@ -6522,3 +6522,24 @@ the mechanism (lists halved, used share 28% → 39%, expert-matching indicators 
 (fewer, more useful indicators to check in the assistant). **Claimed:** shorter lists, a higher used share, no answer
 cut. **Not claimed:** no harm. The user's hypothesis — shorter lists may reduce qwen3.6's runaway thinking — is noted
 for a later model test. CH4 (the analysis row: Changes 52, 53) and CH6 6.5j updated. Every run from here includes it.
+
+## 2026-10-17 — The web run, redone on today's pipeline: plan — fixed before the run
+
+User: order 48 → 50/51 → 45 (web) → the model test came first (stay on qwen3-coder) → "Lets draft the web run";
+reuse the old web rows? No: `c45B` (45/60) ran on `46da793` — one-call digest, no ceiling, without Changes 48, 51, 52,
+53 — so B − A would mix web search with five other changes; it stays as a record of an incomplete attempt.
+**A — web off: `c53_tuning60` as it is** (no extra run): its `backend/` and `run_eval.py` are identical to `main`'s
+(`git diff 9fb59bd main`: empty); same server state (restart 10-13 15:51; context 131,072).
+**B — web on, from the saved answers:** today's `main` in a frozen worktree `../SigmaAssistant-web`; `--sample 60 --seed 0
+--web-snapshots <repo>/eval/web_snapshots/tuning60.jsonl` (SHA-256 `d9f72b9c…4ecc14`, unchanged since 10-06; rule pages
+dropped in the evaluation; **no live search, so no API limit applies**) → `web_tuning60.jsonl`; one request at a time,
+detached. The web digest in pieces of ≤ 16,000 tokens (Change 49).
+**First, a 2-report web trial** on the first two tuning cases (`--limit 2`, scratch output) to check the web path end to
+end (pieces, ceiling, digest record); the saved file's coverage of the 60 cases is checked before the run.
+**Primary, mechanism, guards and gate — exactly as fixed on 2026-10-06** (no score of that attempt was ever read):
+primary **S5vu** B − A; mechanism (`web_effect.py`): the human values the report lacks that the first rule has, A vs
+B, and the web strings used; guards S4, S4p, S3u, S5u, S1, S3, S5, S5v, rules, time, tokens, the digest's record,
+**leaks** (kept pages holding the gold id; expected 0 — if any, also reported without those cases). **Gate:** S5vu B − A
+> 0, the mechanism higher in B, and neither S3u nor S1 lower with a 95% CI entirely below 0. If it fails, the web stage
+stays in the assistant as context for the analyst, without a claim of better agreement; the evaluation's default stays
+`--no-web-enrich`. **Disclosed:** pages searched in October 2026 for older reports — an upper bound for a new report.
