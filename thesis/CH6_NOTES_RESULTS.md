@@ -752,6 +752,15 @@ on long reports). Disclosed: one run; prompts not adapted to the new model. (log
 ---
 
 ## 6.6 Smaller observations worth a sentence each
+- `[MEASURED]` **One report keeps defeating the analysis step** (`9a2d8b3e`, Check Point on CVE-2025-33053 / Stealth
+  Falcon; ~40,000 characters): its analysis answer is cut on every attempt in **9 of the 27 runs** that include it, with
+  qwen3-coder and with qwen3.6. The one saved cut tail (`c50_tuning60`) shows the model still listing indicators —
+  Windows process paths the implants impersonate (`dxdiag.exe`, `WWAHost.exe`, `UserAccessBroker.exe`), each with
+  value, type, context and confidence. The report describes many tools of one actor, the prompt asks to "extract ALL
+  threat indicators … BOTH explicitly mentioned AND implicitly referenced", and the answer lists them **first**: when
+  the list outgrows the limit, the techniques and the log source after it are never written. Not a loop — an
+  exhaustive list longer than the space; how long it gets varies by run. (Post-hoc reading of one saved tail; the
+  tails of earlier runs were not recorded. Log 2026-10-17.)
 
 - `[MEASURED]` Only **26.6%** (54/203) of the "quotes" the attack-vector stage gives as
   evidence appear verbatim in its input (25.6% after Change 12). An upper bound on
