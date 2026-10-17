@@ -735,6 +735,22 @@ SigmaHQ log source, no measured harm; its effect on the final pick is not claime
 
 ---
 
+## 6.5i A newer model with thinking (qwen3.6) — better ATT&CK, worse everything else `[MEASURED]` 2026-10-17, tuning set
+
+**Setup:** the same pipeline, `qwen3.6:latest` (36B MoE, newer generation, can "think") instead of `qwen3-coder:30b`,
+thinking on for the attack-vector and analysis steps (answer limit 32,768 there); one run on the 60 tuning reports
+against the same pipeline on qwen3-coder, same server state; rule fixed before the run: switch only if one score is
+better and none worse (95% CIs).
+**Result — not switched:** ATT&CK better (S4 +0.112 [+0.035, +0.203]; fewer, more precise techniques: precision
+0.129 → 0.221, exactly-10 lists 78% → 25%), but the log source (S3u −0.217), detection fields (S5u −0.150) and valid
+rules (S1 −0.083) worse, all with CIs below 0; 2.5× slower. The analysis step's thinking ran to its limit without an
+answer in 5 reports; even without those, the log source was right 12 vs 23 times (post-hoc).
+**Claim:** a newer model is not automatically better for this task; with prompts tuned for qwen3-coder it lost on the
+two things the pipeline exists for (where to look, what to match), and thinking adds a failure mode (runaway reasoning
+on long reports). Disclosed: one run; prompts not adapted to the new model. (log 2026-10-17)
+
+---
+
 ## 6.6 Smaller observations worth a sentence each
 
 - `[MEASURED]` Only **26.6%** (54/203) of the "quotes" the attack-vector stage gives as

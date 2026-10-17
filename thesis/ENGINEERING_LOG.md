@@ -6381,3 +6381,28 @@ or a settings change starts a new segment, recorded).
 **Resumed 2026-10-16 23:37** (user back on the VPN): server state unchanged since the run started (restart 10-13
 15:51; Ollama 0.34.1; `qwen3.6:latest` `07d35212591f`; same settings), the Spark idle; tunnel rebuilt; the same command,
 detached; it resumes at case 45 (44 saved).
+
+## 2026-10-17 — qwen3.6 with thinking: result — fails "no harm"; the pipeline stays on qwen3-coder
+
+**Run:** `q36think_tuning60` (`8cad7ea`, `qwen3.6:latest`, thinking in AV + analysis), 60/60, 0 errors, 0 failed calls,
+**CITABLE**; one server state; stopped by the user at 44 and resumed (logged); finished 2026-10-17 01:22.
+**Decision rule** (`compare_arms.py --manifest` vs `c51_tuning60`, qwen3-coder; paired, bootstrap 10,000, seed 0;
+qwen3.6 − qwen3-coder):
+- **Better:** **S4 +0.112 [+0.035, +0.203]** — holds (one score above 0).
+- **No harm:** **S3u −0.217 [−0.333, −0.100]**, **S5u −0.150 [−0.251, −0.055]**, **S1 −0.083 [−0.150, −0.017]** — three
+  CIs entirely below 0 → **fails**. S5vu +0.011 [−0.046, +0.069].
+**→ Per the plan, the pipeline stays on `qwen3-coder:30b`.**
+**Reported, not deciding:** P 0.400 → 0.250 (−0.150 [−0.267, −0.033]); Pany 0.533 → 0.350; S3 −0.192; S5 −0.098 [−0.197,
+−0.003]; **ATT&CK precision S4prec 0.129 → 0.221 (+0.093 [+0.024, +0.172])**, techniques listed per case 8.5 → 5.8,
+lists of exactly 10 78% → 25% — qwen3.6 tags fewer, more precise techniques (Tgold, gold listed, 0.500 → 0.452, CI across
+0); first rules that parse 60 → 55 of 60; seconds per report 178 → 449 (2.5×); tokens +22,646.
+**Why the log source fell (post-hoc):** (1) **the analysis's thinking ran to the 32,768 limit on every attempt in 5
+reports** (`ad7085ac`, `9a2d8b3e`, `05164d17`, `32b5db62`, `a62298a3`) — 15 cut answers, the analysis lost; 7 reports had
+no log-source pick; the analysis step took 14,322 of the run's 26,893 seconds; (2) **but not only that**: on the 53
+reports where qwen3.6's analysis did give a pick, its first rule's log source was exact in **12**, qwen3-coder's in **23**
+(an ad-hoc count, not a committed tool — for explanation only). `diagnose_logsource.py`: rule category right 20 of 52
+scored (qwen3-coder 28 of 60); the analysis still follows the guess in 39 of 47.
+**Reading:** on this task and these prompts (tuned on qwen3-coder), the newer model with thinking writes worse
+log sources and detection fields and fewer valid rules, runs 2.5× longer, and its thinking can run away on long reports;
+it is better only at choosing ATT&CK techniques. The prompts were not adapted to it (disclosed: a model change with
+prompts tuned for the old model favours the old model). **Next:** the web run, on qwen3-coder.
