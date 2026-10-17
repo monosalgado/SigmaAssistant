@@ -763,6 +763,7 @@ only when nothing else. **Run** (one, against the same pipeline the day before; 
 indicators matching expert values all kept — but detection fields (S5u) −0.043 with a CI below 0 → **not merged**.
 **Claim:** the list can be halved without losing the indicators that match the experts; whether the small field-score
 dip is real or run-to-run noise (identical runs have differed by 0.086) one run cannot say. (log 2026-10-17)
+**Decision after the result (user, 2026-10-17):** merged anyway — "the detection fields was worse by a minimum, it could be just because of the run … we don't need too many indicators to begin with". Disclosed as kept against its gate; the S5u dip is not claimed away.
 
 ---
 

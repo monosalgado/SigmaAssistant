@@ -6509,3 +6509,16 @@ right 27/59.
 **Context for the S5u result (not a reason to override the gate):** S5u across runs of today's pipeline on these
 reports — `c48B` 0.273, `c50` 0.351, `c51` (the reference) 0.349; C53 0.306; two identical runs have differed by 0.086
 (CH7 50). A single run cannot tell a 0.04 dip from noise; the plan's rule treats a CI below 0 as harm, and it is.
+
+## 2026-10-17 — Change 53 merged into `main` (user's decision, against its gate)
+
+User: "I want to keep it, the detection fields was worse by a minimum, it could be just because of the run. It helped
+more of the indicators to be used by the rules, we don't need too many indicators to begin with. What if that helped
+with the qwen3.6 as it doesn't have to take into account too many indicators." **Merged `9924c79`** (no file touched by
+both sides since `b2a7554`); **934 tests pass**. Recorded as **kept against its gate**: the pre-set rule (S5u CI
+entirely below 0 = harm) was not met — S5u −0.043 [−0.084, −0.006] — and that dip is disclosed, not argued away; the
+user's reasons are the single-run noise (S5u spans 0.273–0.351 across runs of the same pipeline on these reports),
+the mechanism (lists halved, used share 28% → 39%, expert-matching indicators all kept, no cut answers) and the design
+(fewer, more useful indicators to check in the assistant). **Claimed:** shorter lists, a higher used share, no answer
+cut. **Not claimed:** no harm. The user's hypothesis — shorter lists may reduce qwen3.6's runaway thinking — is noted
+for a later model test. CH4 (the analysis row: Changes 52, 53) and CH6 6.5j updated. Every run from here includes it.
