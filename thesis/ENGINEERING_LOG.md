@@ -6406,3 +6406,28 @@ scored (qwen3-coder 28 of 60); the analysis still follows the guess in 39 of 47.
 log sources and detection fields and fewer valid rules, runs 2.5× longer, and its thinking can run away on long reports;
 it is better only at choosing ATT&CK techniques. The prompts were not adapted to it (disclosed: a model change with
 prompts tuned for the old model favours the old model). **Next:** the web run, on qwen3-coder.
+
+## 2026-10-17 — Change 52: the answer limit 32,768 for every step, and a cut analysis salvaged — design, fixed before the code
+
+**User:** "we can extend that limit a little bit, the spark before was receiving 3 request a time, ones with 96k
+tokens. Also, it had a problem on the firmware that Francis solved" (the lab's firmware fix, as told by the user) —
+"raise the limit and add the salvage, keep one request [at a time]".
+**Why (post-hoc, 10 runs 2026-10-05..17):** answers cut at the limit are almost all the analysis step (an exhaustive
+indicator list written first, CH6 6.6); with qwen3-coder the analysis was lost (every attempt cut) in 3 reports in 9
+runs (`9a2d8b3e`; `70761fe8`, `b7155193` in the old web run), with qwen3.6's thinking in 5 more.
+**1. Limit:** `OUTPUT_TOKEN_LIMIT` 16,384 → **32,768** for every step (the thinking steps' limit was already 32,768).
+The limit (Change 24) was set against answers that never end; the loop seen then (invented sub-techniques) is now
+capped by Change 32's ten-technique limit. An answer that fits today is unchanged; a cut one gets twice the room; a
+runaway one costs twice the time. 30,000 + 32,768 < 131,072. Retries after a cut stay (2) — in 2 reports a retry
+finished where the first attempt was cut.
+**2. Salvage (analysis step):** when every attempt is cut (`OutputLimitReached`), code reads the last attempt's
+answer up to its last complete value — every complete top-level field and the complete items of a list cut midway —
+instead of discarding it (the web digest already keeps the complete items of a cut answer). Missing fields stay
+empty, as for any failed call. Recorded in the row (`analysis_salvaged`: which fields were kept, how many
+indicators). **Limitation, stated:** the answer lists indicators first, so a cut inside that list keeps only finished
+indicators — the techniques and log source after them are still lost; reordering the answer (Idea A) stays parked.
+**Measured:** in the next runs (from the web run on), answers cut and analyses lost or salvaged per run, against the
+10 runs above. Tests first; offline.
+**Next, separate change (user: "Do we really need so much indicators?"):** post-hoc on `c51_tuning60` (the
+pipeline's own `indicator_use` record): 1,682 indicators listed, **479 (28%) used by any rule**; hashes 149 → 9 used,
+IPs 68 → 3 — a prompt change asking for the indicators a rule could use, its own design and run.
