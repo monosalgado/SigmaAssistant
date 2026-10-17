@@ -95,9 +95,10 @@ def test_a_thinking_step_gets_the_larger_answer_limit(monkeypatch):
     monkeypatch.setenv("OLLAMA_THINK_STAGES", "analysis")
     client = _client()
     assert _sent(client, "analysis")["max_tokens"] == llm_client.THINKING_OUTPUT_TOKEN_LIMIT == 32_768
-    assert _sent(client, "review")["max_tokens"] == llm_client.OUTPUT_TOKEN_LIMIT == 16_384
+    # Change 52: every step's limit is 32,768 now, so a thinking step gets the same as the others.
+    assert _sent(client, "review")["max_tokens"] == llm_client.OUTPUT_TOKEN_LIMIT == 32_768
     monkeypatch.delenv("OLLAMA_THINK_STAGES")
-    assert _sent(client, "analysis")["max_tokens"] == 16_384          # unset: unchanged
+    assert _sent(client, "analysis")["max_tokens"] == 32_768
 
 
 def test_the_largest_possible_request_still_fits_the_servers_context():

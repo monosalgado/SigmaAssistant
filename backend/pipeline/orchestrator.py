@@ -779,6 +779,8 @@ class PipelineOrchestrator:
             "review_changes": list(optimization.get("all_changes") or []),
             "generations": context.get("generation_log", []),
             "generation_retried": bool(context.get("generation_retried")),
+            # Change 52: what a cut analysis answer kept (None when it finished)
+            "analysis_salvaged": (context.get("extraction") or {}).get("salvaged"),
         }
         if "analyst_review" in context:
             pipeline_metadata["analyst_review"] = context["analyst_review"]

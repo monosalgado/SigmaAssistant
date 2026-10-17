@@ -7,7 +7,8 @@ Uses the PRIMARY model (gemini-2.5-flash) since this is a critical stage.
 
 from __future__ import annotations
 import json
-from backend.pipeline.base_stage import PipelineStage
+from backend.llm_client import OutputLimitReached
+from backend.pipeline.base_stage import PipelineStage, salvage_json
 from backend.pipeline.stage_attack_vector import AttackVectorStage
 from backend.pipeline import prompts
 from backend.pipeline.attack_ids import load_attack_ids, split_known
@@ -94,6 +95,13 @@ class AnalysisStage(PipelineStage):
                 "logsource_suggestions": [],
                 "logsource_primary": "",
             }
+            # Change 52: an answer cut at the limit on every attempt keeps what it finished.
+            salvaged = salvage_json(getattr(e, "partial", "")) if isinstance(e, OutputLimitReached) else None
+            if isinstance(salvaged, dict):
+                result.update(salvaged)
+                result["_salvaged"] = {"fields": sorted(salvaged),
+                                       "indicators": len(salvaged.get("indicators") or [])}
+                print(f"[{self.name}] Salvaged from the cut answer: {result['_salvaged']}")
 
         # 3. Unpack results into the same context keys the pipeline expects
         indicators = result.get("indicators", [])
@@ -104,6 +112,7 @@ class AnalysisStage(PipelineStage):
             "indicators": indicators,
             "attack_summary": attack_summary,
             "suggested_log_sources": suggested_log_sources,
+            "salvaged": result.get("_salvaged"),
         }
 
         # Technique IDs ATT&CK does not have are dropped and recorded, never repaired (Change 31).

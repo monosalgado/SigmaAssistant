@@ -6431,3 +6431,9 @@ indicators — the techniques and log source after them are still lost; reorderi
 **Next, separate change (user: "Do we really need so much indicators?"):** post-hoc on `c51_tuning60` (the
 pipeline's own `indicator_use` record): 1,682 indicators listed, **479 (28%) used by any rule**; hashes 149 → 9 used,
 IPs 68 → 3 — a prompt change asking for the indicators a rule could use, its own design and run.
+**Built (tests first, seen to fail):** `OUTPUT_TOKEN_LIMIT = 32768` (four tests that pinned 16,384 updated to the new
+value first); `base_stage.salvage_json` (the text up to its last complete value, open lists/objects closed; strings,
+escapes and Windows paths handled — a test holds each); `AnalysisStage` uses it when every attempt is cut
+(`OutputLimitReached`), records `extraction.salvaged` (fields kept, indicators); the row records `analysis_salvaged`
+(`DIAGNOSIS_FIELDS`). Tests: `test_analysis_salvage.py` 8. **Suite: 927 pass.** The salvage changes nothing for an
+answer that finishes; the limit changes nothing for an answer under 16,384 tokens.

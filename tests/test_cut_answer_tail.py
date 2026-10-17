@@ -58,7 +58,7 @@ def test_a_finished_answer_keeps_no_tail():
     TELEMETRY.reset()
     assert _client("{\"ok\": 1}", "stop").generate("p") == "{\"ok\": 1}"
     assert TELEMETRY.as_dicts()[0]["cut_tail"] is None
-    assert OUTPUT_TOKEN_LIMIT == 16384
+    assert OUTPUT_TOKEN_LIMIT == 32768      # Change 52 (was 16,384)
 
 
 def test_the_error_carries_the_last_cut_answer():

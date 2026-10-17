@@ -74,6 +74,8 @@ DIAGNOSIS_FIELDS = (
     "logsource_suggestions", "logsource_primary", "suggested_log_sources",
     "coverage_check", "indicator_use", "pre_review_rules", "review_changes", "validation_issues", "poc_snippets_found",
     "generations", "generation_retried",
+    # Change 52: what a cut analysis answer kept.
+    "analysis_salvaged",
     # Change 45: what the web stage searched, kept, dropped and digested.
     "web_enrichment",
     # Only in the simulated-analyst run's oracle rows (plan 5.3): the review and its check.

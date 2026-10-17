@@ -56,7 +56,7 @@ def _client(monkeypatch, responses):
 def test_every_call_asks_for_the_output_limit(monkeypatch):
     client, _, sent = _client(monkeypatch, [_response('{"a": 1}')])
     client.generate("p")
-    assert sent[0]["max_tokens"] == OUTPUT_TOKEN_LIMIT == 16384
+    assert sent[0]["max_tokens"] == OUTPUT_TOKEN_LIMIT == 32768      # Change 52 (was 16,384)
 
 
 def test_a_finished_answer_is_returned_after_one_call(monkeypatch):

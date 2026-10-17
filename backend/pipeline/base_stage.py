@@ -5,7 +5,7 @@ from typing import Any, Callable, Optional
 import json
 import time
 
-from backend.llm_client import PromptTooLarge
+from backend.llm_client import OutputLimitReached, PromptTooLarge
 from backend.telemetry import stage_scope
 
 
@@ -50,6 +50,43 @@ def repair_json_escapes(text: str) -> str:
             out.append("\\\\")
             i += 1
     return "".join(out)
+
+
+def salvage_json(text: str):
+    """What a JSON answer cut at the output limit had finished (Change 52): the text up to its last complete value,
+    with the open lists and objects closed - every complete top-level field and the complete items of a list cut
+    midway. None if nothing complete is left."""
+    text = (text or "").strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1] if "\n" in text else ""
+    stack, in_string, escape, points = [], False, False, []
+    for i, ch in enumerate(text):
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch in "{[":
+            stack.append(ch)
+        elif ch in "}]":
+            if stack:
+                stack.pop()
+        elif ch == "," and stack:
+            points.append((i, list(stack)))       # everything before this comma is complete
+    for end, open_ in reversed(points[-200:]):
+        candidate = text[:end] + "".join("}" if c == "{" else "]" for c in reversed(open_))
+        try:
+            value = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        if value:
+            return value
+    return None
 
 
 class PipelineStage(ABC):

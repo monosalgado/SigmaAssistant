@@ -32,7 +32,9 @@ from backend.token_count import count_tokens
 # sequence) runs until the client timeout, on every retry. The limit sits above every
 # answer that finished in the reference run (longest: 12,374 tokens), so it binds only
 # on answers that would not have finished anyway.
-OUTPUT_TOKEN_LIMIT = 16384
+# Change 52 (2026-10-17, user): raised from 16,384 - answers cut there were almost all the analysis's long indicator
+# list; the loop this limit was set against is now capped by Change 32's ten-technique limit.
+OUTPUT_TOKEN_LIMIT = 32768
 # A step allowed to think (OLLAMA_THINK_STAGES) gets a larger limit: the thinking counts against it (qwen3.6 probe,
 # 2026-10-16: up to 8,236 thinking tokens, the longest answer 10,395). User: 32,768 for the thinking steps only.
 THINKING_OUTPUT_TOKEN_LIMIT = 32768
