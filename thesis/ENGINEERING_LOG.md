@@ -6543,3 +6543,9 @@ B, and the web strings used; guards S4, S4p, S3u, S5u, S1, S3, S5, S5v, rules, t
 > 0, the mechanism higher in B, and neither S3u nor S1 lower with a 95% CI entirely below 0. If it fails, the web stage
 stays in the assistant as context for the analyst, without a claim of better agreement; the evaluation's default stays
 `--no-web-enrich`. **Disclosed:** pages searched in October 2026 for older reports — an upper bound for a new report.
+**Coverage of the saved answers:** all 60 tuning reports' queries (`build_web_snapshots.stage_queries`) are in
+`tuning60.jsonl` — 55 distinct queries, all with results, none an error. **Worktree** `../SigmaAssistant-web` at
+`4d1c7cc`, 934 tests pass. **2-report web trial passed** (`web_trial_2.jsonl`, one request at a time, the Spark idle):
+`17ce9373` — 4 of 5 pages kept, 1 digest piece (11,151 tokens), 3 items kept / 8 dropped; `c5a178bf` (Slingshot) — 4 of 5
+kept, 2 pieces (15,036 and 12,862 tokens; its first page split into parts), 14 kept / 10 dropped; no rule page, no cut,
+refused or failed call; both first rules parse; 162 s and 406 s. The largest request 15,072 tokens.
