@@ -6475,3 +6475,15 @@ indicators" → what a rule could match on, only what the text shows, each value
 implicitly referenced" → hashes and IPs only when nothing else); tests first (`test_change53_indicators.py`, 3: 2 seen to
 fail, 1 holds what must not change); **932 pass**; no existing test pinned the old wording. `backend/` differs from
 `main` only in `prompts.py` part 1.
+
+**2026-10-17 — before Change 53's run: does "only what the text shows" lose the expert's outside knowledge?**
+User: the experts' rules use knowledge that is not in the report — will the new wording cut it off; should an agent
+bring it? **Measured (post-hoc, `eval/indicator_provenance.py`, tests first, 2; `c51_tuning60`; defanging, case,
+whitespace and doubled backslashes ignored):** indicators **in the report** — listed 1,594, used by a rule 462, used
+and matching an expert value **65**; **not in the report** (the model's own additions) — listed 88, used 17, used and
+matching an expert value **2** (both in one report, variants of a command the report gives). The "implicitly
+referenced" path carried almost none of the expert's outside knowledge; the wording's cost on that path is ~2
+matches in 60 reports. The outside knowledge (57–71% of the experts' values are not in the reports, CH6 6.5c) needs
+its own channel, labelled as not from the report: the web search (Change 45; its run follows) is one; a step that
+adds the model's own knowledge of the technique or tool, marked and checked, would be another. **Preflight (Change 53
+worktree `9fb59bd`): passed** — tunnel, model, context 131,072, 932 tests, smoke CITABLE.
