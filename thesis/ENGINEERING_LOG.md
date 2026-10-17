@@ -6487,3 +6487,6 @@ matches in 60 reports. The outside knowledge (57–71% of the experts' values ar
 its own channel, labelled as not from the report: the web search (Change 45; its run follows) is one; a step that
 adds the model's own knowledge of the technique or tool, marked and checked, would be another. **Preflight (Change 53
 worktree `9fb59bd`): passed** — tunnel, model, context 131,072, 932 tests, smoke CITABLE.
+**Change 53 run started 2026-10-17 11:48** (user: "push it and start the run"): the Spark idle, detached (nohup, own
+session), qwen3-coder (no thinking or model setting in the environment). First row 11:52: code `9fb59bd`, model
+`qwen3-coder:30b`, thinking None; 7 requests, nothing cut or failed, 156 s.
