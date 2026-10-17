@@ -473,7 +473,7 @@ Perform a comprehensive analysis of the following text in THREE parts within a s
 
 ## PART 1: Entity/Indicator Extraction
 
-Extract ALL threat indicators from the text:
+Extract the threat indicators a detection rule could match on — the attacker activity the text shows. List only what the text shows, not indicators you infer it implies, and each distinct value once. Behaviour first: processes, command lines, file paths, registry keys, URLs and request paths, domains, services. Indicator types:
 - **process**: Process or executable names (e.g., mimikatz.exe, powershell.exe)
 - **command_line**: Specific command-line patterns or arguments
 - **file_path**: File paths or filenames
@@ -489,7 +489,7 @@ Extract ALL threat indicators from the text:
 - **service_name**: Windows/cloud service names
 - **other**: Any other relevant indicator
 
-Be thorough - extract BOTH explicitly mentioned AND implicitly referenced indicators.
+File hashes and IP addresses are rarely what a detection rule matches: list them only when the text gives nothing else for that part of the attack.
 Each indicator needs: value, type, context (brief quote), confidence (high/medium/low).
 
 IMPORTANT: Skip any indicator whose value matches (or is a substring of) an entry in the
