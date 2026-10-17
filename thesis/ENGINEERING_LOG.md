@@ -6378,3 +6378,6 @@ after a cut at temperature 0 (which would also save time with qwen3-coder).
 command in `../SigmaAssistant-q36` (`8cad7ea`) with `OLLAMA_MODEL=qwen3.6:latest
 OLLAMA_THINK_STAGES=attack_vector,analysis`, detached; it resumes at case 45. Check the server state first (a restart
 or a settings change starts a new segment, recorded).
+**Resumed 2026-10-16 23:37** (user back on the VPN): server state unchanged since the run started (restart 10-13
+15:51; Ollama 0.34.1; `qwen3.6:latest` `07d35212591f`; same settings), the Spark idle; tunnel rebuilt; the same command,
+detached; it resumes at case 45 (44 saved).
