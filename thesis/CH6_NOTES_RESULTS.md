@@ -751,6 +751,21 @@ on long reports). Disclosed: one run; prompts not adapted to the new model. (log
 
 ---
 
+## 6.5j Fewer indicators — the ones a rule can use (Change 53, not merged) `[MEASURED]` 2026-10-17, tuning set
+
+**Why:** the analysis listed every indicator, explicit and "implicitly referenced" (median 23.5 per report), and rules
+used 28% of them — hashes 6%, IPs 4%; the experts' rules for these reports match a hash in none and an IP in one. Long
+lists are what overflow the answer limit (report `9a2d8b3e`, CH6 6.6). The model's own additions (indicators not in
+the report) matched an expert value 2 times in 60 reports (post-hoc): not the route of the experts' outside knowledge.
+**Change:** ask for the indicators a rule could match on — only what the text shows, behaviour first, hashes and IPs
+only when nothing else. **Run** (one, against the same pipeline the day before; gate fixed before): lists halved
+(median 12.5), used share 28% → 39%, no answer cut, report `9a2d8b3e` finished in a third of the tokens, the
+indicators matching expert values all kept — but detection fields (S5u) −0.043 with a CI below 0 → **not merged**.
+**Claim:** the list can be halved without losing the indicators that match the experts; whether the small field-score
+dip is real or run-to-run noise (identical runs have differed by 0.086) one run cannot say. (log 2026-10-17)
+
+---
+
 ## 6.6 Smaller observations worth a sentence each
 - `[MEASURED]` **One report keeps defeating the analysis step** (`9a2d8b3e`, Check Point on CVE-2025-33053 / Stealth
   Falcon; ~40,000 characters): its analysis answer is cut on every attempt in **9 of the 27 runs** that include it, with

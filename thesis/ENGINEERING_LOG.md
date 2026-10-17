@@ -6490,3 +6490,22 @@ worktree `9fb59bd`): passed** — tunnel, model, context 131,072, 932 tests, smo
 **Change 53 run started 2026-10-17 11:48** (user: "push it and start the run"): the Spark idle, detached (nohup, own
 session), qwen3-coder (no thinking or model setting in the environment). First row 11:52: code `9fb59bd`, model
 `qwen3-coder:30b`, thinking None; 7 requests, nothing cut or failed, 156 s.
+
+## 2026-10-17 — Change 53 run: result — the mechanism works; "no harm" fails narrowly on S5u → not merged (per the plan)
+
+**Run:** `c53_tuning60` (`9fb59bd`, qwen3-coder), 60/60, 0 errors, **0 answers cut**, 0 failed calls, **CITABLE**;
+11:48–15:04, one request at a time, detached, no interruption.
+**Gate 1 — mechanism (`indicator_counts.py`): passes.** Indicators listed 1,690 → **1,130**; median per report 23.5 →
+**12.5** (≤ 17 required); used by a rule 479 → 439, **share 28% → 39%** (> 28% required); hashes + IPs 217 → 123.
+**Gate 2 — no harm (`compare_arms.py` vs `c51_tuning60`, paired, bootstrap 10,000, seed 0): fails.** **S5u −0.043
+[−0.084, −0.006]** — CI entirely below 0; S3u −0.017 [−0.050, +0.000]; S5vu −0.015 [−0.044, +0.012]; S1 −0.017 [−0.050,
++0.000]; S4 −0.012 [−0.057, +0.022]. **Per the plan, Change 53 is not merged** (branch `c53-indicators` kept as record).
+**Reported, not gating:** P +0.033 [+0.000, +0.083]; **Pany +0.067 [+0.017, +0.133]**; S5 −0.038 [−0.080, −0.002]; S5v
+−0.006; Tgold 0.500 → 0.429 [−0.167, +0.000]; rules 4.38 → 4.42; seconds +17 [−33, +94]; tokens −2,187 [−4,644, +293].
+`indicator_provenance.py`: used and matching an expert value — in the report 66 (c51: 65), not in the report 3 (c51:
+2): **the indicators that reach the experts' values were all kept**. **Report 34 (`9a2d8b3e`):** 33 indicators, a
+2,996-token answer (c51: 101 indicators, 6,871 tokens), one attempt, not cut. `diagnose_logsource.py`: rule category
+right 27/59.
+**Context for the S5u result (not a reason to override the gate):** S5u across runs of today's pipeline on these
+reports — `c48B` 0.273, `c50` 0.351, `c51` (the reference) 0.349; C53 0.306; two identical runs have differed by 0.086
+(CH7 50). A single run cannot tell a 0.04 dip from noise; the plan's rule treats a CI below 0 as harm, and it is.
