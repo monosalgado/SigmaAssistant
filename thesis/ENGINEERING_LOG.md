@@ -6549,3 +6549,7 @@ stays in the assistant as context for the analyst, without a claim of better agr
 `17ce9373` — 4 of 5 pages kept, 1 digest piece (11,151 tokens), 3 items kept / 8 dropped; `c5a178bf` (Slingshot) — 4 of 5
 kept, 2 pieces (15,036 and 12,862 tokens; its first page split into parts), 14 kept / 10 dropped; no rule page, no cut,
 refused or failed call; both first rules parse; 162 s and 406 s. The largest request 15,072 tokens.
+**Web run (B) started 2026-10-17 16:32** (user: "push it and start the run"): another user's `glm-4.7-flash` was loaded
+but idle (GPU 0%, its keep-alive ending within seconds), so starting interrupted no one. Detached (nohup, own
+session). First row 16:35: code `4d1c7cc`, `qwen3-coder:30b`, web on, saved answers' SHA-256 `d9f72b9c2a43…` (matches
+the plan); 8 requests, 1 digest piece, 3 items kept, nothing cut, refused or failed, 161 s.
