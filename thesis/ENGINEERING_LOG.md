@@ -6553,3 +6553,30 @@ refused or failed call; both first rules parse; 162 s and 406 s. The largest req
 but idle (GPU 0%, its keep-alive ending within seconds), so starting interrupted no one. Detached (nohup, own
 session). First row 16:35: code `4d1c7cc`, `qwen3-coder:30b`, web on, saved answers' SHA-256 `d9f72b9c2a43…` (matches
 the plan); 8 requests, 1 digest piece, 3 items kept, nothing cut, refused or failed, 161 s.
+
+## 2026-10-18 — The web run: result — the mechanism does not show; web search not claimed to improve the rules
+
+**Run B:** `web_tuning60` (`4d1c7cc`, qwen3-coder, saved answers `d9f72b9c…`), 60/60, 0 errors, 0 answers cut; 16:32–20:37,
+one request at a time, detached, no interruption; **107 web-digest requests, the largest 15,987 tokens** — the kind of
+step that halted the Spark three times ran without trouble in pieces. **Two requests refused at the 30,000 ceiling**,
+both the review of one report (`70761fe8`, SocGholish DNS: 31,213 and 31,569 tokens — its rules are long); not sent,
+its 3 rules stay unreviewed.
+**Validity:** `summarise.py` first said NOT CITABLE — its gates counted the refused calls as "failed" and "without token
+data". Fix (tests first, 2: one seen to fail, one holds that a real failure still fails): the gates read the row's
+calls and leave out refused ones, as the stop rule has since Change 49 (a refusal is a finding about the pipeline,
+logged as such before any run). After it: **CITABLE**; the verdicts of `c51`, `c53`, `q36think` unchanged. 936 pass.
+**Gate (as fixed 2026-10-06), B − A against `c53_tuning60` (identical pipeline, web off):**
+1. **S5vu +0.010 [−0.022, +0.045]** — higher in B (the gate asks > 0): holds.
+2. **Mechanism (`web_effect.py`)** — the human values the report lacks that the first rule has: **A 6 (3 cases), B 4 (3
+   cases)**; per case more in B in 2, fewer in 3 — **not higher in B: fails**.
+3. S3u +0.017 [+0.000, +0.050]; S1 0.000 — neither lower: holds.
+**→ The gate fails on the mechanism. Per the plan, the web stage stays in the assistant as context for the analyst,
+without a claim of better agreement; the evaluation's default stays `--no-web-enrich`.**
+**Reported:** the web kept 978 strings in 47 of 60 cases (916 new to the report); rules used 28 of them in the first
+rule (12 cases) and 167 in any rule (22 cases); of the 173 human values the reports lack, the kept pages offered 16;
+**leaks 0**. P, Pany unchanged; S5u −0.008 [−0.058, +0.035]; S4 +0.025 [−0.028, +0.074]; S4p −0.026; rules 4.42 → 4.52;
+seconds +49 [−38, +115]; **tokens +30,663 per report** [+23,611, +38,849] (+55%).
+**Reading:** the search brings many new strings, and the rules do use some, but they are rarely the ones the human
+expert used (16 of 173 offered, 4 found by first rules vs 6 without web) — on this benchmark, web search adds content,
+not agreement. It stays useful as context the analyst can read (pages, findings, rule pages found), the reason the
+user kept it in the assistant on 2026-10-06.

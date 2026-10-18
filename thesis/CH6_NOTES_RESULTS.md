@@ -694,6 +694,7 @@ CVE-2024-35250 case) — a risk for the log source.
 **What is claimed so far:** a title search reaches the human's missing values in about 1 case in 5 and the human rule in
 about 1 in 10; a CVE search reaches neither. Whether the rules improve: the two-arm run (S5vu primary), paused
 2026-10-06 at 6 of 60 per arm when the Spark went down.
+**Result (2026-10-18, redone on today's pipeline; gate fixed 2026-10-06):** web on vs off on the 60 tuning reports — S5vu +0.010 [−0.022, +0.045], but the mechanism does not show: the human values the report lacks, found by the first rule, 4 with web vs 6 without; S3u, S1 not lower; no leak; +55% tokens. The web kept 978 strings (916 new to the report) and the rules used 167 — content, not agreement with the expert. **Not claimed to improve the rules;** kept in the assistant as context for the analyst. The digest in pieces ran 107 requests (≤ 15,987 tokens) without trouble for the Spark. (log 2026-10-18)
 
 ---
 

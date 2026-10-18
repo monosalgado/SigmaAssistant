@@ -244,3 +244,34 @@ def test_older_files_say_what_they_did_not_record():
 
 def test_an_empty_file_is_not_citable():
     assert check_gates([])["verdict"] == "NOT CITABLE"
+
+
+# --- Change 49 follow-up (2026-10-18): a request refused at the token ceiling is not an infrastructure failure ---
+
+def _gated_row(calls):
+    """A row whose telemetry summary counts every not-ok call as an error and every call without tokens - as
+    `telemetry.summarise_calls` does - and whose `llm_calls` list them."""
+    return {"scores": {"validity": {"parses": True}}, "error": None, "n_rules": 1, "elapsed_s": 100.0,
+            "snapshots_missed": 0, "poc_snapshots_missed": 0, "pipeline": {}, "rule_id": str(id(calls)),
+            "telemetry": {"n_errors": sum(not c.get("ok", True) for c in calls),
+                          "calls_without_token_data": sum(c.get("prompt_tokens") is None for c in calls)},
+            "llm_calls": calls}
+
+
+def _gate_status(rows, name):
+    return next(c["status"] for c in check_gates(rows)["checks"] if c["name"] == name)
+
+
+def test_a_refused_request_does_not_fail_the_gates():
+    # Change 49's design: a refusal is a finding about the pipeline, not an outage (the stop rule already skips it).
+    refused = {"ok": False, "refused": True, "prompt_tokens": None, "error": "not sent"}
+    rows = [_gated_row([{"ok": True, "prompt_tokens": 10}, refused])]
+    assert _gate_status(rows, "no failed LLM calls") == "PASS"
+    assert _gate_status(rows, "token data on every call") == "PASS"
+
+
+def test_a_real_failure_still_fails_the_gates():
+    failed = {"ok": False, "prompt_tokens": None, "error": "APIConnectionError"}
+    rows = [_gated_row([{"ok": True, "prompt_tokens": 10}, failed])]
+    assert _gate_status(rows, "no failed LLM calls") == "FAIL"
+    assert _gate_status(rows, "token data on every call") == "FAIL"

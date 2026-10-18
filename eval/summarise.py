@@ -143,6 +143,11 @@ def _gate(name: str, rows: list, key: str, bad):
             "detail": f"{len(failing)} of {len(present)} rows fail"}
 
 
+def _sent_calls(row: dict) -> list:
+    """The row's LLM calls that were sent - all but those refused at the token ceiling (Change 49)."""
+    return [c for c in row.get("llm_calls") or [] if not c.get("refused")]
+
+
 def check_gates(rows: list) -> dict:
     """Is a result file citable? (plan 1.4a)
 
@@ -161,10 +166,14 @@ def check_gates(rows: list) -> dict:
               lambda r: r["snapshots_missed"]),
         _gate("PoC GitHub snapshots all served", rows, "poc_snapshots_missed",
               lambda r: r["poc_snapshots_missed"]),
+        # A request refused at the token ceiling was never sent (Change 49): a finding about the pipeline, not an
+        # outage - read from the row's calls when it lists them, as the run's stop rule does (2026-10-18).
         _gate("token data on every call", rows, "telemetry",
-              lambda r: tel(r).get("calls_without_token_data", 0)),
+              lambda r: (sum(1 for c in _sent_calls(r) if c.get("prompt_tokens") is None) if "llm_calls" in r
+                         else tel(r).get("calls_without_token_data", 0))),
         _gate("no failed LLM calls", rows, "telemetry",
-              lambda r: tel(r).get("n_errors", 0)),
+              lambda r: (sum(1 for c in _sent_calls(r) if not c.get("ok", True)) if "llm_calls" in r
+                         else tel(r).get("n_errors", 0))),
     ]
     if any("pipeline" in r for r in rows):
         checks.append(_gate("no case-level errors", rows, "error", lambda r: r["error"]))
