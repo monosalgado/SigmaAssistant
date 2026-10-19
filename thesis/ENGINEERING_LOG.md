@@ -6758,3 +6758,15 @@ rule, 341 rules). **Scope windows-linux (220; 48,180 pairs): log source 0.278, A
 chance on these samples (n 41–42). Phase 2's claim stays as it was made (all report types, pre-registered); the
 narrower scope is a disclosed limitation (CH7 59) and the reference point for new work. Notes: CH5 (scope section),
 CH7 59; the action plan's decisions log already holds the scope decision.
+
+## 2026-10-19 — User: the by-report-type split stays out of the thesis; exact agreement is not the goal
+
+After the ad hoc split by report type (held-out, final Phase 2 pipeline, uncommitted script: web cases score higher
+on every agreement score — and have far higher chance — and the held-out log-source gain came from web reports),
+the user: "I don't want to put this numbers on the thesis. I will justify that for testing I switched to only
+windows/linux logs because those were the ones I could recreate. Also, I think we should [not] worry to much like on
+having exactly the same rule as the human, that doesn't actually mean it doesn't work". So: no committed tool for the
+split and no number from it cited; the scope's stated reason is testability on recorded logs (wording suggested:
+"the attack types with recorded logs to test on" — the recordings are public, not recreated by us); agreement scores
+stay as they are, and the weight moves to whether rules fire on recorded attacks (R11). The post-hoc scope re-scoring
+of the earlier entry (held-out S3 13/41) stays in the log and CH7 59 as recorded.
