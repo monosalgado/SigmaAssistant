@@ -47,10 +47,16 @@ def used_rule_ids(results_dir: Path) -> set:
     return used
 
 
-def select_heldout(cases: list, used: set, n: int, seed: int) -> list:
+def select_heldout(cases: list, used: set, n: int, seed: int, scope: str = None) -> list:
+    """n never-run cases by the harness's stratified sampler; n = 0 -> every never-run case, in rule-id order.
+    With a scope (eval/scope.py), only the cases in it."""
     from eval.run_eval import stratified_sample
+    from eval.scope import keep
 
-    return stratified_sample([c for c in cases if c["rule_id"] not in used], n, seed)
+    pool = keep([c for c in cases if c["rule_id"] not in used], scope)
+    if not n:
+        return sorted(pool, key=lambda c: c["rule_id"])
+    return stratified_sample(pool, n, seed)
 
 
 def subset_manifest_lines(manifest: Path, rule_ids: set) -> list:
@@ -69,7 +75,7 @@ def write_once(path: Path, lines: list) -> None:
 
 
 def draw(out: Path, cases: list, results_dir: Path, manifest: Path, n: int = N_CASES, seed: int = SEED,
-         exclude: list = ()) -> list:
+         exclude: list = (), scope: str = None) -> list:
     """Draw n never-run cases and write their manifest lines to `out`, once. A case counts as run if
     its rule id is in any result file under `results_dir` or in any of the `exclude` files (runs kept
     elsewhere, such as a smoke run in a scratch folder)."""
@@ -84,7 +90,7 @@ def draw(out: Path, cases: list, results_dir: Path, manifest: Path, n: int = N_C
                 used.add(row["rule_id"])
     if Path(out).exists():
         raise FileExistsError(f"{out} exists: the held-out cases are drawn once")
-    drawn = select_heldout(cases, used, n, seed)
+    drawn = select_heldout(cases, used, n, seed, scope)
     write_once(out, subset_manifest_lines(manifest, {c["rule_id"] for c in drawn}))
     return drawn
 
@@ -98,15 +104,18 @@ def main(argv: list = None) -> int:
     parser.add_argument("--out", type=Path, default=HELDOUT_PATH)
     parser.add_argument("--exclude", nargs="*", type=Path, default=[],
                         help="result files kept outside eval/results whose cases count as run")
+    parser.add_argument("--n", type=int, default=N_CASES, help="cases to draw; 0 = every never-run case")
+    parser.add_argument("--scope", default=None, help="only cases in this scope (eval/scope.py)")
     args = parser.parse_args(argv)
     manifest = REPO / "eval/manifest.jsonl"
     with contextlib.redirect_stdout(io.StringIO()):
         cases = load_cases(manifest, REPO, 2000)
     used = used_rule_ids(REPO / "eval/results")
-    drawn = draw(args.out, cases, REPO / "eval/results", manifest, exclude=args.exclude)
+    drawn = draw(args.out, cases, REPO / "eval/results", manifest, n=args.n, exclude=args.exclude, scope=args.scope)
     pool = [c for c in cases if c["rule_id"] not in used]
     print(f"corpus {len(cases)} cases; ever run (eval/results) {len(used & {c['rule_id'] for c in cases})}; "
-          f"never run {len(pool)} before --exclude; drawn {len(drawn)} (seed {SEED}) -> {args.out}")
+          f"never run {len(pool)} before --exclude; scope {args.scope}; drawn {len(drawn)} "
+          f"({'all' if not args.n else f'seed {SEED}'}) -> {args.out}")
     print("categories:", dict(Counter(c.get("category") or "none" for c in drawn).most_common()))
     return 0
 

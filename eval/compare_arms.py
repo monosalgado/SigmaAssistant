@@ -46,6 +46,7 @@ sys.path.insert(0, str(REPO))
 
 from eval.compare_runs import bootstrap_ci, load, mcnemar, metric_value  # noqa: E402
 from eval.list_disagreements import first_logsource, stage_differences  # noqa: E402
+from eval.scope import SCOPES, keep  # noqa: E402
 
 PRIMARY = ("S3u", "S5u", "S5vu")
 SECONDARY = ("S1", "S3", "S4", "S5", "S5v", "rules", "seconds", "tokens")
@@ -252,8 +253,15 @@ def main() -> None:
     parser.add_argument("--label-b", default="B")
     parser.add_argument("--manifest", help="the cases' manifest: also score the analysis stage's top "
                                            "log-source pick (P, Pany)")
+    parser.add_argument("--scope", choices=sorted(SCOPES), default=None,
+                        help="compare only the cases in this scope (eval/scope.py); post-hoc on runs made without it")
     args = parser.parse_args()
-    a_runs, b_runs = [load(Path(p)) for p in args.a], [load(Path(p)) for p in args.b]
+    a_runs = [keep(load(Path(p)), args.scope) for p in args.a]
+    b_runs = [keep(load(Path(p)), args.scope) for p in args.b]
+    if args.scope:
+        made = {(r.get("config") or {}).get("scope") for run in a_runs + b_runs for r in run.values()}
+        print(f"scope {args.scope}: cases outside it dropped" +
+              ("" if made == {args.scope} else " - POST-HOC: not every run was made with this scope"))
     la, lb = args.label_a, args.label_b
     cases = _common(a_runs + b_runs)
     print(f"{la}: {len(a_runs)} runs; {lb}: {len(b_runs)} runs; {len(cases)} cases in every run of both")

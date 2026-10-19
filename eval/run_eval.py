@@ -62,6 +62,7 @@ from backend.llm_client import thinking_stages  # noqa: E402
 from backend.pipeline.stage_preprocess import PreprocessStage  # noqa: E402
 from backend.telemetry import TELEMETRY, summarise_calls  # noqa: E402
 from eval.scorers import score_case  # noqa: E402
+from eval.scope import SCOPES, keep  # noqa: E402
 
 _YAML_BLOCK_RE = re.compile(r"```ya?ml\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
 
@@ -369,6 +370,17 @@ def stratified_sample(cases: list, n: int, seed: int) -> list:
     return selected
 
 
+def select_cases(cases: list, args) -> list:
+    """The cases a run takes: the stratified sample (`--sample`, `--seed`), then only those in `--scope` (the
+    same sample without its out-of-scope cases, same order), then the first `--limit`."""
+    if args.sample:
+        cases = stratified_sample(cases, args.sample, args.seed)
+    cases = keep(cases, getattr(args, "scope", None))
+    if args.limit:
+        cases = cases[:args.limit]
+    return cases
+
+
 def extract_rule_yamls(response_text: str) -> list:
     """Pull YAML blocks out of the pipeline's markdown response."""
     return [m.strip() for m in _YAML_BLOCK_RE.findall(response_text or "") if m.strip()]
@@ -447,6 +459,8 @@ def run_config(agent, args, head_revision=_head_revision) -> dict:
         "web_enrich": not args.no_web_enrich,
         "web_snapshots": _file_record(getattr(args, "web_snapshots", None)),
         "min_chars": args.min_chars,
+        # Evaluation scope (user, 2026-10-19; eval/scope.py): None = every case of the manifest/sample.
+        "scope": getattr(args, "scope", None),
         "code": agent.code_revision if old else head_revision(),
         "code_path": old,
         # Thinking per step (qwen3.6 probe, 2026-10-16): None = not set (nothing about thinking sent).
@@ -723,6 +737,9 @@ def main() -> None:
     parser.add_argument("--code", default=None, metavar="CHECKOUT",
                         help="Run an older version of the pipeline from this checkout through this "
                              "harness (eval/old_code.py), e.g. ../SigmaAssistant-may for the May code.")
+    parser.add_argument("--scope", choices=sorted(SCOPES), default=None,
+                        help="Run only the cases in this scope (eval/scope.py), applied after --sample and "
+                             "before --limit: windows-linux = expert rule's product windows or linux.")
     parser.add_argument("--oracle-logsource", action="store_true",
                         help="Simulated analyst (plan 5.3): one analysis per case, then generation "
                              "with no review and with the gold log source as the analyst's choice; "
@@ -743,12 +760,12 @@ def main() -> None:
     cases = load_cases(manifest_path, repo_root, args.min_chars)
     print(f"  {len(cases)} cases with >= {args.min_chars} chars of extracted text")
 
+    cases = select_cases(cases, args)
     if args.sample:
-        cases = stratified_sample(cases, args.sample, args.seed)
-        print(f"  stratified subsample: {len(cases)} cases (seed {args.seed})")
-    if args.limit:
-        cases = cases[:args.limit]
-        print(f"  limited to first {len(cases)}")
+        print(f"  stratified subsample (seed {args.seed}) of {args.sample}")
+    if args.scope:
+        print(f"  scope {args.scope}: only cases whose expert rule is {sorted(SCOPES[args.scope])}")
+    print(f"  selected: {len(cases)} cases" + (f" (first {args.limit})" if args.limit else ""))
 
     out_path = repo_root / args.out
     out_path.parent.mkdir(parents=True, exist_ok=True)

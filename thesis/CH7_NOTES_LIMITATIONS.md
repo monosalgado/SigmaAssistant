@@ -281,6 +281,12 @@ limitation in the log belongs here too.
     app now shows the automatic rules first and regenerates from the analyst's corrections; version 1 is what every
     harness run measures, and the correction step's worth is the simulated analyst's upper bound (S5 +0.144 when the
     analyst's log source is right) — no user study (decided 2026-09-23). (log 2026-10-07)
+59. **On Windows and Linux cases, the log-source result is not above chance** `[DISCLOSE]` `[MEASURED, post-hoc]`
+    (CH5 scope section). The scope was narrowed to Windows and Linux on 2026-10-19, after Phase 2's held-out result
+    (25 of 55 against a chance of 0.173). Re-scored post-hoc on its Windows/Linux cases, the same held-out run is
+    **13 of 41 = 0.317 against the scope's chance 0.278 (p = 0.34)**, and the latest tuning run (`c53_tuning60`) 15 of
+    42 = 0.357 (p = 0.17): the web cases carried much of the earlier result. Small samples (41–42); a post-hoc subset
+    of runs made before the scope existed. (log 2026-10-19)
 
 ---
 

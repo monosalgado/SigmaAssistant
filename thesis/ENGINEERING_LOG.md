@@ -6725,3 +6725,36 @@ Spark time, 42 instead of 60 per tuning run), in `summarise.py` and `compare_arm
 subset, labelled post-hoc), and in the null-baseline tool. **Open for the user:** which cases from now on —
 recommended: the tuning set's 42 in-scope cases (comparable with every past tuning run) for development, and the 46
 never-run in-scope cases kept for the final confirmation.
+
+## 2026-10-19 — Evaluation scope: cases chosen, `--scope windows-linux` built, chance re-measured
+
+**User:** "push it and go with your recommendation" → development on the tuning set's in-scope cases; the final
+confirmation on never-run in-scope cases.
+**Built (tests first — `tests/test_scope.py`, 11; they failed on the missing module; two planted bugs — the scope
+applied before the sample, a rule paired with itself — failed 3 of them, then restored; 950 tests pass):**
+`eval/scope.py` (`in_scope`, `keep`, `null_baselines`, and a summary of counts and baselines); `run_eval.py
+--scope` (new `select_cases`: the seed-0 sample, then the scope, then `--limit`; the scope recorded in each row's
+config); `summarise.py --scope` (scores the in-scope rows against the scope's chance; says POST-HOC when the run was
+not made with that scope; `SCOPE_NULL_BASELINES` copied from `scope.py`'s output); `compare_arms.py --scope` (same
+label); `draw_heldout.py --scope … --n 0` (every never-run in-scope case, rule-id order). Without `--scope` every
+tool behaves as before.
+**Committed counts (`eval/scope.py`):** corpus 303 → in scope **220** (Windows 201, Linux 19; web 71, other 12);
+tuning 42 (39 + 3); held-out 45 (40 + 5); confirmation set 2 44 (40 + 4); confirmation set 3 43 (41 + 2); **never run
+(in no result file) 121 → 87 in scope (80 + 7)**. **Correction:** the earlier entry today said 46 never-run in-scope
+cases — the ad hoc count wrongly treated confirmation set 3 as used. No result file anywhere (this repository or
+any worktree) holds a set-3 case: it was drawn and committed (`2ece908`) but never run. The final set is not drawn
+yet; it is drawn once, with `draw_heldout.py --scope windows-linux --n 0`, when a confirmation run is planned.
+**Chance, re-measured (every gold rule against every other, ordered pairs):** whole corpus (303; 91,506 pairs): log
+source 0.180, ATT&CK F1 0.119, detection F1 0.154 — close to Change 4's 0.173 / 0.092 / 0.133 (one random pair per
+rule, 341 rules). **Scope windows-linux (220; 48,180 pairs): log source 0.278, ATT&CK F1 0.048, detection F1 0.234.**
+**Post-hoc re-scoring on the scope (descriptive; runs made before the scope existed):**
+- Held-out final run (`heldout_final60`, the Phase 2 confirmation): 45 of 60 rows in scope; **S3 13/41 = 0.317 vs
+  chance 0.278, one-sided p = 0.343** (17/41 needed). On all report types it was 25/55 vs 0.173. So the web cases
+  carried much of the held-out log-source result.
+- Latest tuning run (`c53_tuning60`): 42 rows; S1 1.000; **S3 15/42 = 0.357, p = 0.165**; S4 0.103 (chance 0.048);
+  S5 0.284 (chance 0.234); verdict CITABLE.
+- `compare_arms --scope` on `c51` vs `c53`: 42 cases, S3u 0.357 both; S5u −0.042 [−0.094, +0.003].
+**What it means, plainly:** on Windows and Linux attacks the pipeline's first-rule log source is not shown to beat
+chance on these samples (n 41–42). Phase 2's claim stays as it was made (all report types, pre-registered); the
+narrower scope is a disclosed limitation (CH7 59) and the reference point for new work. Notes: CH5 (scope section),
+CH7 59; the action plan's decisions log already holds the scope decision.

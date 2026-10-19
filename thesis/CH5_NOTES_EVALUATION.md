@@ -657,6 +657,19 @@ make the score measure copying — in the assistant they are kept and listed (th
 detection knowledge that did not exist when the report came out; the measured effect is an upper bound for a brand-new
 report. The probe that informed this design: CH6 §6.5f.
 
+### Evaluation scope: Windows and Linux attacks `[DESIGN]` `[MEASURED]` (added 2026-10-19; the user's decision)
+From 2026-10-19 a case counts when its expert rule's log source is `product: windows` or `product: linux`
+(`eval/scope.py`); web (web server, proxy) and other sources (network, cloud, identity, macOS) are out. The assistant
+is unchanged; only what is scored changes. Committed counts: **220 of 303 corpus cases** (Windows 201, Linux 19; out:
+web 71, other 12); tuning set 42 of 60; held-out 45; confirmation set 2 44; confirmation set 3 43 (never run); never run
+at all **87** (80 + 7). Tools take `--scope windows-linux` (`run_eval`: the same seed-0 sample without its out-of-scope
+cases; `summarise`, `compare_arms`: re-scoring, labelled post-hoc on runs made before; `draw_heldout`: `--n 0` = every
+never-run case). **Chance is re-measured on the scope** (each in-scope gold rule against every other one, all 48,180
+ordered pairs): log source exact **0.278** (whole corpus, same method: 0.180; Change 4's 0.173 used one random pair per
+rule over 341 rules), ATT&CK F1 0.048 (0.119), detection-field F1 0.234 (0.154). The log-source floor rises because
+half the Windows rules share `process_creation`. Development uses the tuning set's 42; the final confirmation uses
+never-run in-scope cases. Linux (19) is reported descriptively.
+
 ## 5.7 Status — what exists vs. what is claimed (2026-09-24)
 
 | Component | State |

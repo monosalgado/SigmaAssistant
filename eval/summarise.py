@@ -21,8 +21,14 @@ from __future__ import annotations
 import argparse
 import json
 import statistics
+import sys
 from math import comb, sqrt
 from pathlib import Path
+
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO))
+
+from eval.scope import keep  # noqa: E402
 
 # Measured in Change 4: score of a gold rule against a *different* gold rule.
 NULL_BASELINES = {
@@ -30,6 +36,19 @@ NULL_BASELINES = {
     "attack_f1": 0.092,
     "detection_f1": 0.133,
 }
+# Chance on the evaluation's scope (eval/scope.py: every in-scope gold rule against every other one), copied from
+# `eval/scope.py`'s output - see the log, 2026-10-19 "Evaluation scope ... built".
+SCOPE_NULL_BASELINES = {
+    "windows-linux": {         # 220 gold rules, 48,180 ordered pairs
+        "logsource_exact": 0.278,
+        "attack_f1": 0.048,
+        "detection_f1": 0.234,
+    },
+}
+
+
+def baselines_for(scope):
+    return NULL_BASELINES if scope is None else SCOPE_NULL_BASELINES[scope]
 
 
 def load(path: Path) -> list:
@@ -71,7 +90,7 @@ def _mean(values: list):
     return float(statistics.mean(values)) if values else None
 
 
-def summarise(rows: list) -> dict:
+def summarise(rows: list, baselines: dict = NULL_BASELINES) -> dict:
     scored = [r for r in rows if r.get("scores")]
     parsed = [r for r in scored if (r["scores"].get("validity") or {}).get("parses")]
 
@@ -103,6 +122,7 @@ def summarise(rows: list) -> dict:
             latency.append(row["elapsed_s"])
 
     return {
+        "baselines": baselines,
         "n_cases": len(rows),
         "n_errors": sum(1 for r in rows if r.get("error")),
         "n_scored": len(scored),
@@ -114,7 +134,7 @@ def summarise(rows: list) -> dict:
         "n_logsource": len(logsource),
         "logsource_k": int(sum(logsource)),
         "logsource_p_above_chance": (binom_p_above(int(sum(logsource)), len(logsource),
-                                                   NULL_BASELINES["logsource_exact"])
+                                                   baselines["logsource_exact"])
                                      if logsource else None),
         "logsource_ci": wilson_ci(int(sum(logsource)), len(logsource)),
         "attack_f1": _mean(attack),
@@ -250,7 +270,7 @@ def report(name: str, s: dict) -> None:
         ("S5 detection F1     ", "detection_f1", "detection_f1"),
     ]:
         value = s[key]
-        baseline = NULL_BASELINES[baseline_key]
+        baseline = s.get("baselines", NULL_BASELINES)[baseline_key]
         n = s["n_" + key.split("_")[0]] if ("n_" + key.split("_")[0]) in s else None
         marker = ""
         if value is not None:
@@ -299,6 +319,9 @@ def main() -> None:
     parser.add_argument("results", nargs="+", help="One or two JSONL result files.")
     parser.add_argument("--contamination", default="eval/contamination.jsonl",
                         help="Flag list applied to rows that carry no flag of their own.")
+    parser.add_argument("--scope", choices=sorted(SCOPE_NULL_BASELINES), default=None,
+                        help="Score only the cases in this scope (eval/scope.py), against the scope's chance "
+                             "baselines. On a run made without --scope this is a post-hoc subset.")
     args = parser.parse_args()
     flags = load_flags(Path(args.contamination))
 
@@ -307,17 +330,24 @@ def main() -> None:
         if not path.exists():
             raise SystemExit(f"Not found: {path}")
 
-    summaries = [summarise(load(p)) for p in paths]
+    baselines = baselines_for(args.scope)
+    rows_of = lambda path: keep(load(path), args.scope)  # noqa: E731
+    if args.scope:
+        for path in paths:
+            made = {(r.get("config") or {}).get("scope") for r in load(path)}
+            note = "" if made == {args.scope} else " - POST-HOC: the run was not made with this scope"
+            print(f"scope {args.scope}: {path.name} {len(rows_of(path))} of {len(load(path))} rows{note}")
+    summaries = [summarise(rows_of(p), baselines) for p in paths]
     for path, summary in zip(paths, summaries):
         report(path.name, summary)
-        report_gates(check_gates(load(path)))
-        split = split_by_contamination(load(path), flags)
+        report_gates(check_gates(rows_of(path)))
+        split = split_by_contamination(rows_of(path), flags)
         # Headline on the clean cases; flagged cases on their own line (plan 1.3b).
         if split["flagged"] or split["clean"]:
             report(f"{path.name} - clean cases (no detection rule in the input)",
-                   summarise(split["clean"]))
+                   summarise(split["clean"], baselines))
             report(f"{path.name} - flagged cases (a detection rule reaches the pipeline)",
-                   summarise(split["flagged"]))
+                   summarise(split["flagged"], baselines))
         if split["unknown"]:
             print(f"\n  NOTE: {len(split['unknown'])} case(s) have no contamination flag "
                   "(not in the flag list) and appear in neither subset.")
