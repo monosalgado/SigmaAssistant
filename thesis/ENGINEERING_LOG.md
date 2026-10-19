@@ -6770,3 +6770,17 @@ split and no number from it cited; the scope's stated reason is testability on r
 "the attack types with recorded logs to test on" — the recordings are public, not recreated by us); agreement scores
 stay as they are, and the weight moves to whether rules fire on recorded attacks (R11). The post-hoc scope re-scoring
 of the earlier entry (held-out S3 13/41) stays in the log and CH7 59 as recorded.
+
+## 2026-10-19 — R11.3 Zircolite validation: tool built (before the first pass)
+
+`eval/validate_zircolite.py`, as planned (log: "Zircolite validation … the plan"). Tests first —
+`tests/test_validate_zircolite.py`, 16 (they failed on the missing module; two planted bugs — the colour markup left
+in Zircolite's log line, the "not converted" branch removed — failed 2 of them, then restored); 966 tests pass. It
+runs Zircolite as a separate program (`../Zircolite/.venv/bin/python -m zircolite`, `ZIRCOLITE_NO_CACHE=1`, settings
+`--pipeline sysmon --pipeline windows-logsources --flatten-backend cython --limit -1`), one recording with its own
+rule, then each recording with all the recordings' rules (off-target); reads Zircolite's own log for the conversion
+(converted / skipped / failed / loaded) and its detections file (count, EventRecordIDs); our matcher run on the same
+recording's JSON for the cross-check, by EventRecordID (`rule_matcher.load_raw_events` added — `load_events` now
+calls it, behaviour unchanged). The first output row records Zircolite's commit and version, its `uv.lock` SHA-256,
+the settings and SigmaHQ's commit. A 3-recording check into a scratch folder (not the result) ran end to end, ~1 s per
+run. Next: the first pass on all 138 → `eval/results/zircolite_validation.jsonl`.

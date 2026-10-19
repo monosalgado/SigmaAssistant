@@ -155,8 +155,8 @@ def flatten_event(raw: dict) -> dict:
     return out
 
 
-def load_events(path) -> list:
-    """Events from a JSON file holding one object, a list, or several objects written back to back."""
+def load_raw_events(path) -> list:
+    """The events of a JSON file holding one object, a list, or several objects written back to back, as written."""
     text = Path(path).read_text(encoding="utf-8")
     decoder, events, i = json.JSONDecoder(), [], 0
     while True:
@@ -166,4 +166,9 @@ def load_events(path) -> list:
             break
         obj, i = decoder.raw_decode(text, i)
         events.extend(obj if isinstance(obj, list) else [obj])
-    return [flatten_event(e) for e in events]
+    return events
+
+
+def load_events(path) -> list:
+    """Events from a JSON file holding one object, a list, or several objects written back to back."""
+    return [flatten_event(e) for e in load_raw_events(path)]
