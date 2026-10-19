@@ -6599,3 +6599,25 @@ distribution and product mismatches from ad-hoc queries of the saved rows):
 exact with YAML and Sigma's vocabulary; thinking helps the ATT&CK mapping. Possible fixes if the model is revisited
 (not built): read `(none)` as empty in code (as for the service, Change 25), a thinking budget, Change 53's shorter
 lists, or qwen3.6 for the analysis and qwen3-coder for rule writing (blocked by the Spark's one loaded model).
+
+## 2026-10-19 — Testing rules on recorded logs: the plan, and the two public EVTX collections downloaded
+
+**User (2026-10-19):** "focus a lot on the possibility to test the sigma rules on real environments … maybe I don't need
+to recreate the attacks on my metasploit pro"; the professor's three questions (is Zircolite trustworthy; are these
+recordings tied to vulnerabilities/PoCs or only to ATT&CK; can Metasploit Pro really be used); "push it and do the two
+downloads".
+**Plan (memory `real-log-testing-plan`; to the action plan when the work starts):** (1) inventory the recordings and
+match them to our 303 reports; (2) tools cross-checked — Zircolite (own Python 3.14 environment, approval pending) and
+our validated matcher (`eval/rule_matcher.py`, 132/136 on SigmaHQ's recordings) with an EVTX reader — both first on
+SigmaHQ's recordings with known answers; (3) measures, fixed before any run: report-level hits where a recording
+matches a report (a pair counts only if **the expert's rule fires** on it), noise (unrelated recordings each rule fires
+on, ours vs the experts'), technique-level hits (descriptive); (4) what each lets the thesis claim.
+**Found before downloading (repos' public file trees and README; ad hoc — to be redone with a committed tool):** the
+recordings are mostly ATT&CK-technique level, but **11 of our 303 reports** have recordings of the same CVE
+(PrintNightmare 5, WSUS CVE-2025-59287 2, CVE-2020-1048 2, CVE-2021-42278/42287 2, Zerologon 1; 2 of the 11 in the
+tuning set).
+**Downloaded** (shallow clones into `data/evtx/`, gitignored — added to `.gitignore`; nothing in them is run):
+- `EVTX-to-MITRE-Attack` (mdecrevoisier, **CC0-1.0**) at `4748560` (2026-05-21): **293 .evtx**, 77 MB on disk;
+- `EVTX-ATTACK-SAMPLES` (sbousseaden, **GPL-3.0** — kept out of the repository) at `4ceed2f` (2023-01-24): **278 .evtx**,
+  66 MB on disk.
+(The sizes quoted to the user beforehand, 3 MB and 6 MB, were GitHub's compressed repository sizes — corrected.)
