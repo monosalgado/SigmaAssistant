@@ -6621,3 +6621,17 @@ tuning set).
 - `EVTX-ATTACK-SAMPLES` (sbousseaden, **GPL-3.0** — kept out of the repository) at `4ceed2f` (2023-01-24): **278 .evtx**,
   66 MB on disk.
 (The sizes quoted to the user beforehand, 3 MB and 6 MB, were GitHub's compressed repository sizes — corrected.)
+
+## 2026-10-19 — Recorded-log testing, step 1: inventory and matching (identifiers only)
+
+`eval/evtx_inventory.py` (tests first, 3, seen to fail): per recording — collection, top folder, CVE and ATT&CK
+technique IDs in the path, plus CVEs a collection's README table ties to a name in the file name; our reports' CVEs
+(gold rule title, tags, references) and techniques (tags); matches by CVE (report-level candidates) and by technique
+or its parent (technique level). Details in `eval/results/evtx_inventory.json`; counts only reported. 939 tests pass.
+**Result:** EVTX-to-MITRE-Attack 293 recordings (7 with a CVE, 279 with a technique ID); EVTX-ATTACK-SAMPLES 278 (7
+with a CVE, 1 with a technique ID — its folders name tactics, not techniques). Our 303 reports: 172 name a CVE, 232
+carry technique tags. **Matched by CVE: 12 reports (2 in the tuning set), 7 distinct CVEs** (1 recording for 4 of them,
+2 for 3, 3 for 5); matched by technique: 127 reports (23 tuning). (The ad-hoc count before the download said 11; this
+committed figure is 12.) **Next:** a fair pair needs the gold rule to fire on the recording — that needs an EVTX
+reader (our matcher) and/or Zircolite, both validated first on SigmaHQ's recordings with known answers (approval
+pending); our pipeline's rules exist for the 2 tuning reports — the other 10 would need a 10-report run.
