@@ -774,3 +774,5 @@ so removing one is reversible; untracked and ignored files have no such safety n
 | 2026-10-04 | Change 41 not confirmed (S5vu −0.005 [−0.039, +0.025]) → removed | user |
 | 2026-10-04 | R9 replay: a rule evaluator from pySigma's parsing + our own matcher (no new dependency) rather than pySigma's SQLite backend; validated on SigmaHQ's recordings; synthetic replay next, in the plan | user |
 | 2026-10-04 | Process: a push runs only after a clean secret scan, or after every hit is read (after a push ran with 2 unread, benign hits) | Claude, logged |
+| 2026-10-19 | Recorded-log testing with Zircolite (user installs it; Zircolite over our matcher: "we need to defend that too"); validate it on SigmaHQ's known-answer recordings first (R11) | user |
+| 2026-10-19 | **Evaluation scope from now on: Windows and Linux attacks only** — a case counts when its expert rule's log source is `product: windows` or `product: linux`; web (web server, proxy) and other sources (network, cloud, macOS, …) are left out. Earlier results stay as they were; any re-scoring of past runs on the new scope is labelled post-hoc | user |

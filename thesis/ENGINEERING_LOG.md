@@ -6699,3 +6699,29 @@ validated on **Sysmon recordings only**; rules for other channels (e.g. the Secu
 exercise — results on them are reported as outside the validated scope unless a later, separately planned check covers
 them. It checks that Zircolite applies a rule correctly, not that a rule is good.
 **Runs on the laptop only** — no Spark, no VPN; expected to take minutes.
+
+## 2026-10-19 — Evaluation scope: Windows and Linux attacks only (user decision)
+
+**User:** "I want to focus only on windows and linux attacks. Nothing related to the web" → asked whether that meant
+the recorded-log work or the whole evaluation → "the whole evaluation, Windows and Linux".
+**Definition (fixed now):** a case is **in scope** when its expert (gold) rule's log source names `product: windows` or
+`product: linux` (the manifest's log source, as `load_cases` reads it). Out: web (`category: webserver` or `proxy`,
+no product) and every other source (network, firewall, cloud, identity, macOS, …). The boundary is clean in our corpus:
+no Windows or Linux rule reads a web server or proxy log. The assistant itself is unchanged: it still takes any report;
+only what is scored changes. "Web" here means web attacks; web search inside the pipeline is a separate matter (already
+off in evaluations).
+**Counts (ad hoc, to be redone by a committed tool before citing):** 303 cases → **220 in scope** (Windows 201, Linux
+19); out: web 71 (web server 54, proxy 17), other 12. By set: tuning 60 → 42 in scope (39 + 3); held-out 60 → 45
+(40 + 5); confirmation set 2 → 44 (40 + 4); confirmation set 3 → 43 (41 + 2); cases in no set yet: 63 → **46 in
+scope** (41 + 5), never run by any arm.
+**What it changes, disclosed:** earlier results stay as reported (all report types); re-scoring past runs on the new
+scope is post-hoc and labelled so. Log-source scores may rise just from fewer possible answers, so the chance
+baselines are recomputed on the in-scope cases before any comparison. Linux is small (19 cases, 3 in tuning) — its
+results will be descriptive. Recorded-log testing (R11) is unaffected except that one of the 12 CVE pairs (a network
+log rule) drops out; Linux recordings would need a separate public dataset (download needs the user's approval).
+**Proposed implementation (not built; tests first, after the user's go):** `eval/scope.py` (`in_scope(case)` and the
+counts above, committed); a `--scope windows-linux` option in `run_eval.py` (runs only in-scope cases — also less
+Spark time, 42 instead of 60 per tuning run), in `summarise.py` and `compare_arms.py` (re-score saved runs on the
+subset, labelled post-hoc), and in the null-baseline tool. **Open for the user:** which cases from now on —
+recommended: the tuning set's 42 in-scope cases (comparable with every past tuning run) for development, and the 46
+never-run in-scope cases kept for the final confirmation.
