@@ -6580,3 +6580,22 @@ seconds +49 [−38, +115]; **tokens +30,663 per report** [+23,611, +38,849] (+55
 expert used (16 of 173 offered, 4 found by first rules vs 6 without web) — on this benchmark, web search adds content,
 not agreement. It stays useful as context the analyst can read (pages, findings, rule pages found), the reason the
 user kept it in the assistant on 2026-10-06.
+
+## 2026-10-19 — Why qwen3.6 had better ATT&CK but a worse log source (post-hoc reading of `q36think_tuning60`)
+
+User asked why. **Post-hoc, not a pre-registered measure** (per-field counts from `diagnose_logsource.py`; the pick
+distribution and product mismatches from ad-hoc queries of the saved rows):
+- **The category is not the main gap:** the analysis's top pick has the gold's category in 24 of 60 (qwen3-coder 26).
+  Its picks are closer to the experts' mix — process_creation 27 (experts 24, qwen3-coder 37), file_event 5 (experts 7,
+  qwen3-coder 0) — qwen3-coder's over-use of process_creation pays off because it is the experts' most common choice.
+- **What lowered S3u:** (1) 8 reports with no scored first rule (5 analyses lost to runaway thinking; invalid first
+  rules); (2) **the product field** — right in 29 of 52 scored rules (qwen3-coder 40 of 60): in 6 rules qwen3.6 wrote
+  `product: (none)` **literally** (the tables' word for "leave empty", which qwen3-coder does not copy), and it named
+  vendor products (`iis`, `barracuda_esg`).
+- **ATT&CK:** fewer techniques (5.8 vs 8.5) with higher precision (0.221 vs 0.129); exactly-10 lists 25% vs 78%.
+- **Invalid rules:** 4 of 5 are writing mistakes in rule writing, which was not thinking — broken YAML (2) and Sigma
+  modifiers that do not exist (`|in`, `|eq`).
+**Reading (interpretation):** the prompts' conventions were tuned on how qwen3-coder reads them; a coding model is more
+exact with YAML and Sigma's vocabulary; thinking helps the ATT&CK mapping. Possible fixes if the model is revisited
+(not built): read `(none)` as empty in code (as for the service, Change 25), a thinking budget, Change 53's shorter
+lists, or qwen3.6 for the analysis and qwen3-coder for rule writing (blocked by the Spark's one loaded model).
