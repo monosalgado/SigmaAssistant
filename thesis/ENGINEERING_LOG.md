@@ -6635,3 +6635,25 @@ carry technique tags. **Matched by CVE: 12 reports (2 in the tuning set), 7 dist
 committed figure is 12.) **Next:** a fair pair needs the gold rule to fire on the recording — that needs an EVTX
 reader (our matcher) and/or Zircolite, both validated first on SigmaHQ's recordings with known answers (approval
 pending); our pipeline's rules exist for the 2 tuning reports — the other 10 would need a 10-report run.
+
+## 2026-10-19 — Zircolite installed (setup check only, not a result)
+
+**User:** Zircolite rather than our own matcher for recorded-log testing ("for the thesis then we need to defend that
+too"). The user installed it with an outside assistant, following Zircolite's own documented method; this log records
+what was installed and what was checked.
+**Where and what:** `/Users/dasalgado/Desktop/Projects/Zircolite` (outside this repository) at `c32f2ef`, **Zircolite
+4.6.0** (LGPL), its own `.venv` on Python 3.14.6, installed with uv using the project's own dependency override
+(its Sysmon/Windows mapping packages still declare `pysigma<2`; the SQLite backend needs pySigma 2 — `uv pip check`
+reports exactly those two declared conflicts, which the override is there for). Versions: pySigma 2.0.1,
+pySigma-backend-sqlite 2.1.1, pysigma-pipeline-sysmon 2.0.0, pysigma-pipeline-windows 2.0.1, evtx 0.13.1; native
+flattening kernel compiled. Evidence (versions, the resolved `uv.lock`, commands, outputs, hashes) is in Zircolite's
+`helpers/setup-verification/` (ignored by Zircolite's git). This repository, its Python 3.9 environment and
+`data/sigma` were checked unchanged.
+**Checks:** Zircolite's own two test fixtures (one expected match each) and one SigmaHQ known-answer case — rerun here
+into a scratch folder: rule `proc_creation_win_bitsadmin_download` (`d059842b…`) on its regression recording, with the
+`sysmon` + `windows-logsources` mappings → **1 match** (EventID 1, EventRecordID 18463), as its `info.yml` expects
+(`match_count: 1`); no error or warning in the log. One case only, and the same recording as one of Zircolite's own
+fixtures — it shows the install works, **not** that Zircolite is trustworthy on our rules.
+**Next (plan fixed before running):** validate Zircolite on SigmaHQ's regression recordings with known answers (count
+conversion failures, unsupported rules and wrong-telemetry cases apart from zero-match results); then the gold rules on
+the 12 CVE-matched pairs (a pair counts only if the expert's rule fires).
