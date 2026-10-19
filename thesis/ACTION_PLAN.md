@@ -418,6 +418,20 @@ directly: run the rule over the events of the attack (and, for R10, over normal 
 - [ ] **5.6 Lab detonation** for 2–3 showcase reports (the user runs the lab; never operated by Claude) —
       chosen among R9.2's report-grounded misses (our rule differs from the human's), reproducible in the lab.
 
+### Recorded-log testing (user, 2026-10-19: "focus a lot on … test the sigma rules on real environments")
+
+Public recorded Windows logs (EVTX) instead of building events; Zircolite (a standard open-source tool) runs the
+rules, because the thesis must defend the tool (user chose it over our matcher). Measures in the log before any run.
+- [x] **R11.1 Inventory** (`eval/evtx_inventory.py`, `1083ff5`): two public collections in `data/evtx/` (gitignored),
+      571 recordings; **12 of our reports match a recording by CVE** (2 tuning), 127 by technique.
+- [x] **R11.2 Zircolite installed** (user, 2026-10-19; outside the repo, own environment; `f9f0231`).
+- [ ] **R11.3 Validate Zircolite on SigmaHQ's 138 recordings with known answers** — plan fixed in the log
+      2026-10-19 ("Zircolite validation … the plan"); tool `eval/validate_zircolite.py`, tests first. If it does
+      not pass, Zircolite does not score any rule.
+- [ ] **R11.4 The 12 CVE pairs:** the expert's rule first (a pair counts only if it fires), then ours — the 2
+      tuning reports have our rules; the other 10 need a 10-report run (one request at a time).
+- [ ] **R11.5 Noise:** how many unrelated recordings each rule fires on, ours vs the experts' (measures fixed first).
+
 ---
 
 ## Phase 3 — Assistant backend (after Phase 0 approves it)

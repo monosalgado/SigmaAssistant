@@ -6657,3 +6657,45 @@ fixtures — it shows the install works, **not** that Zircolite is trustworthy o
 **Next (plan fixed before running):** validate Zircolite on SigmaHQ's regression recordings with known answers (count
 conversion failures, unsupported rules and wrong-telemetry cases apart from zero-match results); then the gold rules on
 the 12 CVE-matched pairs (a pair counts only if the expert's rule fires).
+
+## 2026-10-19 — Zircolite validation on SigmaHQ's recordings: the plan (fixed before the first pass)
+
+**User:** "push it and write the validation plan". **Question it answers** (the professor's first question): when
+Zircolite says a Sigma rule fires, or does not fire, on a recording, can we believe it? **Nothing below has been run;
+the tool is built after this entry, tests first.** Known beforehand, disclosed: one of the 138 cases (Bitsadmin
+download, `d059842b`) was run at setup — 1 match, as expected — and its recording is also one of Zircolite's own
+test files.
+**Known answers:** SigmaHQ's `regression_data` in our copy of SigmaHQ (`data/sigma` at `dc38804`, 2026-02-16): **138
+recordings**, each an EVTX file naming **one rule** by id and the number of events it must match (`match_count`: 1 in
+114; absent in 24 = at least 1). All 138 are **Sysmon** recordings (process creation 87, registry 30, file 14, process
+access 2, image load 2, other Sysmon 1, emerging threats 2). The same set validated our own matcher (first pass 132 of
+136; 2 recordings had no JSON — Zircolite reads the EVTX itself, so all 138 can be evaluated).
+**Tool:** `eval/validate_zircolite.py`, run with this repository's Python; it calls Zircolite's own Python as a
+separate program (no new dependency here). Each recording is run **on its own, with its own rule only**. Fixed
+settings, Zircolite's documented ones for Sysmon logs: `--pipeline sysmon --pipeline windows-logsources`,
+`--flatten-backend cython`, `--limit -1` (no result dropped), `ZIRCOLITE_NO_CACHE=1`, no rule-status, level or tag
+filter, a fresh output and log file per run. Recorded with the results: Zircolite's commit and version, the SHA-256 of
+its `uv.lock`, the settings, SigmaHQ's commit. Output `eval/results/zircolite_validation.jsonl`.
+**Verdicts (same definition as our matcher's):** **agree** = the rule converted and the number of matching events
+equals `match_count` (at least 1 when absent); **disagree** = converted, any other number (0 included); listed apart
+with the reason: **not converted** (Zircolite's log reports the rule skipped as invalid or failed), **tool error** (exit
+code not 0, or no output file), **rule not found**. The first pass's rate is reported as is.
+**Pass rule:** Zircolite may score rules only if every converted recording agrees, or each disagreement is examined
+and explained **by the recording** (for example `match_count` undercounting, each extra event satisfying the rule as
+written — as with our matcher's 4), never by Zircolite missing or misreading an event the rule matches. A miss that
+cannot be explained this way fails the validation for that log source until understood. A rule that does not convert
+names a construct Zircolite cannot run: our rules using it are reported **"not evaluable", never "did not fire"**.
+Any change of settings after the first pass is a new log entry, with both rates reported.
+**Cross-checks (descriptive):**
+1. **Against our matcher**, recording by recording on the 136 with JSON: same count; and the same events (the
+   EventRecordIDs each one matched). Prediction written now: on the 4 recordings where our matcher found more events
+   than `match_count`, Zircolite finds the same events.
+2. **Off-target:** each recording run once with all 138 rules; the (rule, recording) pairs with at least one match,
+   set against our matcher's 45 pairs (both / Zircolite only / ours only). If Zircolite merges rules with identical
+   logic (it runs them once under one title), the tool records it.
+**What a pass lets the thesis claim:** with its documented Sysmon settings, Zircolite reproduces SigmaHQ's own expected
+results on N of 138 recordings and agrees with an independently built matcher on M of 136. **Limits to keep saying:**
+validated on **Sysmon recordings only**; rules for other channels (e.g. the Security log) rely on mappings this does not
+exercise — results on them are reported as outside the validated scope unless a later, separately planned check covers
+them. It checks that Zircolite applies a rule correctly, not that a rule is good.
+**Runs on the laptop only** — no Spark, no VPN; expected to take minutes.
