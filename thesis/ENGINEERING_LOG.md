@@ -6852,3 +6852,15 @@ may use a different exploit or stage than the report — the expert-fires-first 
 the rule fires on a recorded attack; it does not show the rule is quiet on normal activity (R11.5, and a benign log
 set later).
 **Tool:** `eval/cve_pairs.py`, tests first, committed before Step A runs.
+
+## 2026-10-19 — R11.4 Step A: tool built (before running)
+
+`eval/cve_pairs.py`, as planned. Tests first — `tests/test_cve_pairs.py`, 10 (they failed on the missing module; two
+planted bugs — every silent rule labelled "channel present", the census run inside Zircolite's folder — failed 3 of
+them, then restored); 976 tests pass. Per pair: a **detection** run with exactly the validated settings (the expert's
+rule alone, cwd = Zircolite's folder) and a **census** run (same plus `--no-event-filter --dbfile -sr`, in a scratch
+folder, so Zircolite's own folder stays untouched): event counts per channel from the saved database (counts only),
+the channels and event IDs the converted rule reads from the saved ruleset. Labels as planned; "outside the validated
+scope" = the rule reads any channel other than Sysmon's (or names none). Rows key the report as `report`, not
+`rule_id`, so the held-out draw does not count these reports as run (a test checks it). Output
+`eval/results/cve_pairs_stepA.jsonl`. Next: run it.
