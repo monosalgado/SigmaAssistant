@@ -6813,3 +6813,42 @@ it checks that a rule is applied correctly, not that it is good. Notes: CH5 ("Zi
 recordings"); action plan R11.3 [x].
 **Next (R11.4):** the expert rules on the 11 Windows CVE pairs from the inventory (a pair counts only if the expert's
 rule fires) — the measures and the log-source/channel handling to be fixed in the log before running.
+
+## 2026-10-19 — R11.4 the CVE pairs: the plan (fixed before any tool or run)
+
+**User:** "push it and write the R11.4 plan". **Question:** where a public recording holds the same CVE as one of our
+reports, does the expert's rule fire on it — and then, does ours? Identifiers and counts only; nothing here describes
+what a recording contains beyond its channels and the events a rule matched.
+**Pairs (from `eval/results/evtx_inventory.json`, `1083ff5`):** 12 reports match a recording by CVE; **11 in scope**
+(one, `7b33baef`, has a network-log expert rule — out). **22 (report, recording) pairs**; the PrintNightmare
+recordings are shared by 4 reports (`02fb90de`, `2131cfb3`, `5b2bbc47`, `ba6b9e43`), so pairs are not independent and
+results are also given per CVE. Expert rules' log sources: 8 by category (Sysmon-mapped: process creation 3, image
+load, file event, file delete, registry set, registry event), 3 by service (System 2: `44bbff3e`, `e80a0fee`;
+Application 1: `e5f66e87`) — **the service ones read channels the Zircolite validation did not exercise** and are
+labelled "outside the validated scope" wherever they appear.
+**Settings:** exactly the validated ones (R11.3): Zircolite v4.6.0 @ `c32f2ef`, `--pipeline sysmon --pipeline
+windows-logsources --flatten-backend cython --limit -1`, no cache; one rule per Zircolite run.
+**Step A — the expert's rule on each pair (offline, laptop):** per pair: converted or not; events matched and their
+EventRecordIDs; the recording's channels (event counts per channel, from Zircolite's flattened events; only counts
+kept). Each pair is **usable** (the rule converted and fires on ≥ 1 event) or listed apart: **silent, its channel
+present** (the recording holds events of the channel the rule reads but none match — it does not show what the expert
+targeted), **silent, its channel absent** (cannot be tested), **not converted**, **tool error**. A report is usable
+when ≥ 1 of its pairs is. Step A's result is logged before Step B is planned in detail or run.
+**Step B — our rules on the usable reports only (needs the Spark):** today's pipeline (main, recorded commit;
+`--no-web-enrich --scope windows-linux`, `run_resilient`), **k = 3 runs per report**, on a manifest subset of the
+usable reports written once and committed before the run; one request at a time. Each of our valid rules is run on
+its report's usable recordings with the same settings, one rule per run. **Measures, per report and run:**
+- **primary — caught the expert's events:** at least one of our rules matches at least one event the expert's rule
+  matched on the same recording;
+- secondary — fires at all on the usable recordings (any event); and the same for the first rule only;
+- our rules that do not convert are counted apart as "not evaluable", never as misses; misses are sorted into "our
+  rule reads a channel the recording does not have" vs "channel present, no match";
+- reported per report as hits in k runs (0–3), and per CVE. **Descriptive only — no statistical test** (≤ 11 reports,
+  most sharing one CVE). Noise (how many unrelated recordings each rule fires on) is R11.5, planned apart.
+**Disclosed now:** 3 of the 11 reports had never been run (`44bbff3e`, `e80a0fee` from confirmation set 3, and
+`e5f66e87`); if Step B runs them they leave the pool of never-run in-scope cases (87) for the final confirmation (the
+draw excludes any case in a result file). The recordings come from other people's reproductions of the CVE, which
+may use a different exploit or stage than the report — the expert-fires-first rule is there for that. A hit shows
+the rule fires on a recorded attack; it does not show the rule is quiet on normal activity (R11.5, and a benign log
+set later).
+**Tool:** `eval/cve_pairs.py`, tests first, committed before Step A runs.
