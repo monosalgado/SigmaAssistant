@@ -633,6 +633,22 @@ on the first pass**; the 4 disagreements were checked and are recordings with mo
 stated count; 2 have no JSON copy. Only 2 of the corpus's 303 gold rules have a recording, so the recordings
 validate the evaluator but cannot score our rules.
 
+### Zircolite, validated on the same recordings `[DESIGN]` `[MEASURED]` (added 2026-10-19)
+For testing rules on recorded logs (R11) the user chose **Zircolite** (open source, LGPL; v4.6.0 at `c32f2ef`, its own
+environment outside the repository, dependencies pinned by its `uv.lock`) over our matcher, so the thesis rests on a
+standard tool. It converts each Sigma rule with pySigma (its documented Sysmon mappings, `sysmon` +
+`windows-logsources`, which add the event type and channel a rule's log source implies) to SQL and runs it over the
+EVTX. **Validation, plan fixed before the tool was written** (`validate_zircolite.py`): each of SigmaHQ's 138
+recordings with its own rule — **all 138 rules converted; 134 of 138 agree with the stated count on the first pass;
+the 4 disagreements are the same 4 as our matcher's** (recordings with more qualifying events than their stated
+count). **Against our independently built matcher: the same events (by Windows record number) on all 136 recordings
+with a JSON copy**, including the 4 (predicted before the run); the 2 without JSON agree with their stated count.
+Off-target (every rule against every recording, descriptive): 42 pairs, all also found by our matcher; our matcher's
+3 extra pairs are rules matching an event of another type (a `registry_set` rule on a registry-delete event, etc.) —
+our matcher does not apply the log source by design, Zircolite's mappings do. **Scope of the validation: Sysmon
+recordings only**; rules for other channels rely on mappings this did not exercise. It shows Zircolite applies a rule
+correctly, not that a rule is good. (log 2026-10-19)
+
 ### Synthetic replay — designed, validated, and not used `[DESIGN]` `[MEASURED]` (added 2026-10-05)
 Events built from the human rules (`event_builder.py`: DNF, one event per way the rule can fire, minimal values,
 nothing invented; regex or contradiction = "cannot build"), our rules scored on them (`replay.py`: hit over every

@@ -6784,3 +6784,32 @@ recording's JSON for the cross-check, by EventRecordID (`rule_matcher.load_raw_e
 calls it, behaviour unchanged). The first output row records Zircolite's commit and version, its `uv.lock` SHA-256,
 the settings and SigmaHQ's commit. A 3-recording check into a scratch folder (not the result) ran end to end, ~1 s per
 run. Next: the first pass on all 138 → `eval/results/zircolite_validation.jsonl`.
+
+## 2026-10-19 — R11.3 Zircolite validation: first pass — PASSED (134 of 138; the same 4 as our matcher, same events)
+
+`eval/validate_zircolite.py` (`48718e4`) → `eval/results/zircolite_validation.jsonl` (first row: Zircolite v4.6.0 @
+`c32f2ef`, `uv.lock` SHA-256 `182fbe57de912d92…`, settings, SigmaHQ @ `dc38804`). Laptop only.
+**Result, first pass, no fix:** 138 recordings — **all 138 rules converted; agree 134, disagree 4 → 134 of 138**. No
+"not converted", no tool error, no rule missing. The 4 disagreements are **the same 4 as our matcher's** (log
+2026-10-04): `0b9ad457` AnyDesk artefact 3 (expected 1), `8fbf3271` Cred Dump tools dropped files 3, `45e112d0` IE
+security zones 3, `c7dcacd0` disable administrative share 2 — each extra event satisfies the rule as written
+(examined then), i.e. the recordings' `match_count` undercounts.
+**Cross-check with our matcher (independently built, on SigmaHQ's JSON copies):** same number of events on **136 of
+136**, **same events (EventRecordID) on 136 of 136**. The prediction written in the plan — on the 4 recordings where our
+matcher found more than `match_count`, Zircolite finds the same events — held, **4 of 4**. The 2 recordings without a
+JSON copy (`8f3ab69a`, `9c226817`), which our matcher could not evaluate, agree (1 of 1 each).
+**Off-target (descriptive):** each recording with all 138 rules: Zircolite 42 (rule, recording) pairs, our matcher 45;
+**all 42 in both**; 3 only ours — `33efc23c` (`registry_set`) on a registry-delete recording, `bef37fa2`
+(`process_creation`) on a file-event recording, `d645ef86` (`registry_delete`) on a registry-set recording: rules
+matching an event of another type, which our matcher allows by design (it does not apply the log source) and
+Zircolite's Sysmon mapping excludes (it adds the event type). No all-rules run merged or dropped a rule (loaded =
+converted in all 138).
+**Verdict under the plan:** every converted recording agrees, or its disagreement is explained by the recording (the 4,
+with the same events found by two independent tools) → **Zircolite may score rules — on Sysmon recordings, with these
+settings**. Answer to the professor's first question: on SigmaHQ's own known-answer recordings Zircolite reproduces
+the expected result in 134 of 138, the other 4 being recordings that hold more qualifying events than stated, and it
+matches an independently built evaluator event for event. Limits kept: Sysmon only (other channels not exercised);
+it checks that a rule is applied correctly, not that it is good. Notes: CH5 ("Zircolite, validated on the same
+recordings"); action plan R11.3 [x].
+**Next (R11.4):** the expert rules on the 11 Windows CVE pairs from the inventory (a pair counts only if the expert's
+rule fires) — the measures and the log-source/channel handling to be fixed in the log before running.
