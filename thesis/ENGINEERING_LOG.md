@@ -6864,3 +6864,24 @@ the channels and event IDs the converted rule reads from the saved ruleset. Labe
 scope" = the rule reads any channel other than Sysmon's (or names none). Rows key the report as `report`, not
 `rule_id`, so the held-out draw does not count these reports as run (a test checks it). Output
 `eval/results/cve_pairs_stepA.jsonl`. Next: run it.
+
+## 2026-10-19 — R11.4 Step A result: the expert's rule fires on 0 of 22 CVE pairs (the telemetry does not match)
+
+`eval/cve_pairs.py` (`f34469b`) → `eval/results/cve_pairs_stepA.jsonl`; Zircolite v4.6.0 @ `c32f2ef`, validated
+settings. All 22 detection runs and 22 census runs exited 0; all 22 expert rules converted.
+**Result: usable pairs 0 of 22; usable reports 0 of 11.** Labels: **silent, channel absent 17**; **silent, channel
+present 5** — and in those 5 the recording holds no event of the type the rule reads (rule events present: 0 each).
+**Why (census, counts only):** the expert rules read Sysmon in 8 of 11 reports (event IDs 1, 7, 11, 12–14, 13, 23), the
+System log in 2 (`44bbff3e`, `e80a0fee`) and the Application log in 1 (`e5f66e87`). Of the **10 distinct recordings,
+only 1 holds any Sysmon event**, and none of the types these rules read; 5 hold Security-log events, the others
+print-service, PowerShell, System or Application channels, none with the event IDs the service rules read. So the
+public recordings of these CVEs were captured with other telemetry (mostly the Security log) than the one the SigmaHQ
+experts wrote their rules for (mostly Sysmon). Not a Zircolite fault: every rule converted, and the census reads the
+recordings' own channels.
+**Under the plan:** no report is usable → **Step B is not run** (no Spark time; the 3 never-run reports stay unused).
+Nothing is concluded about our rules. **What it means for the thesis:** matching a public recording to a report by
+CVE is not enough — the recording must also carry the telemetry the rule reads; with these two collections the
+report-level route (PoC → our rule → recorded attack) gives no testable pair. Remaining routes, for the user to choose:
+technique-level tests on the collections' Sysmon recordings (how many exist is not yet counted), another public
+dataset recorded with Sysmon, the Security-log mapping (`windows-audit`, not validated — SigmaHQ's known answers are
+Sysmon only), or the lab (Sysmon logging; the user and the lab). Notes: CH7 60; action plan R11.4.

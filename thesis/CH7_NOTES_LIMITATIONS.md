@@ -287,6 +287,12 @@ limitation in the log belongs here too.
     **13 of 41 = 0.317 against the scope's chance 0.278 (p = 0.34)**, and the latest tuning run (`c53_tuning60`) 15 of
     42 = 0.357 (p = 0.17): the web cases carried much of the earlier result. Small samples (41–42); a post-hoc subset
     of runs made before the scope existed. (log 2026-10-19)
+60. **Public recordings of the same CVE did not carry the telemetry the expert rules read** `[DISCLOSE]` `[MEASURED]`
+    (R11.4). 11 of our Windows reports have a public recording of the same CVE (22 pairs), but the expert's own rule
+    fires on none of them: 8 of the 11 expert rules read Sysmon events and only 1 of the 10 recordings holds any Sysmon
+    event (most hold Security-log events). Testing a generated rule on "the recorded attack" therefore needs recordings
+    made with the same telemetry the rules are written for; with these collections the report-level test was not
+    possible, so nothing is concluded about our rules from it. (log 2026-10-19)
 
 ---
 

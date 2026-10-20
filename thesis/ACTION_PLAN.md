@@ -428,7 +428,9 @@ rules, because the thesis must defend the tool (user chose it over our matcher).
 - [x] **R11.3 Validate Zircolite on SigmaHQ's 138 recordings with known answers** — **PASSED 2026-10-19**: all
       converted, 134 of 138 agree, the 4 others = our matcher's 4 (recordings undercount), same events as our
       matcher on 136 of 136 (`eval/validate_zircolite.py`, `zircolite_validation.jsonl`). Valid for Sysmon only.
-- [ ] **R11.4 The 12 CVE pairs (11 in the Windows/Linux scope, 22 pairs):** plan fixed in the log 2026-10-19. Step A
+- [x] **R11.4 The 12 CVE pairs — Step A DONE 2026-10-19: the expert's rule fires on 0 of 22 pairs** (17 the rule's
+      channel absent, 5 present without the rule's event type; only 1 of the 10 recordings has Sysmon events, most are
+      Security-log) → **no usable report, Step B not run**. Next route: the user's choice (log). Original plan: Step A
       (offline): the expert's rule on each pair — usable if it fires. Step B (Spark): today's pipeline, k = 3, on
       the usable reports only; primary = one of our rules matches an event the expert's rule matched. Descriptive.
 - [ ] **R11.5 Noise:** how many unrelated recordings each rule fires on, ours vs the experts' (measures fixed first).
