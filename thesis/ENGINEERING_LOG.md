@@ -6885,3 +6885,41 @@ report-level route (PoC → our rule → recorded attack) gives no testable pair
 technique-level tests on the collections' Sysmon recordings (how many exist is not yet counted), another public
 dataset recorded with Sysmon, the Security-log mapping (`windows-audit`, not validated — SigmaHQ's known answers are
 Sysmon only), or the lab (Sysmon logging; the user and the lab). Notes: CH7 60; action plan R11.4.
+
+## 2026-10-23 — Real-log demo (fodhelper + ActiveMQ): the chain works; real logs expose over-broad rules that similarity scoring cannot
+
+**First end-to-end demonstration of report → assistant rule → recorded attack → Zircolite.** The user detonated the
+attacks in their own Windows 10 VM (their lab, their action) and exported the Sysmon logs as EVTX; the assistant and
+Zircolite ran here. A **demonstration**, not a scored eval run: the rules came from the live web-app pipeline, and the
+recordings are user-generated, so the numbers below are illustrative and labelled so. Artifacts local in `EVTX
+Examples/` (gitignored); recordings are lab captures, kept out of the public repo.
+
+**Sanity check — fodhelper (T1548.002):** the user's own May rule (`fodhelper.exe` → `cmd.exe`) run with Zircolite
+(validated settings) on a fresh recording (`sysmon.evtx`, 9,718 events): **fired 12 times**, every match
+`fodhelper.exe`→`cmd.exe`. Confirms the whole chain works on a Sysmon recording the user controlled — the telemetry
+the public CVE recordings lacked (R11.4).
+
+**The real test — ActiveMQ CVE-2023-46604:** input was an **independent** analysis blog (Rapid7
+`ra-cve-2023-46604-analysis`), not the attack recipe, to avoid circularity. The assistant (`/analyze`, qwen3-coder,
+270 s) generated **4 rules**. Zircolite (validated settings) on the user's recording
+(`activemq-cve-2023-46604-sysmon.evtx`, 17,691 Sysmon events — EventID 1/5 only, **no network events captured**):
+- Rule 1 (network, DestinationPort 61616) and Rule 4 (C2, network): **0** — the recording captured no Sysmon network
+  events (EventID 3), so they could not fire. Capture limitation, not rule logic.
+- Rule 2 (`msiexec` MSI): **14** — but the selection is a loose OR on `CommandLine|contains` `msiexec` / `/q /i`, so
+  it matches all msiexec including the normal service (`msiexec /V`). It did flag the suspicious `msiexec -Embedding`,
+  but is not specific.
+- Rule 3 (priv-esc/lateral: `CommandLine|contains` `certutil`/`-urlcache`/`-split`/**`-f`**): **1,470** — a
+  false-positive storm. `-f`, matched case-insensitively, hits `-ForceV1` (conhost) and `--enable-features` (Edge),
+  flagging ~1,470 benign processes.
+
+**Reading it straight:** the assistant identified the right behaviour (msiexec executing a malicious MSI is the real
+post-exploitation step for this CVE), and all 4 rules are valid Sigma, but on real logs they ranged from un-fireable
+(network, not captured) to dangerously broad (rule 3). **"It fires" is not the bar — rule 3 fires on everything.**
+**The thesis point:** rule 3 uses `CommandLine` exactly as a human rule would, so it would score fine on detection-field
+agreement (S5) — yet it is useless. **Real-log testing with Zircolite exposed in 0.02 s a failure the entire
+paper-based (similarity) evaluation cannot see.** This is the strongest argument for the recorded-log direction.
+
+**Next (path 2, user wants it; tomorrow):** use the assistant's analyst-review/correct step (Change 46) to tighten
+rule 2/3, re-test on the same recording, and show specific detection of the malicious msiexec with the noise gone —
+demonstrating human-in-the-loop correction *and* real-log validation in one story. Also: enabling Sysmon network
+logging in the VM would let the network rules be tested.
