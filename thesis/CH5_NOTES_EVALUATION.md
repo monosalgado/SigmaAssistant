@@ -660,7 +660,10 @@ fire (no Sysmon network events captured) and one
 process rule fired **1,470 times** on benign processes because its selection matched the substring `-f` (hitting
 `-ForceV1`, `--enable-features`). **The point for the chapter:** that rule uses `CommandLine` like a human rule and
 would score fine on detection-field agreement (S5), yet is useless — a failure real-log testing exposes instantly and
-similarity scoring cannot. Full detail in the log, 2026-10-23 and 2026-10-26. (Next: the assistant's analyst-review step to tighten
+similarity scoring cannot. Full detail in the log, 2026-10-23 and 2026-10-26. **Re-runs 2026-10-27 (log 2026-10-28):**
+the same blog gave 3 different, network-only rules (first split at the attack-vector step, temperature 0); two other
+inputs (Rapid7's in-the-wild post; the Metasploit module's own documentation, circular) gave 6 and 2 rules; **0 of the
+11 matched the attack** (the only 2 matches were the ActiveMQ server starting). (Next: the assistant's analyst-review step to tighten
 and re-test.)
 
 ### Synthetic replay — designed, validated, and not used `[DESIGN]` `[MEASURED]` (added 2026-10-05)

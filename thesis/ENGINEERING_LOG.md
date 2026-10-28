@@ -6959,3 +6959,50 @@ behaviour". Checked today against the run's own saved record (`data/sessions.jso
 - **Also:** "context for the analyst" (why web search stays in the app, 2026-10-18) does not keep it out of the rules.
   In the app its kept findings go to the stages that write them (on 2026-10-18 the rules used 167 web strings).
 - Updated: CH5 demo note; the user's meeting notes (local). No scored result changes.
+
+## 2026-10-28 — Real-log demo, re-runs of 2026-10-27: the same blog gave 3 different rules (first split at the attack-vector step, temperature 0); two other inputs; 0 of 11 new rules matched the attack
+
+`[DEMO]`, descriptive. Three runs the user made in the web app on 2026-10-27 (version 1, no corrections), read from
+the saved record (`data/sessions.json`, sessions `2d9fa751`, `c2e969ab`, `751a5dfc`; local, gitignored), no new code.
+Each run's rules saved as YAML under `EVTX Examples/` (gitignored) and run with Zircolite (validated settings) on the
+same recording as 10-23 (17,691 Sysmon events; process events only, no network events captured).
+
+**1. The same blog as 10-23 (Rapid7 analysis), `2d9fa751`: 3 rules, all `network_connection` reading
+`NetworkPayload`, a field Sysmon network events do not have → 0, 0, 0** (10-23's run: 4 rules → 0, 14, 1,470, 0).
+Where the two runs split:
+- Web search came from the saved search: the same 4 pages read and the same 8 findings kept. The PoC result is
+  identical.
+- **The first difference is the attack-vector step (temperature 0): 5 of its 16 fields are worded differently.**
+- Then the analysis: 22 vs 20 indicators, 6 of 10 ATT&CK techniques shared; the same first log source
+  (`network_connection / windows`).
+- Then rule writing (temperature 0.3): 4 rules → 3.
+- Not proven: identical page text on both days (the 10-23 run did not save the fetched page). The PoC and digest
+  steps, which read the page, gave identical output.
+
+This fits what is measured: temperature-0 answers change between sessions on the server, and two runs of identical
+code on frozen inputs disagree on 16 of 60 reports, growing down the chain (CH6 6.0c); rule writing runs at 0.3 and
+review at 0.2 (CH7 15).
+
+**2. Rapid7's post on attacks seen in the wild (ETR) as input, `c2e969ab`.** Web search read Huntress,
+glassportal.io, advens.com and activemq.apache.org (not the Metasploit page); 5 findings kept, all from Huntress.
+**6 rules; 1 fired: rule 6 (`java.exe` with `ActiveMQ` in the command line), 2 matches — both the ActiveMQ server
+starting (`activemq.bat console`, `activemq.bat start`), not the attack.** The other 5: 0. From the rule files: rules
+1 and 4 use fields Sysmon does not record for those events (`NetworkPayload`; `Hashes` on file events), rule 5
+matches defanged addresses (`172.245.16[.]125`) that never occur in a log, and rules 2–3 encode the in-the-wild
+campaign's exact msiexec command (none in the recording). More specific than 10-23's rules (no false-positive storm),
+but tied to another campaign's indicators.
+
+**3. The Metasploit module's own documentation page (GitHub) as input, `751a5dfc` — circular: the tool the user
+attacked with.** Web search read the module's source page, Rapid7's module page, a Metasploit pull request, an
+unrelated GitHub pull request and an Arctic Wolf post; 7 findings kept, 2 from the module's source page and 5 from the
+unrelated pull request (its saved copy holds no Sigma rule text: no `logsource:` or `detection:`). **2 rules → 0, 0:**
+a network rule (port 61616, `Image` contains `activemq`, private addresses excluded) and a process rule
+(`CommandLine` contains `ClassPathXmlApplicationContext` or `ExceptionResponse`; neither string is in any command line
+of the recording).
+
+**Reading:** across the three re-runs, **0 of 11 rules matched an attack event**; the only matches were 2 benign
+server start-ups. Two kinds of failure recur: rules that cannot fire on Sysmon as written (fields Sysmon lacks,
+defanged indicators, packet contents), and rules tied to the input's specifics (another campaign's command, files and
+addresses). Even the circular input (the attack tool's own documentation) gave nothing that fired. SigmaHQ has no rule
+for this CVE in our copy, so there is no expert rule to compare on this recording. Not a rate: 3 runs, 1 recording,
+no network events captured. No scored result changes.
