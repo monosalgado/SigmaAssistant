@@ -7006,3 +7006,17 @@ defanged indicators, packet contents), and rules tied to the input's specifics (
 addresses). Even the circular input (the attack tool's own documentation) gave nothing that fired. SigmaHQ has no rule
 for this CVE in our copy, so there is no expert rule to compare on this recording. Not a rate: 3 runs, 1 recording,
 no network events captured. No scored result changes.
+
+## 2026-11-03 — Housekeeping: cited run results committed; the lab folder sorted (paths in earlier entries changed)
+
+- **Committed (`656a0f1`) the 9 run-result files the log cites but that were only on disk:** `c45A_tuning60`,
+  `c45B_tuning60`, `c48A_tuning60`, `c48B_tuning60`, `c50_tuning60`, `c51_tuning60`, `c53_tuning60`,
+  `q36think_tuning60`, `web_tuning60`. Scanned first: no lab details or keys; the only key-like string is the dummy
+  `apikey=asdasd` quoted from a public exploit; the local home-folder path appears in `config.web_snapshots.path`, as in
+  five files already committed. `baseline60.2026-09-13.jsonl` and `smoke.jsonl` stay uncommitted, as decided earlier
+  (uncited).
+- **`EVTX Examples/` (local, gitignored) sorted into `recordings/`, `rules/`, `results/`.** File names are unchanged;
+  folder names changed, e.g. `ActiveMQ Generated Rules/` → `rules/activemq-2026-10-23-analysis-blog/`. The full map is
+  in `EVTX Examples/README.md`. The paths in the entries of 2026-10-23, 2026-10-26 and 2026-10-28 are the old ones.
+- Outside the repository (the user's `Projects` folder): papers and early material moved to `Thesis-Materials/`, old
+  projects to `Old-Projects/`; nothing in this repository referred to them.
