@@ -63,9 +63,10 @@ def _hayabusa_result(run: dict, converted_id: str) -> dict:
 
 def compare_rule(rule_path, evtx, converted: dict, zdir, hdir, binary: str, workdir,
                  zrunner=subprocess.run, hrunner=subprocess.run) -> dict:
-    rule = yaml.safe_load(Path(rule_path).read_text(encoding="utf-8")) or {}
+    # Both engines run from their own folders, so every path they get is absolute (first R12.3 run, 2026-11-03).
+    rule_path, evtx, workdir = Path(rule_path).resolve(), Path(evtx).resolve(), Path(workdir).resolve()
+    rule = yaml.safe_load(rule_path.read_text(encoding="utf-8")) or {}
     rule_id = str(rule.get("id"))
-    workdir = Path(workdir)
     (workdir / "zircolite").mkdir(parents=True, exist_ok=True)
     zrun = run_zircolite(zdir, [evtx], [rule_path], workdir / "zircolite" / f"{rule_id}.json",
                          workdir / "zircolite" / f"{rule_id}.log", zrunner)
@@ -75,7 +76,8 @@ def compare_rule(rule_path, evtx, converted: dict, zdir, hdir, binary: str, work
         hayabusa = {"status": "not converted", "matched": None, "record_ids": None,
                     "reason": "the converter made no Sysmon copy"}
     else:
-        hrun = run_hayabusa(hdir, binary, evtx, copy["path"], workdir / "hayabusa" / f"{rule_id}.jsonl", hrunner)
+        hrun = run_hayabusa(hdir, binary, evtx, Path(copy["path"]).resolve(), workdir / "hayabusa" / f"{rule_id}.jsonl",
+                            hrunner)
         hayabusa = _hayabusa_result(hrun, copy["converted_id"])
     both = zircolite["status"] == "ran" and hayabusa["status"] == "ran"
     return {"rule_file": Path(rule_path).name, "rule_id": rule_id, "title": rule.get("title"),
@@ -100,7 +102,7 @@ def main(argv: list = None) -> int:
     parser.add_argument("--binary", default=HAYABUSA_BINARY)
     parser.add_argument("--converter", type=Path, default=CONVERTER_DIR)
     args = parser.parse_args(argv)
-    work = args.work or Path(tempfile.mkdtemp(prefix="compare_engines_"))
+    work = (args.work or Path(tempfile.mkdtemp(prefix="compare_engines_"))).resolve()
     env = {"zircolite": zircolite_environment(args.zircolite, SIGMA),
            "hayabusa": hayabusa_environment(args.hayabusa, args.binary, args.converter, SIGMA)}
     print(f"Zircolite {env['zircolite']['zircolite_version']}; Hayabusa {env['hayabusa']['hayabusa_version']} "

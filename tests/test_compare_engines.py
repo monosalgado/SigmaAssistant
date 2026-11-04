@@ -114,6 +114,29 @@ def test_a_failed_zircolite_run_is_a_tool_error(tmp_path):
     assert row["zircolite"]["status"] == "tool error"
 
 
+def test_relative_paths_reach_the_engines_as_absolute_paths(tmp_path, monkeypatch):
+    # Found in the first R12.3 run (2026-11-03): both engines run from their own folders, so a relative recording
+    # path given on the command line did not exist there and every run was a tool error.
+    monkeypatch.chdir(tmp_path)
+    _rule(tmp_path)
+    zcalls = []
+    zrunner = _zircolite([5])
+
+    def zspy(cmd, **kwargs):
+        zcalls.append(cmd)
+        return zrunner(cmd, **kwargs)
+
+    hrunner = _hayabusa([5])
+    compare_rule(Path("rules/some_rule.yml"), Path("rec.evtx"), CONVERTED, tmp_path / "Z", tmp_path / "H", "hb",
+                 Path("work"), zspy, hrunner)
+    zcmd, hcmd = zcalls[0], hrunner.calls[0]
+    assert zcmd[zcmd.index("--events") + 1] == str(tmp_path / "rec.evtx")
+    assert zcmd[zcmd.index("--ruleset") + 1] == str(tmp_path / "rules/some_rule.yml")
+    assert zcmd[zcmd.index("--outfile") + 1].startswith(str(tmp_path / "work"))
+    assert hcmd[hcmd.index("-f") + 1] == str(tmp_path / "rec.evtx")
+    assert hcmd[hcmd.index("-o") + 1].startswith(str(tmp_path / "work"))
+
+
 def test_the_summary_counts_rules_both_ran_and_agreements():
     rows = [{"same_events": True, "zircolite": {"matched": 2}, "hayabusa": {"matched": 2}},
             {"same_events": False, "zircolite": {"matched": 1}, "hayabusa": {"matched": 0}},
