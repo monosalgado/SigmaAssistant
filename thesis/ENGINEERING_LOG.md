@@ -7053,3 +7053,24 @@ so the flags are pinned in R12.1 before anything is counted.
 
 Hayabusa numbers count only after R12.2 passes; R12.3–R12.5 are demonstrations. **R13 (ablation, user 2026-11-03):**
 planned after R12.
+
+## 2026-11-03 — R12.1 done: Hayabusa 4.3.1 and the converter installed; settings pinned before R12.2
+
+- **Hayabusa 4.3.1** for the Mac (`hayabusa-4.3.1-mac-aarch64.zip`, 47,893,989 bytes, SHA-256
+  `cabffad2…4cec`, equal to the digest GitHub publishes for the release), in `Projects/Hayabusa/` outside the
+  repository. Its own rule pack: `rules/` at hayabusa-rules commit `97b3fd90c` (2026-10-28), 5,019 rule files. The VM must
+  run the same version (`hayabusa-4.3.1-win-x64.zip`, SHA-256 `e4196a5e…8ddb`).
+- **Converter:** `sigma-to-hayabusa-converter` at commit `7999fa1` (2026-10-25) in `Projects/`, its own environment:
+  Python 3.14.6 and `ruamel.yaml` 0.18.5, the version its lock file pins (its only dependency; no Poetry).
+- **Settings (pinned):** `dfir-timeline -f <evtx> -r <rules> -w -p verbose -t jsonl -o <file> -C -U` (`-l` instead
+  of `-f` on the VM). `-w` turns off the scan wizard; the `verbose` profile gives `RuleTitle`, `RuleID`, `RuleFile`
+  and `RecordID`. The converted rules name their channel, so `-A` is not used; whether `-D`/`-u`/`-n` are ever needed is
+  checked in R12.2 (a rule loaded or skipped is visible in the counts).
+- **Our 16 saved rules converted** (`EVTX Examples/rules-hayabusa/`, local): 16 Sysmon copies, 14 built-in copies
+  (none for the in-the-wild post's rule 4, file events; rule 5's built-in copy skipped, its address field has no
+  built-in equivalent). The fodhelper rule names the Sysmon channel itself, so its built-in copy demands Sysmon event 1
+  and Security 4688 at once and can never fire; the assistant's rules do not name a channel.
+- **Setup check (not a result):** the fodhelper rule on `recordings/sysmon.evtx` → 12 detections, the same 12 event
+  record numbers as Zircolite. Hayabusa numbers count after R12.2.
+- **R12.4 package** for the user's VM: `EVTX Examples/hayabusa-vm-package.zip` (the converted rules + step-by-step
+  `RUN_ON_VM.txt`).

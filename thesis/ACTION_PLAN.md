@@ -436,7 +436,7 @@ rules, because the thesis must defend the tool (user chose it over our matcher).
 - [ ] **R11.5 Noise:** how many unrelated recordings each rule fires on, ours vs the experts' (measures fixed first).
 
 ### Hayabusa (Dr. Simon, 2026-10-28: test the rules on the system the attack ran on) — plan in the log 2026-11-03
-- [ ] **R12.1 Install** Hayabusa 4.3.1 on the Mac (outside the repo, like Zircolite) and Yamato's
+- [x] **R12.1 Install** (done 2026-11-03: Hayabusa 4.3.1, rules `97b3fd90c`, converter `7999fa1`; settings in the log) Hayabusa 4.3.1 on the Mac (outside the repo, like Zircolite) and Yamato's
       `sigma-to-hayabusa-converter` (own environment); the same Hayabusa version on the VM. Read the real flags.
 - [ ] **R12.2 Validate on SigmaHQ's 138 known-answer recordings** (converted rules), as R11.3 did for Zircolite;
       events compared with Zircolite's. Pass criterion in the log before the run.
