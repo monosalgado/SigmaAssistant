@@ -7074,3 +7074,24 @@ planned after R12.
   record numbers as Zircolite. Hayabusa numbers count after R12.2.
 - **R12.4 package** for the user's VM: `EVTX Examples/hayabusa-vm-package.zip` (the converted rules + step-by-step
   `RUN_ON_VM.txt`).
+
+## 2026-11-03 — R12.2 tool built (`eval/validate_hayabusa.py`, 20 offline tests; suite 996 pass); two points fixed before the run
+
+Found while building, from probes in a scratch folder (not results): all 138 SigmaHQ rules named by the recordings get
+a Sysmon copy from the converter; none is on its ignore list; the converted rule IDs are the IDs in Hayabusa's own pack
+(the pack is made by the same converter). The converter collects only files under a folder path containing "rule" and
+reads its ignore list from its working folder, so the tool copies the rules into `rules-in` and runs it from its own
+folder. Hayabusa reports what it loaded (`Total detection rules`, `Detection rules enabled after channel filter`).
+
+**Fixed before the run:**
+1. **Hayabusa's own config excludes 1 of the 138 converted rules** — "Sysmon Configuration Change" (Sysmon event 16),
+   listed in `rules/config/exclude_rules.txt` as replaced by a Hayabusa rule. Hayabusa then skips it silently (prints
+   "Excluded rules: 1", loads 0 rules, exits 1, writes no file). The default config is kept (not edited): such a rule is
+   **not loaded**, listed apart with its reason, like "not converted" — never a disagreement. The same applies to a rule
+   on `noisy_rules.txt` or dropped by the channel filter.
+2. **Reading of the pass rule** ("no fewer agreements than Zircolite"): Hayabusa's agreements are compared with
+   Zircolite's **on the recordings Hayabusa evaluated** (agree + disagree); Zircolite's 134 of 138 overall is reported
+   beside it. The events condition is unchanged: the same record numbers as Zircolite on every recording where both
+   produced output.
+
+Settings as pinned in R12.1, plus `-K` (no colour; the screen only).
