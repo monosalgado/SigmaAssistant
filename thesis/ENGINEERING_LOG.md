@@ -7095,3 +7095,31 @@ folder. Hayabusa reports what it loaded (`Total detection rules`, `Detection rul
    produced output.
 
 Settings as pinned in R12.1, plus `-K` (no colour; the screen only).
+
+## 2026-11-03 — R12.2 result: Hayabusa PASSED on SigmaHQ's 138 known-answer recordings (after a bug in the tool's first run was found and fixed)
+
+**The first run was invalid — a bug in the tool, not a Hayabusa result.** It converted all 138 rules in one folder.
+A SigmaHQ rule's own `related: derived` links survive conversion, so 16 converted files named more than one original,
+and 3 recordings ran with **another rule's** copy (`certutil_encode` ran "File In Suspicious Location Encoded To
+Base64 Via Certutil.EXE"; `findstr_lsass` ran "Security Tools Keyword Lookup Via Findstr.EXE"; a third a renamed
+variant). It printed NOT PASSED (131 of 137; the same events as Zircolite on 135 of 137, the 2 differences being the
+wrong rules). Found by checking each converted copy's title against its original before trusting the run. **Fix:**
+each rule is converted on its own (a test reproducing the bug first). The invalid rows are kept on disk,
+`hayabusa_validation.invalid-mapping.jsonl` (not committed). The pass rule was not changed.
+
+**Result** (`eval/results/hayabusa_validation.jsonl`; Hayabusa v4.3.1, its rules `97b3fd90c`, converter `7999fa1`,
+`ruamel.yaml` 0.18.5, SigmaHQ `dc3880459`):
+- converter: a Sysmon copy for **138 of 138** rules; each recording ran with its own rule's copy (title check: 0 of
+  138 differ);
+- **133 agree, 4 disagree, 1 not loaded** ("Sysmon Configuration Change", excluded by Hayabusa's own config);
+- **agreement with SigmaHQ's counts: 133 of the 137 evaluated, the same as Zircolite on those 137** (134 of 138
+  overall);
+- **the same events as Zircolite (by record number) on 137 of 137 recordings** with output from both;
+- the 4 disagreements are **exactly Zircolite's 4**, and our matcher's (recordings with more matching events than
+  their stated count).
+
+**→ PASSED** (the rule fixed before the run). Three independent ways of applying a Sigma rule — Hayabusa, Zircolite and
+our matcher — give the same events on SigmaHQ's known answers. **Scope: Sysmon only**, like Zircolite: the converter's
+built-in-log copies (Security 4688 etc.) are not exercised by these recordings, so built-in results (R12.4 on the VM)
+are descriptive only. It shows Hayabusa applies a converted rule correctly, not that a rule is good. Tool: 22 offline
+tests; suite 998 pass. Next: R12.3 (our 16 rules, Hayabusa vs Zircolite), R12.4 (the user's VM), R12.5.

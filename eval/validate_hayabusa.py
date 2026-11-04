@@ -110,22 +110,28 @@ def converted_index(out_dir) -> dict:
 
 
 def convert_rules(converter_dir, rule_paths: list, workdir, runner=subprocess.run) -> tuple:
-    """Copy the rules to `<workdir>/rules-in`, convert them, and return (converted index, the converter's output)."""
+    """Convert each rule on its own (`<workdir>/rules-in/NNN` -> `<workdir>/converted/NNN`) and return (converted
+    index, the converter's output). One rule per run because a SigmaHQ rule's own `related: derived` entries survive
+    conversion: converted together, rule B's copy also names rule A, and A could be mapped to B's copy (first R12.2
+    run, 2026-11-03)."""
     workdir = Path(workdir)
-    source, target = workdir / "rules-in", workdir / "converted"
-    for folder in (source, target):
+    for folder in (workdir / "rules-in", workdir / "converted"):
         if folder.exists():
             shutil.rmtree(folder)
-    source.mkdir(parents=True)
-    for rule in rule_paths:
-        name = Path(rule).name
-        while (source / name).exists():
-            name = "_" + name
-        shutil.copy(rule, source / name)
-    done = runner([str(Path(converter_dir) / ".venv/bin/python"), "sigma-to-hayabusa-converter.py",
-                   "-r", str(source), "-o", str(target)], cwd=str(converter_dir), capture_output=True, text=True,
-                  timeout=RUN_TIMEOUT_S)
-    return converted_index(target), (done.stdout or "") + (done.stderr or "")
+    index, report = {}, []
+    for i, rule in enumerate(rule_paths):
+        source, target = workdir / "rules-in" / f"{i:03d}", workdir / "converted" / f"{i:03d}"
+        source.mkdir(parents=True)
+        shutil.copy(rule, source / Path(rule).name)
+        original = str((yaml.safe_load(Path(rule).read_text(encoding="utf-8")) or {}).get("id"))
+        done = runner([str(Path(converter_dir) / ".venv/bin/python"), "sigma-to-hayabusa-converter.py",
+                       "-r", str(source), "-o", str(target)], cwd=str(converter_dir), capture_output=True, text=True,
+                      timeout=RUN_TIMEOUT_S)
+        report.append((done.stdout or "") + (done.stderr or ""))
+        own = converted_index(target).get(original)
+        if own:
+            index[original] = own
+    return index, "".join(report)
 
 
 def _not_loaded_reason(load: dict) -> str:
@@ -223,6 +229,11 @@ def environment(hdir, binary: str, converter_dir, sigma_dir, runner=subprocess.r
             "settings": list(SETTINGS), "sigma_commit": _git(sigma_dir, "rev-parse", "--short", "HEAD")}
 
 
+def converter_errors(report: str, work) -> list:
+    """The converter's ERROR lines, with the local work folder replaced by `<work>` (no local paths in results)."""
+    return [line.replace(str(work), "<work>") for line in report.splitlines() if "ERROR" in line][:50]
+
+
 def _zircolite_rows(path: Path) -> dict:
     rows = {}
     if path.exists():
@@ -254,14 +265,14 @@ def main(argv: list = None) -> int:
 
     wanted = [recording_info(info)[0] for info in infos]
     converted, report = convert_rules(args.converter, sorted({str(index[r]) for r in wanted if r in index}), work)
-    print(f"converter: {len(converted)} Sysmon copies for {len({r for r in wanted if r in index})} rules")
+    print(f"converter: a Sysmon copy for {len(converted)} of {len({r for r in wanted if r in index})} rules (each converted on its own)")
     zircolite = _zircolite_rows(REPO / "eval/results/zircolite_validation.jsonl")
 
     rows = []
     for i, info in enumerate(infos, 1):
         rule_id = recording_info(info)[0]
         if rule_id not in index:
-            row = {"rule_id": rule_id, "recording": str(Path(info).parent), "verdict": "rule not found",
+            row = {"rule_id": rule_id, "recording": str(Path(info).parent.relative_to(SIGMA)), "verdict": "rule not found",
                    "matched": None, "record_ids": None, "expected": None, "reason": "",
                    "zircolite_verdict": (zircolite.get(rule_id) or {}).get("verdict"),
                    "same_events_as_zircolite": None}
@@ -274,7 +285,7 @@ def main(argv: list = None) -> int:
     summary = summarise(rows)
     with open(args.out, "w", encoding="utf-8") as f:
         f.write(json.dumps({"environment": env, "recordings": len(rows), "summary": summary,
-                            "converter_errors": [l for l in report.splitlines() if "ERROR" in l][:50]}) + "\n")
+                            "converter_errors": converter_errors(report, work)}) + "\n")
         for row in rows:
             f.write(json.dumps(row) + "\n")
 

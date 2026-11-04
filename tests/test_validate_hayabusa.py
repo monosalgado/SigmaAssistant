@@ -24,6 +24,7 @@ from eval.validate_hayabusa import (
     command,
     convert_rules,
     converted_index,
+    converter_errors,
     environment,
     parse_load,
     read_detections,
@@ -122,6 +123,41 @@ def test_the_converter_runs_from_its_own_folder_on_a_folder_named_for_rules(tmp_
     assert "rule" in str(source)  # the converter only collects files under a folder path containing "rule"
     assert (source / "some_rule.yml").exists()
     assert index[RULE_ID]["converted_id"] == CONVERTED_ID and "files created" in report
+
+
+def test_each_rule_gets_its_own_copy_even_when_another_rule_derives_from_it(tmp_path):
+    # Found in the first R12.2 run (2026-11-03): a SigmaHQ rule's own `related: derived` entries survive conversion,
+    # so rule B's copy also names rule A; converting all rules in one folder mapped A to B's copy. Each rule is now
+    # converted on its own, so A's copy comes from A's conversion.
+    other_id, other_converted = "44444444-4444-4444-4444-444444444444", "55555555-5555-5555-5555-555555555555"
+    rule_a, rule_b = tmp_path / "sigma/a.yml", tmp_path / "sigma/b.yml"
+    rule_a.parent.mkdir(parents=True)
+    rule_a.write_text(RULE_YAML, encoding="utf-8")
+    rule_b.write_text(RULE_YAML.replace(RULE_ID, other_id), encoding="utf-8")
+
+    def runner(cmd, **kwargs):
+        source, out = Path(cmd[cmd.index("-r") + 1]), Path(cmd[cmd.index("-o") + 1]) / "sysmon"
+        out.mkdir(parents=True, exist_ok=True)
+        for f in source.glob("*.yml"):
+            original = (yaml.safe_load(f.read_text(encoding="utf-8")) or {})["id"]
+            if original == RULE_ID:
+                related, new_id = [{"id": RULE_ID, "type": "derived"}], CONVERTED_ID
+            else:  # B was derived from A in SigmaHQ, and its copy keeps that link
+                related, new_id = [{"id": RULE_ID, "type": "derived"}, {"id": other_id, "type": "derived"}], other_converted
+            (out / f.name).write_text(yaml.safe_dump({"id": new_id, "related": related}), encoding="utf-8")
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    index, _ = convert_rules(tmp_path / "C", [rule_a, rule_b], tmp_path / "work", runner)
+    assert index[RULE_ID]["converted_id"] == CONVERTED_ID
+    assert index[other_id]["converted_id"] == other_converted
+
+
+def test_converter_errors_are_kept_without_the_local_work_folder(tmp_path):
+    report = (f"[INFO] Start\n[ERROR:x.py:412] Error while converting rule [{tmp_path}/rules-in/000/a.yml]: "
+              f"incompatible field. Conversion skipped.\n")
+    assert converter_errors(report, tmp_path) == [
+        "[ERROR:x.py:412] Error while converting rule [<work>/rules-in/000/a.yml]: incompatible field. "
+        "Conversion skipped."]
 
 
 # --- one recording, end to end, with a fake Hayabusa -------------------------------------------

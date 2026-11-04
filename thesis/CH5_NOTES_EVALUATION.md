@@ -649,6 +649,18 @@ our matcher does not apply the log source by design, Zircolite's mappings do. **
 recordings only**; rules for other channels rely on mappings this did not exercise. It shows Zircolite applies a rule
 correctly, not that a rule is good. (log 2026-10-19)
 
+### Hayabusa, validated on the same recordings `[MEASURED]` (added 2026-11-03)
+Dr. Simon (2026-10-28) asked for Hayabusa, which runs on the system the attack ran on. Hayabusa 4.3.1 (AGPLv3) does
+not translate a rule's abstract log source, so each rule is converted first by Yamato Security's
+`sigma-to-hayabusa-converter` (adds the channel and event ID; a Sysmon copy and a built-in-log copy). **Validation,
+plan fixed before the tool was written** (`validate_hayabusa.py`), each of the 138 recordings with its own rule's
+Sysmon copy: **133 of the 137 evaluated agree with the stated count — the same as Zircolite on those 137 — and the
+same events as Zircolite on 137 of 137**; the 4 disagreements are Zircolite's and our matcher's 4. One rule was not
+loaded: Hayabusa's own config excludes "Sysmon Configuration Change" (replaced by its own rule) — listed apart,
+decided before the run. `[DISCLOSE]` The tool's first run was invalid (a conversion mix-up ran 3 recordings with
+another rule); found by a title check, fixed with a test, rerun; the pass rule unchanged. **Scope: Sysmon only**;
+the built-in-log copies are not validated. (log 2026-11-03)
+
 ### Real-log demo — why this matters, in one case `[DEMO]` (added 2026-10-23; corrected 2026-10-26)
 First end-to-end run on a recording the user captured in their own VM (fodhelper and ActiveMQ CVE-2023-46604; the
 attack detonation is theirs, assistant + Zircolite here). A demonstration, not a scored run. The fodhelper chain
