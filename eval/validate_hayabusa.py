@@ -144,6 +144,26 @@ def _not_loaded_reason(load: dict) -> str:
     return "no rules loaded"
 
 
+def run_hayabusa(hdir, binary: str, evtx, rule, outfile, runner=subprocess.run) -> dict:
+    """One Hayabusa run: its exit code, what it loaded, whether the rule loaded (and why not), and its detections
+    (None when the rule did not load or there is no output file)."""
+    outfile = Path(outfile)
+    outfile.parent.mkdir(parents=True, exist_ok=True)
+    if outfile.exists():
+        outfile.unlink()
+    try:
+        done = runner(command(hdir, binary, evtx, rule, outfile), cwd=str(hdir), capture_output=True, text=True,
+                      timeout=RUN_TIMEOUT_S)
+        exit_code, printed = done.returncode, (done.stdout or "") + (done.stderr or "")
+    except subprocess.TimeoutExpired:
+        exit_code, printed = None, f"timed out after {RUN_TIMEOUT_S} s"
+    load = parse_load(printed)
+    loaded = not (load["total_rules"] == 0 or load["enabled_after_channel_filter"] == 0 or load["no_rules_loaded"])
+    return {"exit_code": exit_code, "load": load, "loaded": loaded,
+            "reason": "" if loaded else _not_loaded_reason(load),
+            "detections": read_detections(outfile) if loaded else None, "printed_tail": _COLOUR.sub("", printed)[-300:]}
+
+
 def check_recording(info_path, converted: dict, hdir, binary: str, workdir, zircolite: dict,
                     runner=subprocess.run) -> dict:
     info_path = Path(info_path)
@@ -164,27 +184,15 @@ def check_recording(info_path, converted: dict, hdir, binary: str, workdir, zirc
     if len(evtx) != 1:
         row["verdict"] = "no EVTX" if not evtx else "several EVTX"
         return row
-    workdir = Path(workdir)
-    workdir.mkdir(parents=True, exist_ok=True)
-    outfile = workdir / f"{rule_id}.jsonl"
-    if outfile.exists():
-        outfile.unlink()
-    try:
-        done = runner(command(hdir, binary, evtx[0], converted[rule_id]["path"], outfile), cwd=str(hdir),
-                      capture_output=True, text=True, timeout=RUN_TIMEOUT_S)
-        exit_code, printed = done.returncode, (done.stdout or "") + (done.stderr or "")
-    except subprocess.TimeoutExpired:
-        exit_code, printed = None, f"timed out after {RUN_TIMEOUT_S} s"
-    load = parse_load(printed)
-    row.update(exit_code=exit_code, load=load)
-    if load["total_rules"] == 0 or load["enabled_after_channel_filter"] == 0 or load["no_rules_loaded"]:
-        row.update(verdict="not loaded", reason=_not_loaded_reason(load))
+    run = run_hayabusa(hdir, binary, evtx[0], converted[rule_id]["path"], Path(workdir) / f"{rule_id}.jsonl", runner)
+    row.update(exit_code=run["exit_code"], load=run["load"])
+    if not run["loaded"]:
+        row.update(verdict="not loaded", reason=run["reason"])
         return row
-    detections = read_detections(outfile)
-    if exit_code != 0 or detections is None:
-        row.update(verdict="tool error", reason=_COLOUR.sub("", printed)[-300:])
+    if run["exit_code"] != 0 or run["detections"] is None:
+        row.update(verdict="tool error", reason=run["printed_tail"])
         return row
-    det = detections.get(row["converted_id"]) or {"count": 0, "record_ids": []}
+    det = run["detections"].get(row["converted_id"]) or {"count": 0, "record_ids": []}
     row.update(matched=det["count"], record_ids=det["record_ids"], verdict=verdict(expected, det["count"]))
     if z.get("record_ids") is not None:
         row["same_events_as_zircolite"] = det["record_ids"] == sorted(z["record_ids"])
