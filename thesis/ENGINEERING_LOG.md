@@ -7020,3 +7020,36 @@ no network events captured. No scored result changes.
   in `EVTX Examples/README.md`. The paths in the entries of 2026-10-23, 2026-10-26 and 2026-10-28 are the old ones.
 - Outside the repository (the user's `Projects` folder): papers and early material moved to `Thesis-Materials/`, old
   projects to `Old-Projects/`; nothing in this repository referred to them.
+
+## 2026-11-03 — Plan R12: Hayabusa as a second rule engine, and the same-system test (Dr. Simon, 2026-10-28)
+
+**Why.** Dr. Simon (meeting 2026-10-28, via the user) asked that the rules be tested with Hayabusa on the system the
+attack ran on; the user used Hayabusa in the May demo on that Windows 10 VM. A second, independent engine also
+strengthens every real-log result: the same rules on the same recording through two tools. What the docs say
+(read 2026-11-03, not yet run): Hayabusa 4.3.1 (2026-10-28, AGPLv3) runs Sigma rules but does not translate the
+abstract `logsource` itself; Yamato Security's `sigma-to-hayabusa-converter` (GPL-3.0; only `ruamel.yaml`) adds the
+log channel and event ID and writes a Sysmon copy and a built-in-log copy (Security 4688, fields renamed) of each rule.
+By default Hayabusa can skip rules silently (scan wizard; a channel filter; deprecated, unsupported and noisy rules),
+so the flags are pinned in R12.1 before anything is counted.
+
+**Steps (R12 in the action plan):**
+1. **R12.1 Install** (user approved the downloads 2026-11-03): Hayabusa 4.3.1 for the Mac and the converter, outside
+   the repository with their own environments; the same Hayabusa version on the VM. Read the real flags from the
+   tools; write the exact settings here before R12.2.
+2. **R12.2 Validation, as R11.3 did for Zircolite.** Each of SigmaHQ's 138 recordings (`regression_data`) with the
+   converter's Sysmon copy of the rule it names. **Agree** = Hayabusa's count equals the stated `match_count` (at least
+   1 when absent). A rule the converter skips is reported as "not converted", not as a disagreement. **Pass** =
+   Hayabusa matches the same events as Zircolite (by Windows event record number) on every recording where both
+   produce output, and it agrees with SigmaHQ's counts on at least as many converted recordings as Zircolite did (134 of
+   138); every other difference is listed with its cause. A committed tool, tests first.
+3. **R12.3 `[DEMO]`** The 16 saved rules (fodhelper + the four ActiveMQ sets in `EVTX Examples/rules/`), converted, on
+   the two recordings; per-rule counts and events compared with Zircolite's (12; 0 · 0 · 14 · 1,470; …).
+4. **R12.4 `[DEMO]`, required: the same-system test.** The user runs Hayabusa 4.3.1's live analysis on the VM, as
+   Administrator, with the same converted rules, and brings back the result file. Compared with R12.3 by event record
+   number. The live logs keep growing after the 10-23 export, so matches after the export's last record are reported
+   separately, not as a disagreement.
+5. **R12.5 `[DEMO]`** Hayabusa's own rule pack (its curated SigmaHQ and Hayabusa rules) on the ActiveMQ recording: do
+   the experts' rules catch the attack the user ran? A reference point for the 0 of 11 of 2026-10-28.
+
+Hayabusa numbers count only after R12.2 passes; R12.3–R12.5 are demonstrations. **R13 (ablation, user 2026-11-03):**
+planned after R12.

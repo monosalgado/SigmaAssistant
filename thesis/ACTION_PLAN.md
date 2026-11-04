@@ -435,6 +435,17 @@ rules, because the thesis must defend the tool (user chose it over our matcher).
       the usable reports only; primary = one of our rules matches an event the expert's rule matched. Descriptive.
 - [ ] **R11.5 Noise:** how many unrelated recordings each rule fires on, ours vs the experts' (measures fixed first).
 
+### Hayabusa (Dr. Simon, 2026-10-28: test the rules on the system the attack ran on) — plan in the log 2026-11-03
+- [ ] **R12.1 Install** Hayabusa 4.3.1 on the Mac (outside the repo, like Zircolite) and Yamato's
+      `sigma-to-hayabusa-converter` (own environment); the same Hayabusa version on the VM. Read the real flags.
+- [ ] **R12.2 Validate on SigmaHQ's 138 known-answer recordings** (converted rules), as R11.3 did for Zircolite;
+      events compared with Zircolite's. Pass criterion in the log before the run.
+- [ ] **R12.3 Our saved rules (16) on our 2 recordings**, Hayabusa vs Zircolite counts. `[DEMO]`
+- [ ] **R12.4 Same-system test (required):** Hayabusa's live analysis on the VM with the converted rules (the user
+      runs it); compared with R12.3 by event record ID. `[DEMO]`
+- [ ] **R12.5 Hayabusa's own rule pack on the ActiveMQ recording** — do the experts' rules catch the attack? `[DEMO]`
+- [ ] **R13 Ablation** (user, 2026-11-03): how much each pipeline step affects the results. Plan after R12.
+
 ---
 
 ## Phase 3 — Assistant backend (after Phase 0 approves it)
@@ -780,3 +791,6 @@ so removing one is reversible; untracked and ignored files have no such safety n
 | 2026-10-19 | Recorded-log testing with Zircolite (user installs it; Zircolite over our matcher: "we need to defend that too"); validate it on SigmaHQ's known-answer recordings first (R11) | user |
 | 2026-10-19 | **Evaluation scope from now on: Windows and Linux attacks only** — a case counts when its expert rule's log source is `product: windows` or `product: linux`; web (web server, proxy) and other sources (network, cloud, macOS, …) are left out. Earlier results stay as they were; any re-scoring of past runs on the new scope is labelled post-hoc | user |
 | 2026-10-19 | Scores split by report type (Windows/Linux vs web) stay out of the thesis (not made citable). The scope is justified by testing: Windows/Linux are the attack types with recorded logs to test rules on. Exact agreement with the human rule is not the goal — a rule that differs can still work — so real-log testing (R11) comes first | user |
+| 2026-10-28 | Weak results are part of research: find the wall and ways through or around it, don't give up; document extensive testing and the different attempts. Test the rules with Hayabusa on the system the attack ran on | Dr. Simon (via user) |
+| 2026-11-03 | Hayabusa first (R12), the same-system test on the VM required; ablation next (R13) | user |
+| 2026-11-03 | Run worktrees: each commit tagged `run/<name>` (22 tags), the folders moved to the macOS Trash (replaces "keep every worktree", 2026-09-29); the 9 cited result files committed | user |
