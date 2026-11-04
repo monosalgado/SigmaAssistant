@@ -7123,3 +7123,24 @@ our matcher — give the same events on SigmaHQ's known answers. **Scope: Sysmon
 built-in-log copies (Security 4688 etc.) are not exercised by these recordings, so built-in results (R12.4 on the VM)
 are descriptive only. It shows Hayabusa applies a converted rule correctly, not that a rule is good. Tool: 22 offline
 tests; suite 998 pass. Next: R12.3 (our 16 rules, Hayabusa vs Zircolite), R12.4 (the user's VM), R12.5.
+
+## 2026-11-03 — R12.3 `[DEMO]`: our 16 saved rules give the same events in Hayabusa and Zircolite (16 of 16)
+
+Tool `eval/compare_engines.py` (`d503f90`; fix `096eee8`): each rule on its own in each engine, Zircolite on the rule
+as written, Hayabusa on the converter's Sysmon copy, both with their validated settings; counts and events compared
+by record number. **The first run was not a result:** every rule came back "tool error", because the recording path
+was given relative and both engines run from their own folders (Hayabusa: "the file … does not exist"). The tool
+reported it as tool errors, not as 0 matches; fixed by passing absolute paths (test first) and run again.
+
+**Result** (local, `EVTX Examples/results/hayabusa-vs-zircolite-2026-11-03.jsonl`; Zircolite v4.6.0, Hayabusa v4.3.1,
+converter `7999fa1`): **both engines ran all 16 rules and found the same events for 16 of 16.**
+- fodhelper: 12 and 12;
+- 10-23 set (Rapid7 analysis blog): 0 · 14 · 1,470 · 0 in both;
+- 10-27 same blog: 0 · 0 · 0; in-the-wild post: 0 · 0 · 0 · 0 · 0 · 2; Metasploit docs: 0 · 0 — in both.
+- 11 of the 16 rules match nothing in either engine, so for them the agreement is trivial; the 5 that match (12, 14,
+  1,470, 2) match the same events.
+
+**Reading:** the real-log findings — the 1,470-match false-positive storm, the 14 loose msiexec matches, and 0 of the
+11 re-run rules catching the attack (the only 2 matches the server starting) — do not depend on the engine: two
+engines validated on SigmaHQ's known answers give the same events. Still a demonstration (one VM, two recordings, a
+few runs). Next: R12.4 (the user's VM, live), R12.5 (Hayabusa's own rule pack on the ActiveMQ recording).

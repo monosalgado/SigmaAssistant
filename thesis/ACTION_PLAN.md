@@ -440,7 +440,7 @@ rules, because the thesis must defend the tool (user chose it over our matcher).
       `sigma-to-hayabusa-converter` (own environment); the same Hayabusa version on the VM. Read the real flags.
 - [x] **R12.2 PASSED 2026-11-03** (133 of 137 evaluated agree = Zircolite on the same; same events as Zircolite on 137 of 137; 1 rule excluded by Hayabusa's own config; first run invalid, tool bug fixed) **Validate on SigmaHQ's 138 known-answer recordings** (converted rules), as R11.3 did for Zircolite;
       events compared with Zircolite's. Pass criterion in the log before the run.
-- [ ] **R12.3 Our saved rules (16) on our 2 recordings**, Hayabusa vs Zircolite counts. `[DEMO]`
+- [x] **R12.3 DONE 2026-11-03: the same events in both engines for 16 of 16** **Our saved rules (16) on our 2 recordings**, Hayabusa vs Zircolite counts. `[DEMO]`
 - [ ] **R12.4 Same-system test (required):** Hayabusa's live analysis on the VM with the converted rules (the user
       runs it); compared with R12.3 by event record ID. `[DEMO]`
 - [ ] **R12.5 Hayabusa's own rule pack on the ActiveMQ recording** — do the experts' rules catch the attack? `[DEMO]`

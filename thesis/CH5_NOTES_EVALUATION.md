@@ -675,7 +675,9 @@ would score fine on detection-field agreement (S5), yet is useless — a failure
 similarity scoring cannot. Full detail in the log, 2026-10-23 and 2026-10-26. **Re-runs 2026-10-27 (log 2026-10-28):**
 the same blog gave 3 different, network-only rules (first split at the attack-vector step, temperature 0); two other
 inputs (Rapid7's in-the-wild post; the Metasploit module's own documentation, circular) gave 6 and 2 rules; **0 of the
-11 matched the attack** (the only 2 matches were the ActiveMQ server starting). (Next: the assistant's analyst-review step to tighten
+11 matched the attack** (the only 2 matches were the ActiveMQ server starting). **Engine check (2026-11-03, R12.3):** all 16 saved
+rules run through Hayabusa (validated, R12.2) as well give the same events as Zircolite for 16 of 16 — the findings do
+not depend on the engine. (Next: the assistant's analyst-review step to tighten
 and re-test.)
 
 ### Synthetic replay — designed, validated, and not used `[DESIGN]` `[MEASURED]` (added 2026-10-05)
