@@ -7246,3 +7246,9 @@ test of the rule, because the rule and the activity it matched come from the sam
 **Also: the two recordings are not independent.** `activemq-cve-2023-46604-sysmon.evtx` is the same log exported later
 on 2026-10-23: the same days, with more events on the last one (17,691 against 16,527; read with a scratch reader, not
 a result). Where R12.3 and other entries say "two recordings", they mean two exports of one VM's log.
+
+## 2026-11-05 — Lab address removed from the current files
+
+The action plan named the lab's Metasploit Pro address and port (added 2026-09-23); the repository is public and lab
+details stay out of it. Replaced by neutral words, as on 2026-10-10 for the Spark. It was the only lab detail left in
+the current files. The older versions in the history still hold it; the user decides whether to rewrite that history.

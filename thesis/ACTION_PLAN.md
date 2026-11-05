@@ -30,7 +30,7 @@ root cause is that **the thesis's contributions are not settled**:
 
 | Contribution in `OUTLINE.md` | Status |
 |---|---|
-| 1. Detonation-validated evaluation (R1/R2) | **Not built.** The lab exists: Metasploit Pro at `10.10.11.198:3790`, reachable only over the lab's OpenVPN |
+| 1. Detonation-validated evaluation (R1/R2) | **Not built.** The lab exists: Metasploit Pro, reachable only over the lab's OpenVPN |
 | 2. Cost–quality analysis of tiered cloud/local routing | **Blocked.** The Gemini key is suspended and every stage now runs on `qwen3-coder:30b` |
 | 3. Security-pretrained model (Foundation-Sec-8B) | **Dropped** 2026-09-23 (base model unusable with our prompts; all stages stay on qwen) |
 | — Assistant: evidence-backed report + analyst confirmation | **Proposed** 2026-09-23, not yet in the outline |
