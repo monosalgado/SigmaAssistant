@@ -7226,3 +7226,23 @@ false positives for it. Not a comparison of rule-writing skill (plan above).
 
 Tool: 26 offline tests in its own file, 3 more in `tests/test_validate_hayabusa.py`; suite 1,036 pass. Next: R12.4 (the
 user's VM), R13.
+
+## 2026-11-05 — Correction to 2026-10-23: the fodhelper recording was not fresh, and the 12 matches date from December to February
+
+The 2026-10-23 entry stays as written; this one corrects its fodhelper paragraph. Source: Zircolite's saved output of
+that day (`EVTX Examples/results/2026-10-23/`, local).
+
+- **"a fresh recording":** it was not. `sysmon.evtx` is the VM's whole Sysmon log, from 2025-12-15 to 2026-10-23.
+- **"9,718 events":** that is what Zircolite kept for the rule's log source. It filtered out 6,809 more, so the file
+  holds 16,527 events.
+- **When the 12 matches happened:** 2025-12-15 (4), 2026-01-31 (1), 2026-02-19 (7), **none on 2026-10-23**. The check
+  found earlier fodhelper activity still in the log, not a run from that day.
+- **"the user's own May rule":** the rule file is dated 2025-12-14, the day before the first match.
+
+**What stands:** 12 matches, every one `fodhelper.exe` starting `cmd.exe`, and Hayabusa gives the same 12 (R12.3). The
+tools work on a Sysmon log from the user's own VM. **What changes:** this is a check of the tools, not an independent
+test of the rule, because the rule and the activity it matched come from the same period of lab work.
+
+**Also: the two recordings are not independent.** `activemq-cve-2023-46604-sysmon.evtx` is the same log exported later
+on 2026-10-23: the same days, with more events on the last one (17,691 against 16,527; read with a scratch reader, not
+a result). Where R12.3 and other entries say "two recordings", they mean two exports of one VM's log.

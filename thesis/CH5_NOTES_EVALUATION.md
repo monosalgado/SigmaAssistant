@@ -661,10 +661,12 @@ decided before the run. `[DISCLOSE]` The tool's first run was invalid (a convers
 another rule); found by a title check, fixed with a test, rerun; the pass rule unchanged. **Scope: Sysmon only**;
 the built-in-log copies are not validated. (log 2026-11-03)
 
-### Real-log demo — why this matters, in one case `[DEMO]` (added 2026-10-23; corrected 2026-10-26)
+### Real-log demo — why this matters, in one case `[DEMO]` (added 2026-10-23; corrected 2026-10-26, 2026-11-05)
 First end-to-end run on a recording the user captured in their own VM (fodhelper and ActiveMQ CVE-2023-46604; the
 attack detonation is theirs, assistant + Zircolite here). A demonstration, not a scored run. The fodhelper chain
-worked (the user's rule fired 12×). For ActiveMQ, the assistant generated 4 valid Sigma rules from an analysis blog,
+worked (the user's rule fired 12×), as a check of the tools only: the 12 matches date from December to February, earlier
+activity in the VM's log, none from 2026-10-23, and the rule file is dated the day before the first match (log
+2026-11-05). The two recordings are two exports of that one log. For ActiveMQ, the assistant generated 4 valid Sigma rules from an analysis blog,
 **with web search on, as in the app**: the behaviours of rules 2 and 3 (msiexec, certutil) came from two pages the web
 step found (Rapid7's in-the-wild post, Huntress), not from the blog; the Metasploit module page (the user's attack
 tool) was read, but nothing from it was passed on (log 2026-10-26). On the recording, the two network rules could not
