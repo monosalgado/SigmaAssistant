@@ -63,6 +63,7 @@ def test_the_load_report_is_read_through_the_colour_codes():
     coloured = "\x1b[38;2;0;255;0mTotal detection rules: \x1b[0m1\n\x1b[0mDetection rules enabled after channel filter: 1\n"
     assert parse_load(coloured)["total_rules"] == 1
     assert parse_load(LOADED) == {"total_rules": 1, "enabled_after_channel_filter": 1, "excluded": 0, "noisy": 0,
+                                  "deprecated": 0, "unsupported": 0,
                                   "no_rules_loaded": False}
 
 
@@ -73,6 +74,7 @@ def test_an_excluded_rule_is_seen_in_the_load_report():
 
 def test_a_missing_load_report_is_unknown_not_zero():
     assert parse_load("something else\n") == {"total_rules": None, "enabled_after_channel_filter": None,
+                                              "deprecated": 0, "unsupported": 0,
                                               "excluded": 0, "noisy": 0, "no_rules_loaded": False}
 
 
@@ -321,3 +323,22 @@ def test_the_environment_records_versions_and_the_binarys_hash(tmp_path):
     assert env["ruamel_yaml"] == "0.18.5"
     assert env["settings"] == list(SETTINGS)
     assert env["hayabusa_rules_commit"] is None and env["converter_commit"] is None  # not git checkouts here
+
+
+def test_rules_the_defaults_leave_out_are_seen_in_the_load_report():
+    load = parse_load("Deprecated rules: 232 (4.95%) (Disabled)\nUnsupported rules: 42 (0.90%) (Disabled)\n")
+    assert load["deprecated"] == 232 and load["unsupported"] == 42
+
+
+def test_extra_flags_reach_the_command_and_change_nothing_else(tmp_path):
+    plain = command(tmp_path / "H", "hb", "a.evtx", "r.yml", tmp_path / "o.jsonl")
+    more = command(tmp_path / "H", "hb", "a.evtx", "r.yml", tmp_path / "o.jsonl", extra=("-D", "-u"))
+    assert [c for c in more if c not in ("-D", "-u")] == plain and {"-D", "-u"} <= set(more)
+
+
+def test_a_detection_row_without_a_record_number_is_counted_without_one(tmp_path):
+    # Correlation rules report several events at once; R12.5 runs the whole pack, which holds 3 of them.
+    path = tmp_path / "d.jsonl"
+    path.write_text('{"RuleID": "r", "RecordID": "-"}\n{"RuleID": "r"}\n{"RuleID": "r", "RecordID": 7}\n',
+                    encoding="utf-8")
+    assert read_detections(path) == {"r": {"count": 3, "record_ids": [7]}}

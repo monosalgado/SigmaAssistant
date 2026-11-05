@@ -7144,3 +7144,39 @@ converter `7999fa1`): **both engines ran all 16 rules and found the same events 
 11 re-run rules catching the attack (the only 2 matches the server starting) — do not depend on the engine: two
 engines validated on SigmaHQ's known answers give the same events. Still a demonstration (one VM, two recordings, a
 few runs). Next: R12.4 (the user's VM, live), R12.5 (Hayabusa's own rule pack on the ActiveMQ recording).
+
+## 2026-11-05 — R12.5 `[DEMO]` plan fixed before the run: what counts as the attack, and what counts as caught
+
+Hayabusa's own rule pack has **not** been run on the ActiveMQ recording; this entry comes first. Plan R12 step 5 asks
+whether the experts' rules catch the attack, as a reference point for the 0 of 11 of 2026-10-28. That question needs
+two definitions the plan did not have.
+
+**Attack events, from the recording alone, before any rule.** The ActiveMQ server = Sysmon process starts (event 1) of
+`java.exe` with `activemq` in the command line. Attack events = every Sysmon event of a process descending from a
+server process through `ParentProcessGuid`; the server itself is not one. A scratch probe of the recording (not a
+result; the tool must reproduce it) gives 2 server starts (records 17503, 17528), one child of the server in the whole
+recording, and 8 processes with 11 events, records 17660 to 17691 (`cmd`, `conhost`, `jjs`, `whoami`, `hostname`). Limits: the network
+side was not captured, and `ver` is built into `cmd`, so it leaves no process.
+
+**`conhost.exe` does not count.** Windows starts one for console programs, benign ones too, so matching it says nothing
+about the attack. The 2 `conhost` events stay listed; **9 events count**.
+
+**Caught** = at least one rule of level **medium or higher** matches at least one counted attack event, with
+Hayabusa's defaults. `informational` and `low` hold event labels as well as detections (22 + 6 of the 57 Sysmon rules
+in Hayabusa's own folder), so their matches are reported apart and do not count.
+
+**Reported for every rule that matches:** level, counted attack events, `conhost` events, other events. Other events
+are **not** called false positives: the recording is the VM's log over 9 days, with the user's own earlier tests in it.
+Rows Hayabusa writes without a record number (correlation rules) are listed apart, never counted as either.
+
+**Two runs.** (1) Defaults, with the settings R12.2 validated: the result. (2) Deprecated, unsupported and noisy rules
+switched on (`-D -u -n`), listed apart, so that no answer depends on a rule the defaults hide. Hayabusa's exclude list
+stays on in both. Rules loaded, and rules dropped by the channel filter, are reported: the recording holds Sysmon only,
+so built-in-log rules cannot run, and with events 1, 4, 5 and 16 only, network, file and registry rules cannot fire.
+
+**The same measure on our 15 ActiveMQ rules** (the 4 of 10-23 and the 11 of 10-27), from R12.3's record numbers.
+
+**Reading, fixed now.** Caught: the attack can be seen on this recording from process events alone, so the 0 of 11 is
+those rules' shortfall and not only the capture's. Not caught: what was captured limits every rule, ours too. Either
+way one attack on one recording. It is **not** a comparison of rule-writing skill: thousands of rules written over years
+against a few rules from one report each. No rule is changed or tuned after the run. A committed tool, tests first.

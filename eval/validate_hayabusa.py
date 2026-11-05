@@ -58,25 +58,32 @@ _COLOUR = re.compile(r"\x1b\[[0-9;]*m")
 _NUMBERS = {"total_rules": re.compile(r"Total detection rules:\s*([\d,]+)"),
             "enabled_after_channel_filter": re.compile(r"Detection rules enabled after channel filter:\s*([\d,]+)"),
             "excluded": re.compile(r"Excluded rules:\s*([\d,]+)"),
-            "noisy": re.compile(r"Noisy rules:\s*([\d,]+)")}
+            "noisy": re.compile(r"Noisy rules:\s*([\d,]+)"),
+            "deprecated": re.compile(r"Deprecated rules:\s*([\d,]+)"),
+            "unsupported": re.compile(r"Unsupported rules:\s*([\d,]+)")}
 
 
-def command(hdir, binary: str, evtx, rule, outfile) -> list:
-    return [str(Path(hdir) / binary), "dfir-timeline", "-f", str(evtx), "-r", str(rule), *SETTINGS,
+def command(hdir, binary: str, evtx, rule, outfile, extra=()) -> list:
+    return [str(Path(hdir) / binary), "dfir-timeline", "-f", str(evtx), "-r", str(rule), *SETTINGS, *extra,
             "-o", str(outfile)]
 
 
 def parse_load(text: str) -> dict:
     """Hayabusa's own report of the rules it loaded; a number it did not print is unknown (None), except the
-    excluded and noisy counts, which it prints only when they are not 0."""
+    excluded, noisy, deprecated and unsupported counts, which it prints only when they are not 0."""
     plain = _COLOUR.sub("", text or "")
-    out = {"total_rules": None, "enabled_after_channel_filter": None, "excluded": 0, "noisy": 0,
-           "no_rules_loaded": "No rules were loaded" in plain}
+    out = {"total_rules": None, "enabled_after_channel_filter": None, "excluded": 0, "noisy": 0, "deprecated": 0,
+           "unsupported": 0, "no_rules_loaded": "No rules were loaded" in plain}
     for key, pattern in _NUMBERS.items():
         m = pattern.search(plain)
         if m:
             out[key] = int(m.group(1).replace(",", ""))
     return out
+
+
+def record_id(value):
+    """A detection's Windows event record number, or None: correlation rules report several events at once."""
+    return int(value) if str(value).isdigit() else None
 
 
 def read_detections(path) -> dict:
@@ -91,8 +98,8 @@ def read_detections(path) -> dict:
         det = json.loads(line)
         entry = out.setdefault(str(det.get("RuleID")), {"count": 0, "record_ids": []})
         entry["count"] += 1
-        if det.get("RecordID") not in (None, ""):
-            entry["record_ids"].append(int(det["RecordID"]))
+        if record_id(det.get("RecordID")) is not None:
+            entry["record_ids"].append(record_id(det["RecordID"]))
     for entry in out.values():
         entry["record_ids"].sort()
     return out
@@ -144,7 +151,7 @@ def _not_loaded_reason(load: dict) -> str:
     return "no rules loaded"
 
 
-def run_hayabusa(hdir, binary: str, evtx, rule, outfile, runner=subprocess.run) -> dict:
+def run_hayabusa(hdir, binary: str, evtx, rule, outfile, runner=subprocess.run, extra=()) -> dict:
     """One Hayabusa run: its exit code, what it loaded, whether the rule loaded (and why not), and its detections
     (None when the rule did not load or there is no output file)."""
     outfile = Path(outfile)
@@ -152,7 +159,7 @@ def run_hayabusa(hdir, binary: str, evtx, rule, outfile, runner=subprocess.run) 
     if outfile.exists():
         outfile.unlink()
     try:
-        done = runner(command(hdir, binary, evtx, rule, outfile), cwd=str(hdir), capture_output=True, text=True,
+        done = runner(command(hdir, binary, evtx, rule, outfile, extra), cwd=str(hdir), capture_output=True, text=True,
                       timeout=RUN_TIMEOUT_S)
         exit_code, printed = done.returncode, (done.stdout or "") + (done.stderr or "")
     except subprocess.TimeoutExpired:
