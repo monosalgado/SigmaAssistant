@@ -7180,3 +7180,49 @@ so built-in-log rules cannot run, and with events 1, 4, 5 and 16 only, network, 
 those rules' shortfall and not only the capture's. Not caught: what was captured limits every rule, ours too. Either
 way one attack on one recording. It is **not** a comparison of rule-writing skill: thousands of rules written over years
 against a few rules from one report each. No rule is changed or tuned after the run. A committed tool, tests first.
+
+## 2026-11-05 — R12.5 `[DEMO]` result: one expert rule catches the attack at level medium; none of our 15 ActiveMQ rules matches a counted attack event
+
+Tool `eval/pack_on_recording.py` and the plan above were committed first (`6a51161`). This is the only run of the pack
+on this recording. Local result: `EVTX Examples/results/hayabusa-pack-activemq-2026-11-05.jsonl`.
+
+**The attack, from the recording alone:** the tool reproduced the probe. 17,691 events; server starts 17503 and 17528;
+8 processes; 11 attack events, 9 counted (`conhost` 17661 and 17666 listed, not counted).
+
+**Defaults** (Hayabusa 4.3.1, rules `97b3fd90c`): 4,689 rules loaded, 2,307 after the channel filter; 26 excluded; 12
+noisy, 232 deprecated and 42 unsupported left out. 29 rules matched something (high 2, medium 10, low 12, informational 5).
+- **Caught, by one rule:** SigmaHQ's "Shell Process Spawned by Java.EXE" (medium), on record 17660, the first step of
+  the attack, and on no other event of the recording. Checked with `eval/compare_engines.py` on the original rule:
+  Zircolite and Hayabusa both give that one event.
+- That is **1 of the 9 counted events** at medium or higher. `whoami` (17685) and `hostname` (17690) match only at low
+  ("Local Accounts Discovery", 14 other events; "Suspicious Execution of Hostname", 21 other events). The `jjs.exe`
+  step and the later `cmd` steps match only the informational label "Proc Exec".
+- The other 11 rules at medium or high match other events only.
+
+**Everything on** (`-D -u -n`): 4,975 loaded, 2,456 after the channel filter; 31 rules matched, 2 more than the defaults,
+both low ("Whoami Utility Execution" on 17685; "Process Start From Suspicious Folder", not on the attack). No new rule at
+medium or higher, so the answer does not depend on what the defaults hide. No row lacked a record number.
+
+**Our 15 ActiveMQ rules** (all ran): **0 match a counted attack event; not caught.** The 0 of 11 holds under the fixed
+definition, and the 4 rules of 10-23 add no catch. Rule 3 of 10-23 (the 1,470) does touch the attack, but only the 2
+`conhost` events through `-ForceV1`, among 1,468 other events.
+
+**Reading, as fixed before the run:** the attack can be seen on this recording from process events alone, so the 0 of
+11 is those rules' shortfall and not only the capture's. The rule that catches it is generic (any shell under
+`java.exe`), dated 2021-12-17 and written with Log4j in mind, so it was not written for this CVE. It fits the failure
+kinds of 2026-10-28: our rules follow the details of their input; this one follows a behaviour. That is a pattern
+across a few rules, not a tested cause.
+
+**Limits.** One attack, one recording, one rule on one event. A different payload that starts no shell would not match
+this rule. Its 0 other events is a weak test of its noise, because few Java programs ran on this VM; SigmaHQ itself lists
+false positives for it. Not a comparison of rule-writing skill (plan above).
+
+**Corrections to earlier entries (they stay as written):**
+- 2026-10-28 says SigmaHQ has no rule for this CVE in our copy, "so there is no expert rule to compare on this
+  recording". The first half holds; the conclusion does not. The rule above is in our copy (`data/sigma`), generic
+  rather than for this CVE.
+- 2026-10-23 says "EventID 1/5 only". The recording holds events 1 (10,315), 5 (7,347), 4 (28) and 16 (1). Events 4 and
+  16 are Sysmon's own service and configuration records, so the reading stands: no network events.
+
+Tool: 26 offline tests in its own file, 3 more in `tests/test_validate_hayabusa.py`; suite 1,036 pass. Next: R12.4 (the
+user's VM), R13.

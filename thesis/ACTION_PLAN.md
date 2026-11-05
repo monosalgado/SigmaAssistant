@@ -443,7 +443,7 @@ rules, because the thesis must defend the tool (user chose it over our matcher).
 - [x] **R12.3 DONE 2026-11-03: the same events in both engines for 16 of 16** **Our saved rules (16) on our 2 recordings**, Hayabusa vs Zircolite counts. `[DEMO]`
 - [ ] **R12.4 Same-system test (required):** Hayabusa's live analysis on the VM with the converted rules (the user
       runs it); compared with R12.3 by event record ID. `[DEMO]`
-- [ ] **R12.5 Hayabusa's own rule pack on the ActiveMQ recording** — do the experts' rules catch the attack? `[DEMO]`
+- [x] **R12.5 DONE 2026-11-05: caught by one rule at medium (1 of 9 counted attack events); 0 of our 15 ActiveMQ rules** **Hayabusa's own rule pack on the ActiveMQ recording** — do the experts' rules catch the attack? `[DEMO]`
 - [ ] **R13 Ablation** (user, 2026-11-03): how much each pipeline step affects the results. Plan after R12.
 
 ---

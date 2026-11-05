@@ -677,7 +677,11 @@ the same blog gave 3 different, network-only rules (first split at the attack-ve
 inputs (Rapid7's in-the-wild post; the Metasploit module's own documentation, circular) gave 6 and 2 rules; **0 of the
 11 matched the attack** (the only 2 matches were the ActiveMQ server starting). **Engine check (2026-11-03, R12.3):** all 16 saved
 rules run through Hayabusa (validated, R12.2) as well give the same events as Zircolite for 16 of 16 — the findings do
-not depend on the engine. (Next: the assistant's analyst-review step to tighten
+not depend on the engine. **Expert reference (2026-11-05, R12.5):** Hayabusa's rule pack (2,307 rules active on this
+recording) catches the attack at level medium with one rule, SigmaHQ's generic "Shell Process Spawned by Java.EXE" (2021,
+written with Log4j in mind), on 1 of the 9 counted attack events; none of our 15 ActiveMQ rules matches a counted event.
+The attack can be seen from process events alone, so the 0 of 11 is those rules' shortfall, not only the capture's.
+Definitions fixed before the run; not a comparison of rule-writing skill. (Next: the assistant's analyst-review step to tighten
 and re-test.)
 
 ### Synthetic replay — designed, validated, and not used `[DESIGN]` `[MEASURED]` (added 2026-10-05)
