@@ -683,7 +683,9 @@ not depend on the engine. **Expert reference (2026-11-05, R12.5):** Hayabusa's r
 recording) catches the attack at level medium with one rule, SigmaHQ's generic "Shell Process Spawned by Java.EXE" (2021,
 written with Log4j in mind), on 1 of the 9 counted attack events; none of our 15 ActiveMQ rules matches a counted event.
 The attack can be seen from process events alone, so the 0 of 11 is those rules' shortfall, not only the capture's.
-Definitions fixed before the run; not a comparison of rule-writing skill. (Next: the assistant's analyst-review step to tighten
+Definitions fixed before the run; not a comparison of rule-writing skill. **Same-system test (2026-11-08, R12.4):** Hayabusa's live analysis on the VM itself gives the same events as the exported recording for every rule that
+matches (our 4, the expert pack's 29); the live log was complete. Windows' own Security log, not in the export, also lets
+the expert rule catch the first step; our rules match only incidental `conhost` starts there. (Next: the assistant's analyst-review step to tighten
 and re-test.)
 
 ### Synthetic replay — designed, validated, and not used `[DESIGN]` `[MEASURED]` (added 2026-10-05)

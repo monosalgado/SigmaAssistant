@@ -7272,3 +7272,49 @@ local), fixed before the run:
 **R13 (user, today):** the ablation waits until after the work on rule generation (understanding the attack, then how
 it shows in the logs). An ablation describes one frozen pipeline, so it belongs after the changes. The plan drafted on
 2026-11-05 was never written into the log and stays undecided.
+
+## 2026-11-08 — R12.4 `[DEMO]` result: on the VM the attack ran on, Hayabusa finds the same events as on the exported recording (every event, for our 4 matching rules and the expert pack's 29)
+
+Tool `eval/compare_live.py` (`5e700d0`; fix of its descriptive view `a79f99f`), with the reading fixed in Plan R12
+step 4 and in the entry above, before the run. The user ran the package's two commands on the VM today (Hayabusa
+4.3.1, live analysis, the Mac's configuration) and brought back the 5 files (local:
+`EVTX Examples/results/hayabusa-vm-2026-11-08/`, with the tool's `comparison.jsonl`).
+
+**The live Sysmon log was complete:** oldest record 1, newest 23,920, 23,920 events, circular with a 64 MB limit,
+not full, so nothing before the export was lost. Process-creation auditing was on (success and failure), so Windows'
+own Security log records process starts (event 4688).
+
+**Reproduction here first:** the same rule folders on the exported recording give R12.3's events for all 16 Sysmon
+copies and R12.5's counts for all 29 expert rules.
+
+**Result** (Sysmon, up to the export's last record, 17,691; matched by record number and time stamp):
+- **Our rules: the same events for all 4 rules that match anything** (fodhelper 12; the 10-23 rules 2 and 3: 14 and
+  1,470; the in-the-wild post's rule 6: 2), 1,498 events on each side.
+- **Hayabusa's own pack: the same events for all 29 rules that match anything**, 18,025 events on each side.
+- **The attack, with R12.5's definitions:** caught live by the same expert rule ("Shell Process Spawned by Java.EXE",
+  medium, record 17660); none of our rules matches a counted attack event (rule 3 of 10-23 matches only the 2
+  `conhost` starts).
+
+**Reported apart, not compared:**
+- **After the export** the live log kept growing (record 23,920 when its state was read, 24,918 by the pack's run).
+  Our rules match 411 of those events (10-23 rule 3: 400, rule 4: 8, rule 2: 2; in-the-wild rule 6: 1); the pack has
+  7,310 detections there.
+- **Sysmon network logging was switched on by the user today, before the runs:** Sysmon's configuration-change event
+  at 22:10:18 UTC (record 23,266), the first network event 10 s later (record 23,269), 932 network events by the
+  pack's run. The 8 matches of the 10-23 rule 4 (any connection to port 80) are among them, so from today; the attack
+  of 10-23 has no network events, because logging was off then. With network logging on, that rule fires on every web
+  connection.
+- **Windows' own Security log (not in the export):** our rules' Security copies match 1,922 events (10-23 rule 3:
+  1,903; rule 2: 16; in-the-wild rule 6: 3); the pack matches 15,185 Security events, and events in 14 more logs.
+- **Descriptive, post-hoc: other logs linked to the attack's processes** (the same process ID within 1 s of the
+  Sysmon process start). The expert rule's Security copy also matches the attack's first step: record 29715, the same
+  `cmd.exe` start, which Windows wrote 25 ms before Sysmon's event. Our rule 3's Security copy matches only the 2
+  `conhost` starts. **So the first step is caught at medium in two logs, Sysmon and Windows' own; by our rules, in
+  neither.** The first comparison run used a time window opening at Sysmon's first attack time stamp and missed that
+  event. Its measured parts were the same as above; the tool was fixed (test first) and run again.
+
+**Reading:** the same-system test passes. Our rules and the expert pack give the same events on the VM's live logs as
+on the exported recording, so the real-log results so far hold on the system the attack ran on (Dr. Simon's
+question, 2026-10-28). It adds what the export lacked: in Windows' own Security log, the expert rule also catches the
+first step. Still a demonstration: one VM, one attack, one log exported twice. Tool: 17 offline tests; suite 1,053
+pass. **R12 is complete.**
