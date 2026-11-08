@@ -442,9 +442,12 @@ rules, because the thesis must defend the tool (user chose it over our matcher).
       events compared with Zircolite's. Pass criterion in the log before the run.
 - [x] **R12.3 DONE 2026-11-03: the same events in both engines for 16 of 16** **Our saved rules (16) on our 2 recordings**, Hayabusa vs Zircolite counts. `[DEMO]`
 - [ ] **R12.4 Same-system test (required):** Hayabusa's live analysis on the VM with the converted rules (the user
-      runs it); compared with R12.3 by event record ID. `[DEMO]`
+      runs it); compared with R12.3 by event record ID. `[DEMO]` Package updated 2026-11-08 (log): the Mac's rule pack
+      and config go with it, and Hayabusa's own pack runs live too (compared with R12.5).
 - [x] **R12.5 DONE 2026-11-05: caught by one rule at medium (1 of 9 counted attack events); 0 of our 15 ActiveMQ rules** **Hayabusa's own rule pack on the ActiveMQ recording** — do the experts' rules catch the attack? `[DEMO]`
-- [ ] **R13 Ablation** (user, 2026-11-03): how much each pipeline step affects the results. Plan after R12.
+- [ ] **R13 Ablation** (user, 2026-11-03): how much each pipeline step affects the results. **Postponed by the user
+      2026-11-08 until after the rule-generation work** (an ablation describes a frozen pipeline). Plan drafted 2026-11-05
+      in chat only, not decided.
 
 ---
 
@@ -794,3 +797,5 @@ so removing one is reversible; untracked and ignored files have no such safety n
 | 2026-10-28 | Weak results are part of research: find the wall and ways through or around it, don't give up; document extensive testing and the different attempts. Test the rules with Hayabusa on the system the attack ran on | Dr. Simon (via user) |
 | 2026-11-03 | Hayabusa first (R12), the same-system test on the VM required; ablation next (R13) | user |
 | 2026-11-03 | Run worktrees: each commit tagged `run/<name>` (22 tags), the folders moved to the macOS Trash (replaces "keep every worktree", 2026-09-29); the 9 cited result files committed | user |
+| 2026-11-05 | Leave the git history as it is (lab addresses removed from the current files only; cited commit IDs stay valid); revisit only if the lab asks | user |
+| 2026-11-08 | Ablation (R13) after the rule-generation work. Focus now: better rule generation, from understanding the attack to how it shows in the logs. R12.4 on the VM now | user |

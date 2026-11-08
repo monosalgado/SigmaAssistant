@@ -7252,3 +7252,23 @@ a result). Where R12.3 and other entries say "two recordings", they mean two exp
 The action plan named the lab's Metasploit Pro address and port (added 2026-09-23); the repository is public and lab
 details stay out of it. Replaced by neutral words, as on 2026-10-10 for the Spark. It was the only lab detail left in
 the current files. The older versions in the history still hold it; the user decides whether to rewrite that history.
+
+## 2026-11-08 — R12.4 package updated before the run; the ablation (R13) moves after the rule-generation work
+
+**R12.4.** Nothing has run on the VM yet; the user runs it. Changes to the package (`EVTX Examples/hayabusa-vm-package.zip`,
+local), fixed before the run:
+- **The Mac's rule pack and configuration go with it** (`rules-mac`: hayabusa-rules `97b3fd90c`, 5,019 rules and its
+  `config`, identical to the Mac's). Both VM runs point Hayabusa's configuration there (`-c`), so its exclusions, noisy
+  list and field mappings are the ones R12.2, R12.3 and R12.5 used.
+- **Hayabusa's own pack on the live logs is now a planned step** (optional before), compared with R12.5 by record
+  number under R12.5's definitions. R12.4's own reading (Plan R12, step 4) is unchanged.
+- **`-K`** (no colours) and the console text saved to a file: screen only, as on the Mac.
+- **The state of the VM's Sysmon log is recorded first** (event count, oldest and newest record, size limit, whether
+  it overwrites old events) and the process-creation audit setting, which the built-in copies need. Both exports
+  started at record 1; if the live log's oldest record is later, the events before it are gone, and a match missing
+  there is reported as that, not as a disagreement.
+- Detections are matched on channel and record number together: Security and Sysmon number their events separately.
+
+**R13 (user, today):** the ablation waits until after the work on rule generation (understanding the attack, then how
+it shows in the logs). An ablation describes one frozen pipeline, so it belongs after the changes. The plan drafted on
+2026-11-05 was never written into the log and stays undecided.
