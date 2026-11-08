@@ -14,10 +14,11 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from eval.compare_live import (
+    attack_processes,
     attack_window,
     caught_live,
     compare,
-    other_logs_in_window,
+    other_logs_on_attack,
     read_log_state,
     read_rows,
     reproduce_r123,
@@ -32,10 +33,12 @@ LAST = 100  # the export's last record in these tests
 T = "2026-10-23 23:35:0{}.000 +00:00"
 
 
-def _row(rule, record, channel="Sysmon", level="high", ts=None, title=None, event_id=1):
+def _row(rule, record, channel="Sysmon", level="high", ts=None, title=None, event_id=1, pid=None):
     second = record % 60 if isinstance(record, int) else 0
     row = {"RuleID": rule, "RuleTitle": title or f"title {rule}", "Level": level, "Channel": channel,
            "EventID": event_id, "Timestamp": ts or f"2026-01-01 00:00:{second:02d}.000 +00:00"}
+    if pid is not None:
+        row["Details"] = {"PID": pid}
     if record is not None:
         row["RecordID"] = record
     return row
@@ -54,7 +57,7 @@ def _rows(tmp_path, name, rows):
 def test_rows_keep_channel_record_time_and_full_level_names(tmp_path):
     rows = _rows(tmp_path, "a.jsonl", [_row("r1", 5, level="med", ts=T.format(1)), _row("r2", "-", channel="Sec")])
     assert rows[0] == {"rule_id": "r1", "title": "title r1", "level": "medium", "channel": "Sysmon", "event_id": 1,
-                       "record_id": 5, "timestamp": T.format(1)}
+                       "record_id": 5, "timestamp": T.format(1), "pid": None}
     assert rows[1]["record_id"] is None and rows[1]["channel"] == "Sec"
 
 
@@ -193,13 +196,30 @@ def test_the_attack_window_runs_from_the_first_to_the_last_attack_event(tmp_path
                                            "attack_events": 3}
 
 
-def test_other_logs_in_the_window_list_only_medium_or_higher_inside_it(tmp_path):
-    rows = _rows(tmp_path, "l.jsonl", [_row("a", 1, channel="Sec", level="med", ts=T.format(4)),
-                                       _row("b", 2, channel="Sec", level="low", ts=T.format(4)),
-                                       _row("c", 3, channel="Sec", level="high", ts=T.format(9)),
-                                       _row("d", 20, channel="Sysmon", level="high", ts=T.format(4))])
-    found = other_logs_in_window(rows, {"start": T.format(3), "end": T.format(7)})
-    assert [r["rule_id"] for r in found] == ["a"]
+def test_the_attacks_processes_come_from_its_sysmon_process_starts(tmp_path):
+    rows = _rows(tmp_path, "l.jsonl", [_row("info", 20, ts=T.format(3), pid="11"), _row("x", 20, ts=T.format(3), pid="11"),
+                                       _row("info", 21, ts=T.format(4), pid="12"),
+                                       _row("info", 22, ts=T.format(5), event_id=5, pid="11"),
+                                       _row("info", 30, ts=T.format(6), pid="13")])
+    assert attack_processes(rows, ATTACK) == [{"record_id": 20, "pid": "11", "timestamp": T.format(3), "counts": True},
+                                              {"record_id": 21, "pid": "12", "timestamp": T.format(4), "counts": False}]
+
+
+def test_other_logs_are_linked_to_an_attack_process_by_its_id_within_a_second(tmp_path):
+    # Found in the first R12.4 run (2026-11-08): Windows wrote its own process-start event (Security 4688) 25 ms before
+    # Sysmon's for the same process, so a time window opening at Sysmon's first time stamp left it out.
+    processes = [{"record_id": 20, "pid": "11", "timestamp": "2026-10-23 23:35:03.162 +00:00", "counts": True},
+                 {"record_id": 21, "pid": "12", "timestamp": "2026-10-23 23:35:03.176 +00:00", "counts": False}]
+    rows = _rows(tmp_path, "l.jsonl", [
+        _row("a", 1, channel="Sec", level="med", event_id=4688, pid="11", ts="2026-10-23 23:35:03.137 +00:00"),
+        _row("b", 2, channel="Sec", level="low", event_id=4688, pid="11", ts="2026-10-23 23:35:03.137 +00:00"),
+        _row("c", 3, channel="Sec", level="high", event_id=4688, pid="11", ts="2026-10-23 23:35:09.000 +00:00"),
+        _row("d", 4, channel="Sec", level="high", event_id=4688, pid="99", ts="2026-10-23 23:35:03.140 +00:00"),
+        _row("e", 5, channel="Sec", level="high", event_id=4688, pid="12", ts="2026-10-23 23:35:03.170 +00:00"),
+        _row("f", 20, channel="Sysmon", level="high", pid="11", ts="2026-10-23 23:35:03.162 +00:00")])
+    found = other_logs_on_attack(rows, processes)
+    assert [(r["rule_id"], r["counts"]) for r in found] == [("a", True), ("e", False)]
+    assert [r["rule_id"] for r in other_logs_on_attack(rows, processes, levels=("medium", "low"))] == ["a", "b"]
 
 
 def test_caught_live_needs_medium_or_higher_on_a_counted_sysmon_attack_event(tmp_path):

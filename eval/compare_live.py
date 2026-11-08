@@ -13,8 +13,10 @@ configuration and settings on the exported recording (`-f`) and compares them ru
   without a record number (correlation rules), and every other log (Security etc.: not in the export, descriptive).
 - **Reproduction first:** the run here must give R12.3's events for our rules and R12.5's counts for the pack.
 - **The attack, with R12.5's definitions:** whether a rule of level medium or higher matches a counted attack event in
-  the live Sysmon log; and, descriptive (added after the run), the rules at medium or higher on other logs between
-  the first and the last attack event.
+  the live Sysmon log; and, descriptive (added after the run), the rules on other logs that matched an event of one of
+  the attack's processes: the same process ID within a second of its Sysmon process start. (First written as a time
+  window opening at Sysmon's first attack time stamp, which left out Windows' own event for the same process start,
+  written 25 ms earlier; first R12.4 run, 2026-11-08.)
 - **The live Sysmon log's state** (`sysmon-log-state.txt`, written by PowerShell): if its oldest record is later than
   the export's first, the events before it are gone and are reported as missing for that reason.
 
@@ -34,6 +36,7 @@ import subprocess
 import sys
 import tempfile
 from collections import Counter, defaultdict
+from datetime import datetime
 from pathlib import Path
 
 import yaml
@@ -64,17 +67,19 @@ def _text(path) -> str:
 
 def read_rows(path) -> list:
     """Hayabusa's JSON-lines detections: rule, full level name, log, event ID, record number (None when the row has
-    none) and time stamp."""
+    none), time stamp and the process ID of the event's process (None when the row shows none)."""
     rows = []
     for line in _text(path).splitlines():
         if not line.strip():
             continue
         det = json.loads(line)
         level = str(det.get("Level"))
+        details = det.get("Details") if isinstance(det.get("Details"), dict) else {}
         rows.append({"rule_id": str(det.get("RuleID")), "title": det.get("RuleTitle"),
                      "level": LEVEL_NAMES.get(level, level), "channel": det.get("Channel"),
                      "event_id": det.get("EventID"), "record_id": record_id(det.get("RecordID")),
-                     "timestamp": det.get("Timestamp")})
+                     "timestamp": det.get("Timestamp"),
+                     "pid": str(details["PID"]) if details.get("PID") not in (None, "", "-") else None})
     return rows
 
 
@@ -228,14 +233,37 @@ def attack_window(rows: list, attack: dict) -> dict:
             "events_with_a_time": len(times), "attack_events": len(records)}
 
 
-def other_logs_in_window(rows: list, window: dict, levels=CAUGHT_LEVELS) -> list:
-    if not window.get("start"):
-        return []
-    return sorted(({"channel": r["channel"], "event_id": r["event_id"], "record_id": r["record_id"],
-                    "timestamp": r["timestamp"], "level": r["level"], "title": r["title"], "rule_id": r["rule_id"]}
-                   for r in rows if r["channel"] != SYSMON and r["level"] in levels
-                   and window["start"] <= str(r["timestamp"]) <= window["end"]),
-                  key=lambda r: (str(r["timestamp"]), str(r["title"])))
+def _time(stamp: str) -> datetime:
+    return datetime.strptime(str(stamp)[:23], "%Y-%m-%d %H:%M:%S.%f")  # all in UTC (`-U`)
+
+
+def attack_processes(rows: list, attack: dict) -> list:
+    """The attack's processes: its Sysmon process starts (event 1), with their process IDs and time stamps."""
+    records, counted, seen = _attack_records(attack), set(attack["counted"]), {}
+    for row in rows:
+        if (row["channel"] == SYSMON and row["event_id"] == 1 and row["record_id"] in records
+                and row["pid"] is not None and row["record_id"] not in seen):
+            seen[row["record_id"]] = {"record_id": row["record_id"], "pid": row["pid"], "timestamp": row["timestamp"],
+                                      "counts": row["record_id"] in counted}
+    return [seen[n] for n in sorted(seen)]
+
+
+def other_logs_on_attack(rows: list, processes: list, levels=CAUGHT_LEVELS, tolerance_s: float = 1.0) -> list:
+    """Rows of other logs about one of the attack's processes: the same process ID within `tolerance_s` seconds of
+    its Sysmon process start (Windows writes its own process-start event a few milliseconds earlier)."""
+    out = []
+    for row in rows:
+        if row["channel"] == SYSMON or row["level"] not in levels or row["pid"] is None:
+            continue
+        for proc in processes:
+            if row["pid"] == proc["pid"] and abs((_time(row["timestamp"]) - _time(proc["timestamp"])).total_seconds()) \
+                    <= tolerance_s:
+                out.append({"channel": row["channel"], "event_id": row["event_id"], "record_id": row["record_id"],
+                            "timestamp": row["timestamp"], "level": row["level"], "title": row["title"],
+                            "rule_id": row["rule_id"], "pid": row["pid"], "process_record": proc["record_id"],
+                            "counts": proc["counts"]})
+                break
+    return sorted(out, key=lambda r: (str(r["timestamp"]), str(r["title"])))
 
 
 def sysmon_events(rows: list, event_id: int) -> dict:
@@ -298,12 +326,15 @@ def main(argv: list = None) -> int:
                 "pack": compare(runs["pack"]["rows"], live["pack"], export["last_record"])}
     attack = _jsonl(args.r125)[0]["attack"]
     window = attack_window(live["pack"], attack)
-    view = {"window": window,
+    processes = attack_processes(live["pack"], attack)
+    pack_other = other_logs_on_attack(live["pack"], processes)
+    view = {"window": window, "processes": processes,
             "pack_caught_live": caught_live(live["pack"], attack), "ours_caught_live": caught_live(live["ours"], attack),
             "pack_on_attack": on_attack(live["pack"], attack), "ours_on_attack": on_attack(live["ours"], attack),
-            "pack_other_logs_in_window": other_logs_in_window(live["pack"], window),
-            "ours_other_logs_in_window": other_logs_in_window(live["ours"], window, levels=("critical", "high",
-                                                                                            "medium", "low"))}
+            "pack_other_logs_on_attack": pack_other,
+            "pack_caught_other_logs": any(r["counts"] for r in pack_other),
+            "ours_other_logs_on_attack": other_logs_on_attack(live["ours"], processes,
+                                                              levels=("critical", "high", "medium", "low"))}
     sysmon_types = {"network_3": sysmon_events(live["pack"], 3), "config_change_16": sysmon_events(live["pack"], 16)}
     report = {"environment": env, "log_state": state, "export": export, "reproduce": reproduce,
               "loads_here": {name: run["load"] for name, run in runs.items()},
@@ -318,14 +349,14 @@ def main(argv: list = None) -> int:
           f"ours {view['ours_caught_live']}")
     for row in view["pack_on_attack"] + view["ours_on_attack"]:
         print(f"  Sysmon {row['record_id']} {row['level']:6} counts {str(row['counts']):5} {row['title']}")
-    print("other logs in the window, pack (medium or higher):")
-    for row in view["pack_other_logs_in_window"]:
-        print(f"  {row['timestamp']} {row['channel']} {row['event_id']} record {row['record_id']} {row['level']} "
-              f"{row['title']}")
-    print("other logs in the window, ours (any level):")
-    for row in view["ours_other_logs_in_window"]:
-        print(f"  {row['timestamp']} {row['channel']} {row['event_id']} record {row['record_id']} {row['level']} "
-              f"{row['title']}")
+    print(f"attack processes: {len(processes)} ({sum(p['counts'] for p in processes)} counted)")
+    for label, key in (("pack (medium or higher)", "pack_other_logs_on_attack"),
+                       ("ours (any level)", "ours_other_logs_on_attack")):
+        print(f"other logs on the attack's processes, {label}:")
+        for row in view[key]:
+            print(f"  {row['timestamp']} {row['channel']} {row['event_id']} record {row['record_id']} {row['level']} "
+                  f"counts {str(row['counts']):5} (Sysmon {row['process_record']}) {row['title']}")
+    print(f"caught in another log (medium or higher on a counted attack process): {view['pack_caught_other_logs']}")
     print(f"live Sysmon event types: {sysmon_types}")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
