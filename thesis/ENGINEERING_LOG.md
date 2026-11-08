@@ -7318,3 +7318,40 @@ on the exported recording, so the real-log results so far hold on the system the
 question, 2026-10-28). It adds what the export lacked: in Windows' own Security log, the expert rule also catches the
 first step. Still a demonstration: one VM, one attack, one log exported twice. Tool: 17 offline tests; suite 1,053
 pass. **R12 is complete.**
+
+## 2026-11-08 — Diagnosis D1 (rule generation) planned: where does the attack's host behaviour get lost?
+
+**Why.** From today the user's focus is better rule generation: understanding the attack, then how it shows in the
+logs. R12.5 and R12.4 showed the one rule that caught the ActiveMQ attack describes a host behaviour visible in process
+logs (the server's `java.exe` starting a command shell), and none of our 15 ActiveMQ rules did. As in Phase 2: first
+find where the behaviour is lost, then change one thing.
+
+**Runs:** the 4 saved ActiveMQ runs of the web app (`data/sessions.json`, local), all with web search on, as in the
+app: `0832d618` (10-23, Rapid7's analysis blog), `2d9fa751` (10-27, the same blog), `c2e969ab` (10-27, Rapid7's post on
+attacks seen in the wild), `751a5dfc` (10-27, the Metasploit module's documentation; circular). The 10-23 run did not
+save its input text; the 10-27 runs did.
+
+**The reference behaviour** (from the recording, R12.5): the ActiveMQ server's Java process starts a command shell,
+which starts further programs (`jjs`, `cmd`, `whoami`, `hostname`). The expert rule that caught it matches any shell
+(cmd, PowerShell, pwsh, bash) whose parent is `java.exe`.
+
+**Questions, per run, in pipeline order** (the input; the PoC step; the web step; the attack-vector step; the analysis
+step; the example rules retrieved for the rule writer; the rules before and after review):
+1. Is the behaviour in the input or in the web findings: the server process starting a shell or another program, or
+   how the payload runs commands?
+2. Where does it first appear in the pipeline's own outputs, and does it reach the next stages?
+3. Where does each stage say the attack shows in the logs (its telemetry choices), and does that include process
+   creation?
+4. Did a retrieved example rule describe it?
+5. Where it was present, why did no rule detect it: dropped, or written in a form that cannot fire?
+
+**Method.** A committed tool writes each run's stage outputs side by side (a trace, local) and marks words for the
+behaviour, fixed now in the tool: the parent (`java`, `activemq`, `ProcessBuilder`, `Runtime.exec`, spawn, child or
+parent process, `ParentImage`), the child (`cmd`, PowerShell, `pwsh`, `bash`, `/bin/sh`, shell, `jjs`, `whoami`,
+`hostname`) and the log (`process_creation`, process creation, `Image`, `CommandLine`, event 4688). The marks help the
+reading; they are not a measure. The findings are a reading of 4 runs, reported with short quotes and no rate.
+
+**For what comes after:** ActiveMQ is now a design case. A change this suggests is tested on cases not used to design
+it (the 42 Windows/Linux tuning cases for agreement scores, R9.3's two public recordings, any attack the user records
+later), with its measures fixed before the run. It must help the model reason about what any attack leaves in the
+logs, and add nothing specific to ActiveMQ.
