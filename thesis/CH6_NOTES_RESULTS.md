@@ -768,6 +768,17 @@ dip is real or run-to-run noise (identical runs have differed by 0.086) one run 
 
 ---
 
+## 6.5k Why the rules missed an attack the pipeline understood (Diagnosis D1) `[DEMO]` 2026-11-08
+A reading of the 4 saved ActiveMQ runs, stage by stage (`eval/trace_stages.py`; log 2026-11-08), not a rate. The host
+behaviour the expert rule caught (the server's `java.exe` starting a shell) is in the inputs and is **understood** by
+the analysis step in all 4 runs (process creation suggested second, with `ParentImage`; indicators naming `java.exe` as
+the parent). It is lost **when it becomes a rule**: the attack-vector step makes the exploit's delivery the primary
+telemetry by design (`network_connection` in all 4 runs), the rule-writing prompt requires a rule on that delivery,
+8 of the 15 rules are network rules (4 using `NetworkPayload`, a field Sysmon lacks), the 6 process rules copy strings
+from the reports, and **none of the 15 uses `ParentImage`**. Retrieval had the expert rule in its index but its query
+(the attack summary, about the network exploit) did not bring it. Candidate changes are in the log; ActiveMQ is a
+design case from here, so any change is shown on other cases.
+
 ## 6.6 Smaller observations worth a sentence each
 - `[MEASURED]` **One report keeps defeating the analysis step** (`9a2d8b3e`, Check Point on CVE-2025-33053 / Stealth
   Falcon; ~40,000 characters): its analysis answer is cut on every attempt in **9 of the 27 runs** that include it, with

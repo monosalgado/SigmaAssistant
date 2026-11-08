@@ -449,6 +449,13 @@ rules, because the thesis must defend the tool (user chose it over our matcher).
       2026-11-08 until after the rule-generation work** (an ablation describes a frozen pipeline). Plan drafted 2026-11-05
       in chat only, not decided.
 
+### Rule generation (user, 2026-11-08): from understanding the attack to how it shows in the logs
+- [x] **D1 Diagnosis DONE 2026-11-08** (log): the 4 ActiveMQ runs understand the host behaviour, but the rules anchor
+      on the exploit's delivery (8 of 15 network rules) and copy strings; `ParentImage` in 0 of 15; retrieval had the
+      expert rule but did not bring it.
+- [ ] **Next change: the user picks** (A+B host footprint first, C field check, D retrieval query). Measures fixed
+      before the run; shown on cases not used in D1 (ActiveMQ is a design case).
+
 ---
 
 ## Phase 3 — Assistant backend (after Phase 0 approves it)

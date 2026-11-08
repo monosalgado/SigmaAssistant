@@ -7355,3 +7355,51 @@ reading; they are not a measure. The findings are a reading of 4 runs, reported 
 it (the 42 Windows/Linux tuning cases for agreement scores, R9.3's two public recordings, any attack the user records
 later), with its measures fixed before the run. It must help the model reason about what any attack leaves in the
 logs, and add nothing specific to ActiveMQ.
+
+## 2026-11-08 — Diagnosis D1 result: the pipeline understands the host behaviour, but anchors its rules on the exploit's delivery and writes process rules from strings, not from which process starts which
+
+Read with `eval/trace_stages.py` (`3b4be4e`) under the plan above; the trace is local
+(`EVTX Examples/results/diagnosis-2026-11-08/trace.md`); counts of the 15 rules from their files. A reading of 4 runs on
+one attack, not a rate.
+
+1. **The behaviour is in the inputs and the web findings** (Q1). The analysis blog's proof of concept (the saved input
+   of the 10-27 run, 23,372 characters) is a configuration file that makes Java start a program through
+   `ProcessBuilder`. The in-the-wild post and the web findings describe the server's `java.exe` starting `cmd.exe`.
+2. **The analysis step understands it, in all 4 runs** (Q2). Process creation is the second log-source suggestion each
+   time, with `ParentImage` among its fields. Its indicators include "java.exe … observed as parent process in
+   exploitation incidents" (in-the-wild run) and "wrapper.exe launching java.exe which then executes cmd.exe" (10-27
+   blog run).
+3. **The attack-vector step puts it second, by design** (Q3). Its prompt says the primary telemetry of an exploit
+   against a network service is where the exploit request arrives: all 4 runs answer `network_connection`, with
+   process creation secondary. For the analysis blog its candidate patterns are packet bytes marked `network_payload`.
+   Windows logs record at most the connection, not its content.
+4. **The rule-writing prompt follows the primary** (Q3, Q5). The first rule takes the analysis's first log source
+   (`network_connection` in all 4 runs), and the prompt says at least one rule must target the primary attack vector,
+   and that initial-access detection is mandatory when an exploit is described. So **8 of the 15 rules are network
+   rules** (all 3 in the 10-27 blog run), and **4 use `NetworkPayload`**, a field Sysmon's network events do not have.
+5. **The process rules copy strings; none uses the relation** (Q5). The 6 process rules match command-line strings
+   from the reports and web findings (another campaign's msiexec and certutil commands), the ActiveMQ server's own
+   start, or packet strings put into a command line (`ClassPathXmlApplicationContext`, `ExceptionResponse`: they are
+   in the packet and the XML file, not in any command line). **None of the 15 rules uses `ParentImage`**, although the
+   analysis listed it. The rule-writing prompt asks for patterns with quotes; nothing asks which process starts which.
+6. **Retrieval had the expert rule and did not bring it** (Q4). "Shell Process Spawned by Java.EXE" is in the retrieval
+   index (`data/chroma_db`). The query is the attack summary, which describes the network exploit; the example rules
+   retrieved were JNDI and OGNL injection (application logs), mshta, an MSI web install, uncommon destination ports
+   and Java remote debugging.
+7. **Review made one rule broader** (Q5). In the 10-23 run, review removed the C2 rule's addresses and kept "port 80
+   which is a common C2 port": the rule that matched ordinary web traffic in R12.4.
+
+**Reading.** The understanding is not where it breaks: the host behaviour is understood and listed. It breaks when the
+understanding becomes a rule. The pipeline anchors on the exploit's delivery, which suits a web exploit (a web-server
+log records the request) but not this attack, so the host behaviour stays secondary; and the process rules copy strings
+instead of describing which process starts which. In the user's words (understand the attack, then how it shows in
+the logs), the second half is the gap.
+
+**Candidate changes** (not decided; one at a time; tested on cases not used here, with measures fixed first):
+- **A+B, host footprint first:** the attack-vector step describes where each attack step shows in host logs, as a
+  chain of which process starts which, apart from where the exploit arrives; the rule writer anchors at least one rule
+  on the first step a host log records, using parent and child fields where the chain shows them. The model reasons;
+  code keeps checking log sources against SigmaHQ's table, as now.
+- **C, a field check:** code flags a field the chosen log source does not have (such as `NetworkPayload` in
+  `network_connection`) and asks once for a fix. The prompt already asks for valid fields, and it still happened.
+- **D, the retrieval query:** built from the host footprint instead of the attack summary.
