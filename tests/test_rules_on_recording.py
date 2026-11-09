@@ -11,7 +11,7 @@ import json
 import pytest
 import yaml
 
-from eval.rules_on_recording import case_row, caught, judge, recording, write_rules
+from eval.rules_on_recording import case_row, caught, judge, recording, rules_of, write_rules
 
 RULE = """title: A
 id: 11111111-1111-1111-1111-111111111111
@@ -83,3 +83,10 @@ def test_the_recording_is_the_one_evtx_file_in_the_folder(tmp_path):
     (tmp_path / "y.evtx").write_bytes(b"")
     with pytest.raises(ValueError):
         recording(tmp_path)
+
+
+def test_the_rules_before_review_can_be_taken_instead_of_the_final_ones():
+    # Added after the first run (2026-11-09, post-hoc): review broke two of today's pipeline's React2Shell rules.
+    row = {"rules_yaml": ["final"], "pipeline": {"pre_review_rules": ["before"]}}
+    assert rules_of(row, before_review=False) == ["final"] and rules_of(row, before_review=True) == ["before"]
+    assert rules_of({"rules_yaml": ["final"]}, before_review=True) == []

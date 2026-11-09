@@ -8,9 +8,12 @@ as a cross-check). Each rule's other matched events are shown. A rule that does 
 run, is shown as such, never as 0 matches. Each rule is written to its own file with a fresh id (two generated rules
 can share one, and the converter maps copies by id); nothing else in the rule changes.
 
+`--before-review` (added after the first run, post-hoc) takes each case's rules as written before the review step
+(`pipeline.pre_review_rules`) instead of the final ones: review broke two of today's pipeline's React2Shell rules.
+
 Usage:
     .venv/bin/python eval/rules_on_recording.py --case <rule id> <regression folder> [--case ...]
-        --arm <label> <rows.jsonl> [--arm ...] --out <file.jsonl>
+        --arm <label> <rows.jsonl> [--arm ...] [--before-review] --out <file.jsonl>
 """
 
 from __future__ import annotations
@@ -41,6 +44,13 @@ def case_row(path, rule_id: str):
             if row.get("rule_id") == rule_id:
                 return row
     return None
+
+
+def rules_of(row: dict, before_review: bool = False) -> list:
+    """A case's final rules, or the rules as written before the review step."""
+    if before_review:
+        return list((row.get("pipeline") or {}).get("pre_review_rules") or [])
+    return list(row.get("rules_yaml") or [])
 
 
 def write_rules(yamls: list, folder, label: str) -> list:
@@ -92,6 +102,7 @@ def main(argv: list = None) -> int:
     parser.add_argument("--case", nargs=2, action="append", required=True, metavar=("RULE_ID", "REGRESSION_FOLDER"))
     parser.add_argument("--arm", nargs=2, action="append", required=True, metavar=("LABEL", "ROWS"))
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--before-review", action="store_true", help="the rules before the review step (post-hoc)")
     parser.add_argument("--work", type=Path, default=None)
     parser.add_argument("--zircolite", type=Path, default=ZIRCOLITE_DIR)
     parser.add_argument("--hayabusa", type=Path, default=HAYABUSA_DIR)
@@ -110,8 +121,8 @@ def main(argv: list = None) -> int:
                 return 1
             arms[label] = row
         expert = (REPO / next(iter(arms.values()))["rule_path"]).resolve()
-        written = {label: write_rules(row.get("rules_yaml") or [], work / rule_id[:8] / label, f"{label}-{rule_id[:8]}")
-                   for label, row in arms.items()}
+        written = {label: write_rules(rules_of(row, args.before_review), work / rule_id[:8] / label,
+                                      f"{label}-{rule_id[:8]}") for label, row in arms.items()}
         paths = [expert] + [Path(w["path"]) for ws in written.values() for w in ws if w["path"]]
         converted, _ = convert_rules(args.converter, paths, work / rule_id[:8] / "convert")
         run = lambda p: compare_rule(p, evtx, converted, args.zircolite.resolve(), args.hayabusa.resolve(),  # noqa: E731
@@ -131,7 +142,8 @@ def main(argv: list = None) -> int:
                 doc = yaml.safe_load(Path(w["path"]).read_text(encoding="utf-8"))
                 judged.append({"index": w["index"], "title": doc.get("title"), "logsource": doc.get("logsource"),
                                "note": "", **judge(result, expert_ids)})
-            row = {"case": rule_id, "recording": evtx.name, "arm": label, "expert_title": expert_result["title"],
+            row = {"case": rule_id, "recording": evtx.name, "arm": label, "before_review": args.before_review,
+                   "expert_title": expert_result["title"],
                    "expert_events": sorted(expert_ids), "caught": caught(judged), "rules": judged}
             rows_out.append(row)
             print(f"  {label}: caught {row['caught']} ({len(ws)} rules)")
