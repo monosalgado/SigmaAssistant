@@ -296,6 +296,10 @@ limitation in the log belongs here too.
 
 ---
 
+61. **S1 ("valid Sigma") does not check that a rule can run** `[DISCLOSE]` (found 2026-11-09; CH6 §6.4.12). It
+    loads each rule without parsing its condition; pySigma rejects some conditions that S1 accepts (review broke 4 of
+    24 rules this way in one demonstration). Every S1 value cited so far may be too high; the size is not measured.
+
 ## Future work (collected, not prioritised)
 
 - Detonation-validated evaluation (R1/R2) with the lab's Metasploit Pro → Sysmon → EVTX →

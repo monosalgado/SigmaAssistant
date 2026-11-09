@@ -544,6 +544,14 @@ generation answers 0 of 91 calls**; S1 52 → 57 (p = 0.125) is the pattern the 
 so it is not claimed; no detectable effect on S3–S5, tokens or time; **+0.52 rules per case**
 (CI [0.12, 0.97]). What is claimed: the failure mode is gone at no measured cost. (log 2026-09-28)
 
+### 6.4.12 Rules that cannot run, counted as valid — review breaks conditions (found 2026-11-09) `[DEMO]`, size not measured
+Found in Change 54's real-attack check (log 2026-11-09): the review step rewrote `all of selection_*` as
+`all of selection_ *` in 4 of the 24 rules of 4 runs, and generation once named a selection that does not exist.
+pySigma rejects both when it parses the condition, so neither engine can run those rules, but `score_validity` (S1)
+loads a rule without parsing its condition and gives `parses: True`; the review stage's own check passed them too. One of
+the broken rules was the only one with the expert's logic (React2Shell). **S1's values so far overstate how many rules
+can run**; by how much is not measured yet (open; CH7 61).
+
 ## 6.5 A negative result — the security-pretrained model (contribution 3, dropped) `[MEASURED] 2026-09-23`
 
 > **Not used in the thesis** (user, 2026-09-25: "We are not going to use Foundation-Sec at all"). Kept as history only; do not write it up.
