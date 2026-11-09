@@ -711,6 +711,35 @@ def run_oracle_cases(agent, cases: list, config: dict, no_web_enrich: bool, out_
     return n_ok, n_failed, stopped
 
 
+# --- Change 49's tokenizer must be there (found in the first three-arm session, 2026-11-09) ----------------------------
+
+TOKENIZER_FILE = Path("data") / "tokenizer" / "qwen3-coder-tokenizer.json"
+
+
+def missing_tokenizer(code_root, harness_root=None) -> Optional[str]:
+    """Why the code at `code_root` must not be run, or None.
+
+    Since Change 49 (2026-10-08) the pipeline counts each prompt with Qwen's tokenizer and refuses one over the
+    30,000-token ceiling. `backend/token_count.py` looks for the file next to its own code, in data/tokenizer/
+    (gitignored), and without it counts characters / 2 with only a note: stricter than the real count, so more prompts
+    are refused. A checkout made with `git worktree add`, or a fresh clone, has no such file; the first three-arm session
+    ran every arm that way. Code from before Change 49 counts no tokens and needs no file. A link to nowhere counts as
+    missing."""
+    root = Path(code_root)
+    if not (root / "backend" / "token_count.py").exists():
+        return None
+    wanted = root / TOKENIZER_FILE
+    if wanted.exists():
+        return None
+    have = Path(harness_root or Path(__file__).resolve().parent.parent) / TOKENIZER_FILE
+    if have.exists():
+        how = f"link the main checkout's file: mkdir -p '{wanted.parent}' && ln -sf '{have}' '{wanted}'"
+    else:
+        how = "put Qwen3-Coder's tokenizer.json there (source in backend/token_count.py)"
+    return (f"{wanted} is missing, so this code would count characters / 2 instead of tokens and refuse more prompts "
+            f"at the 30,000-token ceiling than it should (Change 49); {how}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", default="eval/manifest.jsonl")
@@ -818,6 +847,9 @@ def main() -> None:
     print(f"  PoC GitHub snapshots: {len(poc_url_map)} URLs from {args.github_manifest}")
 
     print("\nInitialising agent ...")
+    why = missing_tokenizer(args.code or repo_root)
+    if why:
+        raise SystemExit(f"Not started: {why}")
     if args.code:
         if args.oracle_logsource:
             raise SystemExit("--code runs the old pipeline end to end; it has no review checkpoint")
