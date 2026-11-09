@@ -777,6 +777,8 @@ class PipelineOrchestrator:
             "pre_review_rules": [r.get("yaml_content", "") for r in (context.get("generation") or {}).get("rules") or []
                                  if isinstance(r, dict)],
             "review_changes": list(optimization.get("all_changes") or []),
+            # Change 55: the rules review broke, kept as they were before review
+            "review_reverted": list(optimization.get("reverted") or []),
             "generations": context.get("generation_log", []),
             "generation_retried": bool(context.get("generation_retried")),
             # Change 52: what a cut analysis answer kept (None when it finished)
