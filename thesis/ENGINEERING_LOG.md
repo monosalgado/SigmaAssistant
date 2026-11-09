@@ -7562,3 +7562,34 @@ that run's measures changes.
   rule's author; they mention spawning, `cmd.exe` and PowerShell many times but hold no Sigma rule (not flagged by the
   contamination check). They point at child processes for both arms alike. One run per arm on two reports: a
   demonstration, not a rate.
+
+## 2026-11-09 — Change 54 real-attack check `[DEMO]`: the footprint did not decide either catch; rules that cannot run did, and our validity score calls them valid
+
+Runs: arm A (`main`) and arm B (branch `9e053d9`), React2Shell (`271de298`) and Grixba (`af688c76`), CITABLE (arm B's
+Grixba case stopped once on a timeout of the analysis call, its row not written; rerun, as the harness asks). Tool
+`eval/rules_on_recording.py` (`c9191c9`; `--before-review` added after the first reading, `105f43a`, post-hoc).
+Local rows: `eval/results/c54check_{A,B,recordings,recordings_before_review}.jsonl`. Each expert rule matches 1 event
+of its recording (Zircolite and Hayabusa agree on every rule that ran).
+
+**As planned (final rules):** React2Shell, caught by neither (A 3 rules, B 2); Grixba, caught by B (its rule 5,
+`GT_NET.exe`/`GRB_NET.exe` started, on the expert's event, nothing else), not by A (10 rules). So B 1 of 2, A 0 of 2.
+
+**Why, from the rules themselves:**
+- **Grixba:** A wrote the same rule as B's rule 5 (`GT_NET.exe`, `netscan.exe`), but its condition names a selection
+  that does not exist (`condition: selection`, the selection is `selection_img`), so it cannot run. The difference is
+  that slip, not the footprint (B's footprint does not mention these tools).
+- **React2Shell:** A's rule 3, as written before review, is the expert's logic (`ParentImage` ending in `node.exe`,
+  `Image` ending in `powershell.exe` or `cmd.exe`) and matches the expert's event; **review changed its condition from
+  `all of selection_*` to `all of selection_ *`**, which cannot run. B's footprint was right ("node.exe starts" the
+  command), and its rule has the parent and the child, but ANDs a selection for `node.exe` itself, which no single
+  event can meet.
+- **Review broke 4 of the 24 rules of these 4 runs** the same way (`selection_*` became `selection_ *`: A's React2Shell
+  rules 2 and 3, B's Grixba rules 1 and 3). Post-hoc, rules before review: A catches React2Shell, B Grixba.
+- **Our validity score calls them valid.** pySigma rejects both conditions when it parses them (`SigmaConditionError`:
+  `Expected end of text, found '*'`; `Detection 'selection' not defined`), but `score_validity` (S1) gives
+  `parses: True`: it loads the rule without parsing its condition. The review stage's own check also passed them.
+
+**Reading:** a demonstration (2 reports, one run each), not a rate. It does not show the footprint helping: neither
+difference came from it. It shows a defect that matters more: **rules that cannot run**, from review and from
+generation, counted as valid by S1 and by the pipeline's own check. So S1's near-1.0 values so far overstate how many
+rules can run (by how much is not measured yet). Change 54 stays on its branch, not run, not merged.
