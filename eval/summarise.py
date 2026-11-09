@@ -28,6 +28,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
+from eval.compare_runs import metric_value  # noqa: E402
 from eval.scope import keep  # noqa: E402
 
 # Measured in Change 4: score of a gold rule against a *different* gold rule.
@@ -128,6 +129,8 @@ def summarise(rows: list, baselines: dict = NULL_BASELINES) -> dict:
         "n_scored": len(scored),
         "validity_rate": _mean([1.0 if (r["scores"].get("validity") or {}).get("parses")
                                 else 0.0 for r in scored]),
+        # Change 55: S1r, the first rule runs (it loads and every condition parses), from the saved rules.
+        "s1r_rate": _mean([1.0 if metric_value(r, "S1r") else 0.0 for r in scored]),
         "n_parsed": len(parsed),
         "mean_issues": _mean(issues),
         "logsource_exact": _mean(logsource),
@@ -262,6 +265,7 @@ def report(name: str, s: dict) -> None:
     print(f"\n=== {name} ===")
     print(f"  cases                : {s['n_cases']}  (errors: {s['n_errors']})")
     print(f"  S1 valid Sigma       : {_fmt(s['validity_rate'])}  (n={s['n_scored']})")
+    print(f"  S1r first rule runs  : {_fmt(s.get('s1r_rate'))}  (n={s['n_scored']})")
     print(f"  S2 mean issues/rule  : {_fmt(s['mean_issues'], 2)}  (n={s['n_parsed']})")
 
     for label, key, baseline_key in [
@@ -300,6 +304,7 @@ def compare(a: dict, b: dict, name_a: str, name_b: str) -> None:
     print(f"  {'metric':<22} {'A':>10} {'B':>10} {'delta':>10}")
     for label, key, digits in [
         ("S1 valid Sigma", "validity_rate", 3),
+        ("S1r first rule runs", "s1r_rate", 3),
         ("S3 logsource exact", "logsource_exact", 3),
         ("S4 ATT&CK F1", "attack_f1", 3),
         ("S5 detection F1", "detection_f1", 3),

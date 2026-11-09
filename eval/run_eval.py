@@ -81,6 +81,8 @@ DIAGNOSIS_FIELDS = (
     "web_enrichment",
     # Only in the simulated-analyst run's oracle rows (plan 5.3): the review and its check.
     "analyst_review", "analyst_check",
+    # Change 55: the rules review broke, kept as they were before review.
+    "review_reverted",
 )
 
 

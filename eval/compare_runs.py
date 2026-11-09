@@ -47,6 +47,13 @@ def metric_value(row: dict, metric: str):
     parses = bool((scores.get("validity") or {}).get("parses"))
     if metric == "S1":
         return parses if scores else None
+    if metric == "S1r":
+        # Change 55: the first rule runs (it loads and every condition parses), from the saved rules.
+        if "rules_yaml" not in row:
+            return None
+        from eval.runnable_rules import can_run
+        first = (row.get("rules_yaml") or [None])[0]
+        return bool(first is not None and can_run(first)["runs"])
     if metric in ("S3", "S4", "S5"):
         if not parses:
             return None
