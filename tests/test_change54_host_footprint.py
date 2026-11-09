@@ -213,3 +213,33 @@ def test_footprint_coverage_never_adds_a_warning_so_it_never_triggers_the_retry(
 
 def test_a_rule_that_does_not_parse_does_not_count_as_covering():
     assert _covered([_step()], [{"yaml_content": "logsource: [unclosed"}])["host_footprint_covered"] is False
+
+
+# --- the wording clarified before the run (user, 2026-11-09; log the same day) ------------------------------
+# The live check wrote a kernel-driver exploit and a DLL as `starts` steps, and the prompt's own Example A read
+# "explorer.exe starts rundll32.exe loading <loader>.dll": a start and a load in one step.
+
+def test_each_action_is_defined_and_a_module_is_loaded_not_started():
+    section = AV.split("### 4b. Host footprint")[1].split("### 5.")[0]
+    line = next(l for l in section.splitlines() if l.strip().startswith("- `action`"))
+    assert "`starts`" in line and "its own process" in line
+    assert "`loads`" in line and "DLL" in line and "driver" in line
+    assert "`image_load`" in line and "`driver_load`" in line
+
+
+def test_a_step_is_written_only_when_the_attack_has_it():
+    section = AV.split("### 4b. Host footprint")[1].split("### 5.")[0]
+    assert "starts no new program" in section and "no `starts` step" in section
+
+
+def test_example_a_writes_the_start_and_the_load_as_two_steps():
+    steps = _examples()[0]["host_footprint"]
+    assert [(s["action"], s["log_source"]) for s in steps] == [
+        ("starts", "process_creation"), ("loads", "image_load"), ("changes", "registry_set")]
+    assert steps[0]["target"] == "rundll32.exe" and "<loader>.dll" in steps[1]["target"]
+    assert not any(s["action"] == "starts" and ".dll" in s["target"] for e in _examples() for s in e["host_footprint"])
+
+
+def test_instruction_2b_says_a_started_program_is_a_process_and_how_to_write_a_load():
+    line = next(l for l in GEN.splitlines() if l.startswith("2b. "))
+    assert "not a DLL or driver" in line and "`ImageLoaded`" in line
