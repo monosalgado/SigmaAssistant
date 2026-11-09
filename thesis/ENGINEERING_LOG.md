@@ -7496,3 +7496,27 @@ the 42 tuning cases (`--sample 60 --seed 0 --scope windows-linux --limit 2`, no 
 with a parent-process field) can rise while the rules get worse, when a step that loads a module or uses a driver is
 written as `starts`. The no-harm gate (S3u, S5u) and the real-attack check (React2Shell) are what show rule quality.
 The two cases are tuning cases, so any wording changed because of them is disclosed as such.
+
+## 2026-11-09 — Change 54: the footprint wording is clarified before the run (user), because of the live check
+
+**Decision (user, today): clarify first, then run.** The live check (entry above) showed two steps that are not
+process starts written as `starts`. Looking again at the prompt, **its own Example A teaches the confusion**: its
+first step reads "explorer.exe starts rundll32.exe loading <loader>.dll", a start and a load in one step. The trigger
+came from 2 of the 42 tuning cases; the wording below is general and names no case.
+
+**The clarification, fixed now:**
+- **Section 4b:** each action defined: `starts` only for a program that runs as its own process; `loads` for a DLL,
+  driver or other module a process loads (`image_load`, `driver_load`); and a step is written only when the text shows
+  it or the kind of attack implies it, so an attack that starts no new program has no `starts` step.
+- **Example A:** the start and the load become two steps (`explorer.exe` starts `rundll32.exe`; `rundll32.exe` loads
+  `<loader>.dll` in `image_load`), then the Run-key change.
+- **Instruction 2b:** a program started means a process, not a DLL or driver; for a module loaded, the actor in `Image`
+  and the module in `ImageLoaded`.
+- Code unchanged.
+
+**Check before the run:** 2 cases outside the 42, from the Phase 2 held-out cases (already run in September, so not
+taken from the never-run cases kept for a final confirmation): one whose gold rule is a process start, one whose gold
+rule is a module or driver load. A check of function, not a result.
+
+**Measures unchanged** (Change 54 plan), plus one descriptive count fixed now: rules that treat a module as a program
+(`Image` ending in `.dll` or `.sys` in a `process_creation` rule), in both arms.
