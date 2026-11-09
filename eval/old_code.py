@@ -35,7 +35,11 @@ def replay_calls(calls: list) -> None:
                              operation=c["operation"], latency_s=c["latency_s"],
                              prompt_chars=c["prompt_chars"], response_chars=c.get("response_chars", 0),
                              usage={k: c.get(k) for k in _USAGE}, ok=c.get("ok", True),
-                             error=c.get("error"), output_limited=c.get("output_limited", False))
+                             error=c.get("error"), output_limited=c.get("output_limited", False),
+                             # A request refused at the token ceiling stays refused (Change 49), so `run_case`
+                             # treats it as a finding, as it does in a direct run (fixed 2026-11-09).
+                             cut_tail=c.get("cut_tail"), refused=c.get("refused", False),
+                             thinking_allowed=c.get("thinking_allowed"))
 
 
 class WorkerTransport:

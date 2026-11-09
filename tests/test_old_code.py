@@ -78,6 +78,18 @@ def test_the_workers_calls_are_recorded_with_their_stage():
     assert calls[1]["ok"] is False and calls[1]["total_tokens"] == 50
 
 
+def test_a_request_refused_at_the_token_ceiling_stays_refused_not_failed():
+    # Found in the Change 55 live check (2026-11-09): the worker sent `refused`, the replay dropped it, so a prompt
+    # over the 30,000-token ceiling (Change 49) stopped a `--code` run as a failed call; run directly it is a finding.
+    TELEMETRY.reset()
+    refused = {**_call("analysis", ok=False), "refused": True, "error": "prompt of 30131 tokens is over the ceiling"}
+    limited = {**_call("generation"), "output_limited": True, "cut_tail": "...", "thinking_allowed": False}
+    replay_calls([refused, limited])
+    calls = TELEMETRY.as_dicts()
+    assert calls[0]["refused"] is True and calls[0]["ok"] is False
+    assert calls[1]["output_limited"] is True and calls[1]["cut_tail"] == "..." and calls[1]["thinking_allowed"] is False
+
+
 def test_a_case_runs_through_todays_harness_and_is_scored_by_todays_scorer():
     transport = _Transport([_reply()])
     agent = OldCodeAgent(transport=transport, model_name="qwen3-coder:30b")
