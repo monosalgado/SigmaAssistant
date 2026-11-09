@@ -7615,3 +7615,27 @@ also fail for other reasons (an unsupported modifier, a field a backend cannot m
 **Runs:** every committed result file with at least 40 rows, each reported on its own; the 12 that saved the rules
 before review (`c42A/B/C`, `c45A/B`, `c48A/B`, `c50`, `c51`, `c53`, `web_tuning60`, `q36think`; the last on another
 model) also give the review counts. All cases, and the Windows/Linux scope apart. A committed tool, tests first.
+
+## 2026-11-09 — Result (post-hoc): about one rule in seven cannot run, almost all broken by review; review broke 382 rules and fixed none in the 12 runs that saved the rules before review
+
+Tool `eval/runnable_rules.py` (`d3966aa`) under the plan above; summaries committed as
+`eval/results/runnable_rules_all.json` and `eval/results/runnable_rules_windows_linux.json`. 45 runs.
+
+- **Review breaks rules and fixes none.** In the 12 runs that saved the rules before review (since Change 42): 2,889
+  rules before review, 67 of which could not run; **review broke 382 and fixed 0** (rules compared by position; in 4
+  cases review changed the number of rules, not compared). Without the run on qwen3.6: 373 broken of 2,635.
+- **The cause, in the reference run `c53_tuning60`:** 38 of its 265 final rules cannot run; **34 of the 38 have the
+  stray space review writes** (`all of selection_ *`), 2 have another condition error, 2 do not load. Before review, 1
+  of its 271 rules could not run. The review prompt holds no such example; the space comes from the review model.
+- **S1 overstates it.** `c53_tuning60`: S1 0.983 as recorded, **0.783 corrected** (the share of first rules that run);
+  12 first rules S1 counts as valid cannot run, and 6 of them still get S3's credit for the right log source. On the
+  Windows/Linux cases: 1.000 → 0.786. Across the 45 runs, **1,627 of 10,401 final rules cannot run**, and S1 corrected
+  is lower than recorded in every run, by 0.017 (baseline v1 and v2, the qwen3.6 run) up to 0.250 (`c42C`).
+- **When it grew:** the runs before Change 42 did not save the rules before review, so the share broken by review
+  cannot be told for them. Baselines v1 and v2 lose 0.017 each; from Change 36 on, S1 corrected is 0.68–0.88. Not
+  explained here.
+
+**Reading** (post-hoc, on existing rows; no earlier result changes): **about one rule in seven of ours cannot run,
+almost all because the review step breaks them, and review fixes none.** The agreement scores count such a first rule
+as a rule; the real-log tests already showed these rules as unable to run, never as 0 matches. Disclosed in CH6
+§6.4.12 and CH7 61. Next, the user decides: a change so that every rule runs.

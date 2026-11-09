@@ -298,7 +298,9 @@ limitation in the log belongs here too.
 
 61. **S1 ("valid Sigma") does not check that a rule can run** `[DISCLOSE]` (found 2026-11-09; CH6 §6.4.12). It
     loads each rule without parsing its condition; pySigma rejects some conditions that S1 accepts (review broke 4 of
-    24 rules this way in one demonstration). Every S1 value cited so far may be too high; the size is not measured.
+    24 rules this way in one demonstration). **Measured (post-hoc):** S1 corrected is lower than recorded in all 45 runs,
+    by 0.017 to 0.250 (`c53_tuning60` 0.983 → 0.783); 1,627 of 10,401 final rules cannot run; review broke 382 and fixed
+    0 in the 12 runs that saved the rules before it. Cited S1 values must be read as "loads", not "runs".
 
 ## Future work (collected, not prioritised)
 
