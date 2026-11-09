@@ -7639,3 +7639,35 @@ Tool `eval/runnable_rules.py` (`d3966aa`) under the plan above; summaries commit
 almost all because the review step breaks them, and review fixes none.** The agreement scores count such a first rule
 as a rule; the real-log tests already showed these rules as unable to run, never as 0 matches. Disclosed in CH6
 §6.4.12 and CH7 61. Next, the user decides: a change so that every rule runs.
+
+## 2026-11-09 — Change 55 planned (approved by the user): every rule must run; and Change 54's run plan revised to a three-arm session
+
+**Why:** the measure above. The review stage already checks the rules it receives (`validate_rule_text`: load,
+condition resolution, pySigma's validators), but **never checks the rules the model returns**: they become the final
+rules as they come. Review broke 382 rules and fixed none in the 12 runs that saved both.
+
+**The change:**
+1. After the model's review, code checks each returned rule with the same `validate_rule_text`.
+2. A returned rule that fails while the rule before review at the same position passed: **the rule before review is
+   kept**; review's change to it is dropped and recorded (which rule, the error). If review changed the number of
+   rules and any returned rule fails, all the rules from before review are kept.
+3. No new model call; prompts, generation and review's other changes unchanged.
+4. **S1r** ("the first rule runs": it loads and its condition parses) next to S1, computed from the saved rules, so it
+   applies to old runs too.
+
+**Measures, fixed now:**
+- **Step 1, offline (a simulation, labelled so):** the change's rule applied to the saved rows of the 12 runs that
+  kept the rules before review; per run, final rules that cannot run, S1r, S3u and S5u, paired with the recorded
+  values. Exact for the revert itself; the coverage-directed regeneration after review may behave differently live.
+- **Step 2, live:** a 2-case check, then **one session, three arms interleaved one case at a time** on the 42
+  Windows/Linux tuning cases: A = `main`, B = `main` + Change 55, C = B + Change 54 (its branch brought onto Change
+  55). About 6–7 hours, one request at a time; `summarise` CITABLE for each arm.
+- **Keep Change 55 if** (B against A, paired): fewer final rules that cannot run, S1r higher, and no gated score (S3u,
+  S5u, S1) lower with its 95% CI entirely below 0.
+- **Change 54's plan is revised before its run:** its measures and keep rule stay as fixed (M2 must rise; no harm),
+  but they are read **C against B**, so that Change 54 is measured on a pipeline that no longer breaks its own rules.
+- **Real-attack check after the run:** React2Shell and Grixba through A, B and C; their rules on the recordings
+  (`eval/rules_on_recording.py`), caught as defined before.
+
+**Order:** tests first and the change offline; step 1; the branch of Change 54 brought onto Change 55; the 2-case
+live check; the three-arm session (in the user's Terminal panel); the measures; the user decides on both changes.
