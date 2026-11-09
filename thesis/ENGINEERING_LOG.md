@@ -7474,3 +7474,25 @@ As planned (entry above). On a branch, so that `main` stays arm A of the run. Wh
 
 Tests first: 16 new offline tests (`tests/test_change54_host_footprint.py`); suite 1,076 pass. **Next:** the 2-case
 live check on the Spark (needs the USF VPN and the tunnel), then the interleaved run.
+
+## 2026-11-09 — Change 54 live check: the footprint is written and used in both cases; both parent-process rules describe steps that are not process starts
+
+**Preflight passed** (USF VPN, new tunnel; Ollama 0.34.1, `qwen3-coder:30b` digest `06c1097efce0`, as in October;
+context 131,072; tests; smoke CITABLE). **Live check:** branch `change54-host-footprint` (`39192ab`), the first 2 of
+the 42 tuning cases (`--sample 60 --seed 0 --scope windows-linux --limit 2`, no web search), local file
+`eval/results/c54_livecheck.jsonl` (not committed, not a result). Gates: CITABLE. Time per case 132 s and 128 s.
+
+- **The mechanism works end to end.** Both cases got a footprint of 2 steps, all on SigmaHQ's table; both have a rule
+  in a footprint log source (`host_footprint_covered` True) and a first rule with `ParentImage`. CVE-2024-35250 (gold:
+  `image_load`): steps in `process_creation` and `image_load`, rules in both. Slingshot (gold: `windows/security`):
+  steps in `process_creation` and `network_connection`, 7 rules.
+- **But both parent-process rules describe a step that is not a process start.** CVE-2024-35250 is a kernel-driver
+  exploit: the footprint's first step says an "exploitation process starts kernel driver interaction via device
+  handles", and the rule asks for `cmd.exe` under `explorer.exe` with IOCTL names in the command line (no command line
+  holds them). Slingshot: "Winbox Loader starts ipv4.dll"; the rule asks for `Image` ending in `\ipv4.dll` under
+  `\Winbox Loader.exe`, but a DLL is loaded, not started (that is `image_load`).
+
+**Reading:** a check of function on 2 cases, not a result. It shows a risk the plan's measures can miss: M2 (rules
+with a parent-process field) can rise while the rules get worse, when a step that loads a module or uses a driver is
+written as `starts`. The no-harm gate (S3u, S5u) and the real-attack check (React2Shell) are what show rule quality.
+The two cases are tuning cases, so any wording changed because of them is disclosed as such.
