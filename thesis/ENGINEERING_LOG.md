@@ -7453,3 +7453,24 @@ so it is an independent test of the change. The ActiveMQ blog last, as a demonst
 **Order:** tests first and the change offline; a 2-case live check that the footprint appears and reaches the rule
 writer; the interleaved run (started in the user's Terminal panel, over 2 hours); a committed tool for M1–M3; the
 real-attack check; the log and CH6; the user decides.
+
+## 2026-11-08 — Change 54 built offline, on branch `change54-host-footprint` (`39192ab`); `main` unchanged until the user decides
+
+As planned (entry above). On a branch, so that `main` stays arm A of the run. What was built:
+- **Attack-vector prompt:** section 4b, `host_footprint` (up to 4 steps: log source from SigmaHQ's tables, actor,
+  action from `starts`/`writes`/`changes`/`connects`/`loads`/`other`, target, and a quote or
+  `inferred_from_class`); each of the three invented examples gets one footprint line, using only the placeholders the
+  copy counter already knows. Nothing before section 4 and nothing else from section 5 on changed (Change 51's
+  fingerprints still match; that test now also leaves out the footprint line, the way it leaves out the telemetry
+  fields).
+- **Stage:** keeps well-formed steps (a log source, and an actor or a target), at most 4, an unknown action as
+  `other`, and records `on_table` for each step; recorded, not enforced.
+- **Rule writer:** a "Host footprint" section right after the candidate patterns, and instruction 2b: at least one
+  rule detects a footprint step whose log source is on SigmaHQ's table, in that log source, with the actor in
+  `ParentImage` and the started program in `Image` for a program started (`Image` and `TargetFilename` for a
+  file written). Numbered as 2b so that instructions 1–12 keep their numbers.
+- **Coverage check:** `host_footprint_covered` (True, False, or None when no step is on the table). Never a warning,
+  so it never triggers the regeneration.
+
+Tests first: 16 new offline tests (`tests/test_change54_host_footprint.py`); suite 1,076 pass. **Next:** the 2-case
+live check on the Spark (needs the USF VPN and the tunnel), then the interleaved run.
