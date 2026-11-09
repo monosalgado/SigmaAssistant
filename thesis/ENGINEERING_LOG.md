@@ -7704,3 +7704,26 @@ the coverage-directed regeneration after review may behave differently live (not
 agreement score moves, because those scores already counted a rule that loads, runnable or not. Its gain shows only
 where a rule must run: S1r here, the real-log tests in the live session. The live session (step 2) checks this without
 the simulation's limit.
+
+## 2026-11-10 — The three-arm session (Change 55, Change 54): checkouts, live check, a harness fix, and the start
+
+**Checkouts** (detached worktrees outside the repository, `Desktop/Projects/SigmaAssistant-arms/`, removed after the
+run): A = `main` at `bf73798`; B = Change 55 at `1fe2f55` (the change `bd54e8a` and its simulation tool); C = Change
+55 plus Change 54, branch `change54-on-55` at `185e02f` (Change 54's two commits applied on Change 55; 1,112 tests
+pass). All three run through today's harness (`run_eval.py --code <checkout>`), so harness, page snapshots and scorer
+are the same for each.
+
+**Live check** (the first 2 of the 42 cases per arm; local files `eval/results/c55live_*.jsonl`, not results): A and B
+CITABLE. **C stopped:** its analysis prompt on CVE-2024-35250 was 30,131 tokens, over the 30,000-token ceiling of
+Change 49. Run directly, such a request is refused and recorded as a finding; through `--code` the replay of the
+worker's calls dropped the `refused` flag, so it counted as a failed call and stopped the run. **Fixed** (`bd5c6c8`,
+test first): the replay keeps `refused` (and `cut_tail`, `thinking_allowed`). Rerun of C: CITABLE; the same case's
+analysis prompt was again over the ceiling (30,159 tokens), so that case had no analysis; footprints in both cases.
+Arms A and B were under the ceiling on that case. Refused requests are counted per arm in the session.
+
+**Session:** `run_session.sh` (outside the repository): the 42 Windows/Linux tuning cases, **one case at a time**,
+rotating which arm goes first; each arm through `run_resilient` (it rebuilds the tunnel after a dropped connection);
+**one request at a time** on the Spark (nothing runs in parallel). Started in the user's Terminal panel under
+`caffeinate -i`. About 7–8 hours (start-up about 30 s per arm per case, measured in the live check). Outputs:
+`eval/results/c55c54_A-main.jsonl`, `c55c54_B-change55.jsonl`, `c55c54_C-change55-54.jsonl`. If it stops, the same
+command resumes it.
