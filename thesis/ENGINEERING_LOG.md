@@ -7520,3 +7520,26 @@ rule is a module or driver load. A check of function, not a result.
 
 **Measures unchanged** (Change 54 plan), plus one descriptive count fixed now: rules that treat a module as a program
 (`Image` ending in `.dll` or `.sys` in a `process_creation` rule), in both arms.
+
+## 2026-11-09 — Change 54 second live check (clarified wording, `9e053d9`): no module written as a program, but the footprint's weakest step decides the rule
+
+Branch `change54-host-footprint` at `9e053d9`; 2 Phase 2 held-out cases outside the 42, chosen by their gold rule's
+log source before the run (the first in-scope process-start case and the first module-load case in that list):
+NotPetya (gold `process_creation`) and "Windows Spooler Service Suspicious Binary Load" (gold `image_load`). Local
+file `eval/results/c54_livecheck2.jsonl` (not committed, not a result). Gates: CITABLE.
+
+- **No rule treats a module as a program** this time, and Example A's split is respected.
+- **But the steps are still weak where the attack is not a program starting another.** NotPetya: "lsass.exe starts a
+  credential extraction tool" (a tool reading `lsass.exe` is a process access, not a start), then PsExec/WMIC
+  connecting out. Spooler: "SpoolFool starts the Print Spooler", then the DLL written to the driver folder
+  (`file_event`) and the spool directory changed (`registry_event`), which are real; no step for the spooler loading
+  the DLL, which is what the gold rule detects.
+- **The rule writer met instruction 2b with the first step only.** All 6 rules are `process_creation` (the first
+  step's log source), so `host_footprint_covered` is True in both, yet the spooler's file and registry steps got no
+  rule. NotPetya's first rule asks for `lsass.exe` with mimikatz commands in its own command line; it scores exact log
+  source and detection-field F1 1.0 against the gold, so agreement scores would call it good.
+- No rule uses a parent-process field in these 2 cases (in the first live check: 2 of 2).
+
+**Reading** (4 cases, not a result): the footprint is written and used every time, but its quality follows how well
+the model understands who acts, which is weakest for attacks that are not a program starting another; and "a rule in
+a footprint log source" can be met by the weakest step. M2 alone would not show this; the real-attack check would.
