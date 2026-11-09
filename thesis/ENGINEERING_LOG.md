@@ -7543,3 +7543,22 @@ file `eval/results/c54_livecheck2.jsonl` (not committed, not a result). Gates: C
 **Reading** (4 cases, not a result): the footprint is written and used every time, but its quality follows how well
 the model understands who acts, which is weakest for attacks that are not a program starting another; and "a rule in
 a footprint log source" can be met by the weakest step. M2 alone would not show this; the real-attack check would.
+
+## 2026-11-09 — Change 54 real-attack check planned, run before the long run (user)
+
+**Order:** the user moved the real-attack check of the Change 54 plan before the interleaved run (today). Nothing in
+that run's measures changes.
+
+- **Cases:** React2Shell (CVE-2025-55182; corpus case `271de298`, the Windows gold rule, which has SigmaHQ's
+  recording) and Grixba (`af688c76`, with its recording). Neither is in the 42 tuning cases or was used to design
+  Change 54.
+- **Arms:** A = `main`, B = the branch at `9e053d9`; the same day, one after the other; page and PoC snapshots, no web
+  search; one run each.
+- **The check:** each arm's rules for the case run on its recording, each rule on its own, with Zircolite (validated,
+  R11.3) and Hayabusa (validated, R12.2); the expert rule too. A committed tool, tests first.
+- **Reading, fixed now: caught** = at least one of the arm's rules matches at least one event the expert rule matches
+  (Zircolite; Hayabusa as a cross-check). Also shown: each rule's other matched events and the rules that cannot run.
+- **Disclosed:** React2Shell's input pages include the Node.js child-process documentation and a gist by the expert
+  rule's author; they mention spawning, `cmd.exe` and PowerShell many times but hold no Sigma rule (not flagged by the
+  contamination check). They point at child processes for both arms alike. One run per arm on two reports: a
+  demonstration, not a rate.
