@@ -7734,3 +7734,47 @@ The entries headed **2026-11-09**, from the Change 54 live check on, were writte
 time (EST), which was already 2026-11-09 in UTC. The entry headed **2026-11-10** (the three-arm session) was written the
 same evening; no clock read 2026-11-10, so that heading is wrong. The entries stay as written; their content and order
 are right. The session started at 22:38 EST on 2026-11-08.
+
+## 2026-11-09 (morning, EST) — The three-arm session finished but is not cited: the checkouts had no tokenizer, so every arm counted tokens as characters / 2; harness fix, rerun tonight (user)
+
+**What ran:** `run_session.sh`, 22:38:58 to 05:04:44 EST (6 h 26 min): 42 of 42 cases per arm, 126 single-case runs,
+0 failed; web search returned 0 sources in all 126. Local files `eval/results/c55c54_{A-main,B-change55,C-change55-54}.jsonl`
+and `SigmaAssistant-arms/session.log`, kept as a record; not results.
+
+**Gates** (`summarise --scope windows-linux`): B CITABLE. A and C NOT CITABLE, each with one case under 30 s, the same
+one (Shai-Hulud, `efd2eb09`): its rule-writing request was refused at the ceiling twice (the writing and the
+regeneration; counted 50,795 in A, 50,415 in C), so the case ended in about 15 s with no rules. B's rule-writing prompt
+on that case counted 6,989.
+
+**Why:** every run's log says `No tokenizer file at <checkout>/data/tokenizer/qwen3-coder-tokenizer.json; counting
+characters / 2` (126 of 126). Change 49's counter looks for the file next to its own code; `data/` is gitignored, so a
+`git worktree` checkout has none. The worker runs in the main checkout, so the other data (retrieval index, SigmaHQ
+rules) came from there, and the data files next to the code (log-source table, known services, ATT&CK ids) are tracked
+and were present: the tokenizer was the only thing missing. Without it the counter does not stop (by design: its
+estimate is stricter, never looser); it prints one line, not caught in the live check either (C's analysis prompt "over
+the ceiling" at 30,131 there was the same counting). On a sample sentence the tokenizer counts 19 tokens; characters / 2
+gives 43.
+
+**Why only now:** the only earlier runs from another checkout are the May-vs-now reruns (2026-09-29, code `2ec05f6`),
+from before Change 49 added the counter (2026-10-08); every run since was made in the main checkout. The harness fix
+`bd5c6c8` (refusals kept in `--code` runs) came from the same first run of post-Change-49 code from another checkout.
+
+**Refused requests (counted as characters / 2):** A 15 in 9 cases (4 of them rule writing), B 11 in 7 (0), C 17 in 11
+(2). The same counting in every arm, but it falls on the longest prompts, and Change 54 makes prompts longer, so C
+against B would be biased against Change 54.
+
+**Descriptive only, not cited:** S1r (first rule runs) A 0.714, B 1.000, C 0.976 (n = 42 each; A's includes cases the
+refusals left with no rules).
+
+**Decision (user, today):** fix it and rerun the whole session tonight. Rerunning only the affected cases is not done
+(it would choose cases by their outcome).
+
+**Fix** (`9c2a2b9`, tests first, 1,089 pass): `run_eval` stops before its first case when the code it runs counts tokens
+and its tokenizer file is missing or a link to nowhere (runs in the main checkout too), and says how to link the main
+checkout's file. Checked by hand on a checkout without it: stopped with status 1, nothing written, no request sent. The
+three checkouts now link the main checkout's file (outside the repository; their `git status` stays clean); each
+checkout's own counter finds it and counts as `main` does.
+
+**The rerun:** the same session (arms and commits, the 42 cases, one case and one request at a time, the measures and
+keep rules of the 2026-11-09 entries above); outputs `eval/results/c55c54r2_*.jsonl`, log
+`SigmaAssistant-arms/session2.log`.
