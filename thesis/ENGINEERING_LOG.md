@@ -7593,3 +7593,25 @@ of its recording (Zircolite and Hayabusa agree on every rule that ran).
 difference came from it. It shows a defect that matters more: **rules that cannot run**, from review and from
 generation, counted as valid by S1 and by the pipeline's own check. So S1's near-1.0 values so far overstate how many
 rules can run (by how much is not measured yet). Change 54 stays on its branch, not run, not merged.
+
+## 2026-11-09 — Measure planned (user): how often our rules cannot run, before and after review, in the past runs (offline, post-hoc)
+
+**Why:** the real-attack check (entry above) found rules that pySigma cannot run counted as valid by S1, and review
+breaking rules. The user asked to measure it. Offline, on committed result files; no new model calls. Post-hoc by
+nature (the runs are done); labelled so, and no earlier result is changed.
+
+**A rule runs** when pySigma loads it (`SigmaCollection.from_yaml`, as S1 does) **and every condition parses**
+(`parsed_condition[i].parse()`, which S1 skips). It is a lower bound on the rules that cannot run: a conversion can
+also fail for other reasons (an unsupported modifier, a field a backend cannot map), not counted here.
+
+**Counted, per run:**
+- final rules that cannot run; first rules that cannot run among those S1 counts as valid (S1 corrected = the share of
+  first rules that run); cases whose first rule cannot run but whose log source S3 counts as right.
+- for the runs that saved the rules before review (`pipeline.pre_review_rules`, since Change 42): rules that cannot
+  run before review; rules **broken by review** (the rule at the same position ran before review and not after, when
+  review kept the number of rules) and **fixed by review** (the reverse); cases where review changed the number of
+  rules, apart.
+
+**Runs:** every committed result file with at least 40 rows, each reported on its own; the 12 that saved the rules
+before review (`c42A/B/C`, `c45A/B`, `c48A/B`, `c50`, `c51`, `c53`, `web_tuning60`, `q36think`; the last on another
+model) also give the review counts. All cases, and the Windows/Linux scope apart. A committed tool, tests first.
