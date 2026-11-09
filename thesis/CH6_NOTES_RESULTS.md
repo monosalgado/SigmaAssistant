@@ -553,7 +553,11 @@ the broken rules was the only one with the expert's logic (React2Shell). **S1's 
 can run**. **Measured 2026-11-09 (post-hoc, `eval/runnable_rules.py`):** in the 12 runs that saved the rules before
 review, review broke 382 rules and fixed 0 (2,889 rules before review, 67 unable to run before it); in `c53_tuning60`,
 38 of 265 final rules cannot run (34 with the stray space), and S1 drops from 0.983 to 0.783 when it must run (12 first
-rules; 6 of them still credited by S3). Across 45 runs, 1,627 of 10,401 final rules cannot run (CH7 61).
+rules; 6 of them still credited by S3). Across 45 runs, 1,627 of 10,401 final rules cannot run (CH7 61). **The fix,
+Change 55** (code checks review's output and keeps a rule review broke as it was before review), **simulated on the
+saved rows** (exact for the revert, not for what follows it live): `c53_tuning60` 38 → 1 rules that cannot run, S1r
+0.783 → 0.983 (+0.200, CI [+0.100, +0.300]), S3u and S5u unchanged; S1r higher in all 11 qwen3-coder runs. Live run
+pending (log 2026-11-09).
 
 ## 6.5 A negative result — the security-pretrained model (contribution 3, dropped) `[MEASURED] 2026-09-23`
 

@@ -7683,3 +7683,24 @@ changed the number of rules and any returned rule fails, every rule before revie
 where the rule before review failed too stays as review wrote it. Reverts recorded (`optimization.reverted`;
 `review_reverted` in the analysis record). No new model call. Tests first: 4 on `main`, 7 on the branch; suite
 1,089 pass on the branch. **Next:** step 1, the offline simulation on the 12 saved runs.
+
+## 2026-11-09 — Change 55, step 1 (a simulation on saved rows): almost every rule that could not run runs again, S1r rises by about 0.2, agreement unchanged
+
+Tool `eval/simulate_keep_runnable.py` on the branch (`1fe2f55`, tests first): the change's own `keep_runnable` applied
+to the 12 runs that saved the rules before review; both sides scored with today's scorer. Summaries committed as
+`eval/results/c55_simulation_all.json` and `..._windows_linux.json`. **A simulation:** exact for the revert itself;
+the coverage-directed regeneration after review may behave differently live (not simulated).
+
+- **Reference run `c53_tuning60`:** 37 rules reverted; rules that cannot run **38 → 1**; **S1r 0.783 → 0.983 (+0.200,
+  95% CI [+0.100, +0.300])**; S3u 0.400 and S5u 0.306, unchanged. Windows/Linux: 30 → 0; S1r 0.786 → 1.000 (+0.214,
+  [+0.095, +0.357]); S3u and S5u unchanged.
+- **The 11 runs on qwen3-coder:** S1r rises in every one, by +0.067 (`c45B`, a partial web run) to +0.283 (`c42C`),
+  10 of them with a CI above 0; the rules that cannot run fall to 0–9 per run. S3u and S5u move by at most 0.017 either
+  way, every CI including 0.
+- **The run on qwen3.6:** 37 → 28; most of its rules that cannot run come from rule writing, not review, so the change
+  helps it less (S1r +0.050, CI [0.000, +0.117]).
+
+**Reading:** on saved rows the change does what it is for: almost every rule review broke runs again, and no
+agreement score moves, because those scores already counted a rule that loads, runnable or not. Its gain shows only
+where a rule must run: S1r here, the real-log tests in the live session. The live session (step 2) checks this without
+the simulation's limit.
