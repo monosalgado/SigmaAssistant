@@ -7403,3 +7403,53 @@ the logs), the second half is the gap.
 - **C, a field check:** code flags a field the chosen log source does not have (such as `NetworkPayload` in
   `network_connection`) and asks once for a fix. The prompt already asks for valid fields, and it still happened.
 - **D, the retrieval query:** built from the host footprint instead of the attack summary.
+
+## 2026-11-08 — Change 54 planned (approved by the user): host footprint first
+
+**Why:** Diagnosis D1 (entries above). The pipeline understands the attack's host behaviour, but the rules anchor on
+the exploit's delivery and copy strings; `ParentImage` was in 0 of the 15 ActiveMQ rules. Option A+B of D1, chosen by
+the user today. Nothing in it names ActiveMQ or any other attack.
+
+**The change:**
+1. **Attack-vector step, one new output: `host_footprint`.** Up to 4 steps, in order, in which the attack shows in the
+   logs of the machine it runs on, which is not necessarily where its request arrives. Each step: `log_source` (from
+   SigmaHQ's tables, as for the primary telemetry), `actor` (the program that acts, such as the attacked service's own
+   process), `action` (`starts`, `writes`, `changes`, `connects`, `loads`, `other`), `target`, and `derived_from` (a
+   quote from the text, or `inferred_from_class` when the kind of attack implies it). The three invented examples in
+   the prompt each get a footprint (placeholders only).
+2. **Code:** the stage keeps well-formed steps only (at most 4), records whether each step's log source is on
+   SigmaHQ's table (recorded, not enforced, as for the primary telemetry), and formats the steps for the rule writer.
+3. **Rule writer:** a new section with the footprint, and one new instruction: at least one rule detects a footprint
+   step whose log source is on SigmaHQ's table, in that log source, matching the actor and what it does (for a program
+   the actor starts: the actor in `ParentImage`, the program in `Image`); field names from the taxonomy, as now. The
+   existing instructions stay.
+4. **Coverage check:** records whether a rule uses a footprint step's log source. Recorded only; it does not trigger
+   the regeneration.
+
+**Not changed:** the analysis step, retrieval, review and the regeneration triggers (D1's options C and D: later, one
+at a time).
+
+**Measures, fixed now:**
+- **Cases:** the 42 Windows/Linux tuning cases (`--sample 60 --seed 0`, scope `windows-linux`), page and PoC snapshots,
+  no web search. None was used to design this change.
+- **Arms:** A = `main` before the change, B = with it; run on the same day, interleaved one case at a time (answers of
+  the server drift between sessions, so the October run is not reused). About 4–5 hours, one request at a time.
+  `summarise` must give CITABLE for both.
+- **Mechanism (must move):** M1, cases where B's footprint has a step on SigmaHQ's table; **M2, cases with at least one
+  rule using a parent-process field (`ParentImage`, `ParentCommandLine`), A against B, paired, exact McNemar**; M3
+  (adherence), of B's cases with a footprint step on the table, those with a rule in that step's log source, and, for a
+  `starts` step, a rule with a parent-process field. A planning look at the October run (scratch, not a result): 9 of
+  the 42 cases had a parent-process rule; the gold rule uses such a field in 8.
+- **No harm (gate):** S3u, S5u and S1 as the user gets them (first rule), paired, bootstrap 95% CI (`compare_arms`).
+- **Keep the change if** M2 rises in B and no gated score is lower with its CI entirely below 0.
+- **Also reported:** rules per case, tokens and time, and rules using a field their log source lacks (descriptive).
+
+**Real-attack check after the run `[DEMO]`:** the React2Shell (CVE-2025-55182) and Grixba reports, which are in the
+corpus, not in the tuning set, and have a SigmaHQ recording, go through both arms; their rules run on the recordings
+(Zircolite and Hayabusa, validated). Reading: does a rule match an event the expert rule matches? React2Shell's expert
+rules ("suspicious child process from Node.js") detect the same kind of behaviour as the rule that caught ActiveMQ,
+so it is an independent test of the change. The ActiveMQ blog last, as a demonstration only (design case).
+
+**Order:** tests first and the change offline; a 2-case live check that the footprint appears and reaches the rule
+writer; the interleaved run (started in the user's Terminal panel, over 2 hours); a committed tool for M1–M3; the
+real-attack check; the log and CH6; the user decides.
