@@ -7671,3 +7671,15 @@ rules as they come. Review broke 382 rules and fixed none in the 12 runs that sa
 
 **Order:** tests first and the change offline; step 1; the branch of Change 54 brought onto Change 55; the 2-case
 live check; the three-arm session (in the user's Terminal panel); the measures; the user decides on both changes.
+
+## 2026-11-09 — Change 55 built offline, on branch `change55-rules-must-run` (`bd54e8a`); S1r on `main` (`41642bd`)
+
+As planned (entry above). **On `main`:** S1r ("the first rule runs") in `compare_runs`, `compare_arms` and
+`summarise`, from the saved rules (`c53_tuning60`: S1 0.983, S1r 0.783, the same as the measure); the harness keeps
+`review_reverted` in each row. **On the branch:** `keep_runnable` in the review stage: each rule the model returns is
+checked with the same `validate_rule_text` as the rules it receives; a returned rule that fails while the rule before
+review at the same position passed is replaced by the rule before review, without review's changes to it; if review
+changed the number of rules and any returned rule fails, every rule before review is kept; a returned rule that fails
+where the rule before review failed too stays as review wrote it. Reverts recorded (`optimization.reverted`;
+`review_reverted` in the analysis record). No new model call. Tests first: 4 on `main`, 7 on the branch; suite
+1,089 pass on the branch. **Next:** step 1, the offline simulation on the 12 saved runs.
