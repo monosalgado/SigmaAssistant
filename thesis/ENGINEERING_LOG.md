@@ -7727,3 +7727,10 @@ rotating which arm goes first; each arm through `run_resilient` (it rebuilds the
 `caffeinate -i`. About 7–8 hours (start-up about 30 s per arm per case, measured in the live check). Outputs:
 `eval/results/c55c54_A-main.jsonl`, `c55c54_B-change55.jsonl`, `c55c54_C-change55-54.jsonl`. If it stops, the same
 command resumes it.
+
+## 2026-11-08 (evening, EST) — Date note on the entries above
+
+The entries headed **2026-11-09**, from the Change 54 live check on, were written on the evening of 2026-11-08 local
+time (EST), which was already 2026-11-09 in UTC. The entry headed **2026-11-10** (the three-arm session) was written the
+same evening; no clock read 2026-11-10, so that heading is wrong. The entries stay as written; their content and order
+are right. The session started at 22:38 EST on 2026-11-08.
