@@ -34,11 +34,16 @@ from backend.token_count import count_tokens
 # on answers that would not have finished anyway.
 # Change 52 (2026-10-17, user): raised from 16,384 - answers cut there were almost all the analysis's long indicator
 # list; the loop this limit was set against is now capped by Change 32's ten-technique limit.
-OUTPUT_TOKEN_LIMIT = 32768
+# Change 58 (2026-11-10, user): lowered to 12,288. The client gives a request 600 s; at the server's speeds (median 54
+# tokens per second, the slow ones 25 to 33) 32,768 tokens were never reached in that time, so an answer that did not
+# stop was neither cut nor salvaged: it timed out. 12,288 is reached at 20.5 tokens per second and is 1.8 times the
+# longest answer that finished in the runs since Change 53 (6,965).
+OUTPUT_TOKEN_LIMIT = 12288
 # A step allowed to think (OLLAMA_THINK_STAGES) gets a larger limit: the thinking counts against it (qwen3.6 probe,
 # 2026-10-16: up to 8,236 thinking tokens, the longest answer 10,395). User: 32,768 for the thinking steps only.
 THINKING_OUTPUT_TOKEN_LIMIT = 32768
-# A cut answer is retried as often as the OpenAI client retries a timeout (2).
+# A cut answer is retried twice - when the request samples. At temperature 0 an identical request gets the identical
+# answer, so it is not sent again (Change 58); nor is a request that timed out (the client's `max_retries=0`).
 OUTPUT_LIMIT_RETRIES = 2
 # A cut answer's last characters are kept in its call record (#7, 2026-10-05): what it was writing when it ran out.
 CUT_TAIL_CHARS = 2000
@@ -352,6 +357,9 @@ class OllamaLLMClient(LLMClient):
         self._openai = OpenAI(
             base_url=f"{base_url.rstrip('/')}/v1",
             api_key="ollama",  # Ollama/LM Studio doesn't need a real key
+            # Change 58: the client's default resends a timed-out request twice without telling the pipeline - the
+            # same prompt, up to 30 minutes on the shared server. A timeout is reported as the failed call it is.
+            max_retries=0,
         )
         self.model_name = model_name
         self.fast_model_name = model_name  # Same model for local
@@ -400,7 +408,8 @@ class OllamaLLMClient(LLMClient):
         limit = THINKING_OUTPUT_TOKEN_LIMIT if thinking_allowed else OUTPUT_TOKEN_LIMIT
 
         # Tier is always "economy": HybridLLMClient only routes economy calls here.
-        for _attempt in range(1 + OUTPUT_LIMIT_RETRIES):
+        attempts = 1 + (OUTPUT_LIMIT_RETRIES if temperature > 0 else 0)
+        for _attempt in range(attempts):
             started = time.monotonic()
             try:
                 response = self._openai.chat.completions.create(
@@ -441,7 +450,7 @@ class OllamaLLMClient(LLMClient):
                 return content
         raise OutputLimitReached(
             f"answer stopped at the {limit}-token output limit on "
-            f"{1 + OUTPUT_LIMIT_RETRIES} attempts", partial=content or "")
+            f"{attempts} attempt{'s' if attempts > 1 else ''}", partial=content or "")
 
     def make_image_part(self, file_path: str, mime_type: str):
         """Image transcription not supported for text-only local models."""

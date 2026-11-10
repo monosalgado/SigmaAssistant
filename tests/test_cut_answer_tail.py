@@ -48,7 +48,7 @@ def test_the_local_client_records_the_last_2000_characters_of_every_cut_attempt(
     TELEMETRY.reset()
     answer = "".join(f"{{\"value\": \"evil{i}.example\"}}, " for i in range(2000))
     with pytest.raises(OutputLimitReached):
-        _client(answer, "length").generate("p")
+        _client(answer, "length").generate("p", temperature=0.3)     # a request that samples is retried (Change 58)
     calls = TELEMETRY.as_dicts()
     assert len(calls) == 3 and all(c["output_limited"] for c in calls)
     assert all(c["cut_tail"] == answer[-TAIL:] for c in calls)
@@ -58,7 +58,7 @@ def test_a_finished_answer_keeps_no_tail():
     TELEMETRY.reset()
     assert _client("{\"ok\": 1}", "stop").generate("p") == "{\"ok\": 1}"
     assert TELEMETRY.as_dicts()[0]["cut_tail"] is None
-    assert OUTPUT_TOKEN_LIMIT == 32768      # Change 52 (was 16,384)
+    assert OUTPUT_TOKEN_LIMIT == 12288      # Change 58 (Change 52: 32,768; Change 24: 16,384)
 
 
 def test_the_error_carries_the_last_cut_answer():
