@@ -8276,3 +8276,24 @@ C + 59, D + 60; read D against C):
 **Not in this change:** what review looks for (its checklist, the field hint that is wrong for Sigma's
 `process_creation`, "IoC enrichment"); whether review should see the report or the log source's fields; fixing
 tags in code.
+
+## 2026-11-10 — Change 60 built offline, on branch `change60-review-edits` (`a43841c`, on top of Change 59)
+
+**Built** (tests first, 14 new; the branch's suite 1,214 pass). Arms of the planned session: A `main`, B
+`change57-checks`, C `change59-evidence-rules`, D `change60-review-edits`, each on top of the one before.
+- **Review's prompt:** the output format is three parts of text: `### Issues` (one `- [error|warning|info] rule N:
+  …` per line, or `- none`), then only the rules it changes, each complete under `### Rule N: <what changed>` in a
+  `yaml` block, then `### Summary`. It is told that a rule it does not return is kept exactly as written, that a
+  backslash is written once, and that a condition is copied character for character unless the condition is what
+  it corrects. "Deduplication" is gone and the number of rules is kept; the rest of its checklist is unchanged.
+- **Review's input:** the rules are numbered, each in a `yaml` block.
+- **Code** (`parse_review`): reads the issues (an unknown severity or a line without one counts as a warning), the
+  returned rules by number and the summary; a number that does not exist is ignored and recorded; an answer in
+  another shape, or a failed call, changes nothing. Returned rules take their place and go through Change 55's
+  check; the others are the written rules, byte for byte.
+- **Record:** `review_returned` (the rules returned, numbers ignored, whether the answer had the expected form);
+  the harness keeps it in the row (`main`).
+- **One older test** of the stage fed a JSON answer and now feeds the new form.
+
+**Nothing is measured yet.** Whether the model keeps to the new form, how many rules it returns, and what that does
+to the rules needs the live check and the session.
