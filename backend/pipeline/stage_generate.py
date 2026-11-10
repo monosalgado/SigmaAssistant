@@ -315,6 +315,7 @@ class GenerateStage(PipelineStage):
             attack_vector_summary=attack_vector_summary,
             first_rule_logsource=first_rule_logsource_block(logsource_info, _LOGSOURCE_TABLE),
             payload_signatures=payload_signatures_text,
+            host_footprint=AttackVectorStage.format_host_footprint(attack_vector),  # Change 54
             incidental_blacklist=incidental_blacklist,
             attack_summary=attack_summary,
             indicators=indicators_text,

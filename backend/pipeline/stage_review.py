@@ -229,6 +229,10 @@ class ReviewStage(PipelineStage):
         is_valid = not any(i["severity"] == "error" for i in all_issues)
 
         optimized_rules = result.get("optimized_rules", [])
+        # Change 55: code checks every rule the model returns; a rule review broke is kept as it was before review.
+        optimized_rules, reverted = keep_runnable(rules, optimized_rules)
+        if reverted:
+            print(f"[{self.name}] Kept {len(reverted)} rule(s) as before review: review broke them")
 
         # Build corrected_rules list (for potential retry)
         corrected_rules = [r.get("yaml_content", "") for r in optimized_rules] if optimized_rules else [r.get("yaml_content", "") for r in rules]
@@ -248,6 +252,7 @@ class ReviewStage(PipelineStage):
             "rules": optimized_rules,
             "summary": result.get("review_summary", ""),
             "all_changes": all_changes,
+            "reverted": reverted,
         }
 
         error_count = sum(1 for i in all_issues if i["severity"] == "error")
@@ -263,6 +268,36 @@ class ReviewStage(PipelineStage):
     @staticmethod
     def _render_issue(issue) -> str:
         return render_issue(issue)
+
+
+def _fails(yaml_content: str) -> list:
+    return [i["message"] for i in validate_rule_text(yaml_content or "") if i["severity"] == "error"]
+
+
+def keep_runnable(before: list, after: list) -> tuple:
+    """Change 55 (log 2026-11-09): (the rules to return after review, the reverts). A rule review returns that fails
+    `validate_rule_text` while the rule before review at the same position passed is replaced by the rule before
+    review, without review's changes; if review changed the number of rules and any returned rule fails, every rule
+    before review is kept. Review broke 382 rules and fixed none in the 12 runs that saved both, most by rewriting
+    `all of selection_*` as `all of selection_ *`; the rules it receives were checked, the rules it returned were not."""
+    after = list(after or [])
+    before = list(before or [])
+    if len(after) != len(before):
+        failed = [i for i, rule in enumerate(after, 1) if _fails(rule.get("yaml_content", ""))]
+        if failed:
+            return ([{"yaml_content": r.get("yaml_content", ""), "changes_made": []} for r in before],
+                    [{"rule": None, "reason": "review changed the number of rules and returned a rule that fails",
+                      "failed": failed}])
+        return after, []
+    final, reverted = [], []
+    for i, (old, new) in enumerate(zip(before, after), 1):
+        errors = _fails(new.get("yaml_content", ""))
+        if errors and not _fails(old.get("yaml_content", "")):
+            final.append({"yaml_content": old.get("yaml_content", ""), "changes_made": []})
+            reverted.append({"rule": i, "reason": "review broke a rule that passed", "error": errors[0][:300]})
+        else:
+            final.append(new)
+    return final, reverted
 
 
 def validate_rule_text(yaml_content: str, prefix: str = "rule[0]") -> list:

@@ -12,6 +12,7 @@ Key outputs consumed downstream:
   - attack_vector.incidental_artifacts   -> BLACKLIST for indicator extraction
   - attack_vector.kill_chain_stages      -> coverage-gap check
   - attack_vector.primary_telemetry      -> log source hint
+  - attack_vector.host_footprint         -> where the attack shows in host logs (Change 54)
 
 Generic by design: uses CWE categories + MITRE tactics, no CVE-specific logic.
 Uses the PRIMARY model because this single decision anchors the whole pipeline.
@@ -19,6 +20,9 @@ Uses the PRIMARY model because this single decision anchors the whole pipeline.
 
 from __future__ import annotations
 import json
+
+import yaml
+
 from backend.pipeline.base_stage import PipelineStage
 from backend.pipeline import prompts
 from backend.pipeline.sigma_logsource import format_category_table, format_service_table, load_logsource_table
@@ -76,6 +80,65 @@ def telemetry_on_table(label, table: dict = None) -> bool:
     return _menu_entry(label, table if table is not None else _LOGSOURCE_TABLE) is not None
 
 
+# Change 54 (Diagnosis D1, 2026-11-08): where the attack shows in the logs of the machine it runs on, which is not
+# necessarily where its request arrives. Each step: the log source that records it, the program that acts, what it does
+# and to what, and the evidence. The model writes the steps; code keeps the well-formed ones and records whether each
+# log source is on SigmaHQ's table, without enforcing it.
+FOOTPRINT_ACTIONS = ("starts", "writes", "changes", "connects", "loads", "other")
+MAX_FOOTPRINT_STEPS = 4
+
+
+def normalize_footprint(steps, table: dict = None) -> list:
+    """The well-formed footprint steps (a log source, and something that acts or is acted on), at most
+    MAX_FOOTPRINT_STEPS, each with `on_table`; anything that is not a list gives none."""
+    out = []
+    for step in steps if isinstance(steps, list) else []:
+        if not isinstance(step, dict):
+            continue
+        clean = {k: str(step.get(k) if step.get(k) is not None else "").strip()
+                 for k in ("log_source", "actor", "action", "target", "derived_from")}
+        if not clean["log_source"] or not (clean["actor"] or clean["target"]):
+            continue
+        clean["action"] = clean["action"].lower() if clean["action"].lower() in FOOTPRINT_ACTIONS else "other"
+        clean["on_table"] = telemetry_on_table(clean["log_source"], table)
+        out.append(clean)
+        if len(out) == MAX_FOOTPRINT_STEPS:
+            break
+    return out
+
+
+def _rule_logsource(yaml_content: str):
+    """(category, product, service) of one rule, lower-cased, or None when it does not parse."""
+    try:
+        doc = yaml.safe_load(yaml_content or "")
+    except yaml.YAMLError:
+        return None
+    logsource = doc.get("logsource") if isinstance(doc, dict) else None
+    if not isinstance(logsource, dict):
+        return None
+    return tuple((str(logsource.get(k)).strip().lower() or None) if logsource.get(k) else None
+                 for k in ("category", "product", "service"))
+
+
+def footprint_covered(attack_vector: dict, rules: list):
+    """Does a rule use the log source of a footprint step on SigmaHQ's table? None when no step is on it
+    (Change 54; recorded only)."""
+    steps = [s for s in (attack_vector or {}).get("host_footprint") or [] if isinstance(s, dict) and s.get("on_table")]
+    if not steps:
+        return None
+    sources = [_rule_logsource(r.get("yaml_content", "")) for r in rules or [] if isinstance(r, dict)]
+    for step in steps:
+        entry = _menu_entry(step.get("log_source"), _LOGSOURCE_TABLE)
+        for source in sources:
+            if source is None or entry is None:
+                continue
+            if entry[0] == "category" and source[0] == entry[1]:
+                return True
+            if entry[0] == "service" and source[1] == entry[1] and source[2] == entry[2]:
+                return True
+    return False
+
+
 def describe_telemetry(label) -> str:
     """The attack-vector telemetry label in Sigma's terms, for downstream prompts."""
     if not label:
@@ -112,6 +175,7 @@ class AttackVectorStage(PipelineStage):
         "payload_signatures": [],
         "primary_telemetry": "other",
         "secondary_telemetry": [],
+        "host_footprint": [],
         "kill_chain_stages": [],
         "incidental_artifacts": [],
         "confidence": 0.0,
@@ -176,6 +240,8 @@ class AttackVectorStage(PipelineStage):
 
         # Change 51: whether the guess is on SigmaHQ's menu - recorded, not enforced.
         normalized["primary_telemetry_on_table"] = telemetry_on_table(normalized.get("primary_telemetry"))
+        # Change 54: the footprint's well-formed steps, each with whether its log source is on the menu.
+        normalized["host_footprint"] = normalize_footprint(normalized.get("host_footprint"))
         context["attack_vector"] = normalized
 
         # Log summary
@@ -224,6 +290,21 @@ class AttackVectorStage(PipelineStage):
             where = s.get("where", "")
             derived = s.get("derived_from", "")
             lines.append(f"- `{pattern}` (in {where}) — {derived}")
+        return "\n".join(lines)
+
+    @staticmethod
+    def format_host_footprint(attack_vector: dict) -> str:
+        """Numbered footprint steps for the generation prompt, each log source in Sigma's terms (Change 54)."""
+        steps = (attack_vector or {}).get("host_footprint") or []
+        if not steps:
+            return "No host footprint identified."
+        lines = []
+        for i, step in enumerate(steps, 1):
+            evidence = step.get("derived_from") or ""
+            evidence = ("inferred from the kind of attack" if evidence == "inferred_from_class"
+                        else f'"{evidence}"' if evidence else "no quote")
+            lines.append(f"{i}. In {describe_telemetry(step.get('log_source'))}: {step.get('actor') or '(not given)'} "
+                         f"{step.get('action') or 'other'} {step.get('target') or '(not given)'} - {evidence}")
         return "\n".join(lines)
 
     @staticmethod
@@ -370,6 +451,8 @@ class AttackVectorStage(PipelineStage):
 
         return {
             "initial_access_covered": initial_access_covered,
+            # Change 54: recorded only - never a warning, so it never triggers the regeneration.
+            "host_footprint_covered": footprint_covered(av, rules),
             "payload_signatures_covered": covered,
             "payload_signatures_missed": missed,
             "blacklist_violations": violations,

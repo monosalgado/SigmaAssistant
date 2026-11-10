@@ -78,6 +78,9 @@ RULE_GENERATION = """You are an expert Sigma rule author. Generate detection rul
 ### Candidate patterns (proposed by the attack-vector stage, each with where it would be seen and the quote it came from; use those the report supports — one marked inferred_from_class is a general pattern of the vulnerability class, not something this report shows)
 {payload_signatures}
 
+### Host footprint (from the attack-vector stage: where the attack shows in the logs of the machine it runs on, each step with the log source that records it)
+{host_footprint}
+
 ### Strings that must NOT drive detection (researcher/patch workflow artifacts)
 {incidental_blacklist}
 
@@ -118,6 +121,7 @@ RULE_GENERATION = """You are an expert Sigma rule author. Generate detection rul
 ### Instructions
 1. Generate one or more Sigma rules that detect the described attack behavior. **The FIRST rule should use the log source given in "Log Source for the First Rule" above**, unless the evidence above shows that this log source cannot observe the described behaviour; in that case choose the log source that can, and state the reason in that rule's `description`.
 2. **At least one rule MUST target the PRIMARY ATTACK VECTOR** — i.e. match on the attacker-controlled input, entry point, or candidate patterns. If the primary vector is a network request (HTTP/WebSocket/SMB/DNS), the logsource of that rule must match the telemetry where that traffic is observed. Initial-access detection is MANDATORY when an exploit is described. This rule does not have to be the first rule.
+2b. **At least one rule MUST detect a step of the HOST FOOTPRINT** above when a step names a SigmaHQ log source: write that rule in the step's log source and match the actor and what it does — for a program the actor starts (a process, not a DLL or driver), the actor in `ParentImage` and the started program in `Image` (or its `CommandLine`); for a module it loads, the actor in `Image` and the module in `ImageLoaded`; for a file it writes, the actor in `Image` and the file in `TargetFilename`. Field names follow the taxonomy, as the FIELD VALIDITY rule below says. This rule does not have to be the first rule.
 3. Prefer the candidate patterns whose quote shows they come from the report over other strings from the text; use one marked inferred_from_class only where the report describes that behaviour.
 4. **NEVER** use any string from "Strings that must NOT drive detection" as a detection criterion. Those are patch-analysis / researcher-workflow artifacts and would never fire in a real attack.
 5. **FIELD VALIDITY — DERIVE EVERY FIELD NAME FROM THE SIGMA LOGSOURCE TAXONOMY ABOVE.** Every field you put in `detection:` MUST be a field that the taxonomy block describes as existing for the chosen (category, product, service) triple. General rules that always apply:
@@ -336,6 +340,15 @@ Log sources with a category (write the category name):
 Log sources without a category (write `product/service`; where the product is "(none)", write `/service`):
 {logsource_services}
 
+### 4b. Host footprint (REQUIRED; an empty list is allowed)
+- `host_footprint`: List of 0-4 steps, in order, in which the attack shows in the logs of the machine it runs on: what the attacker's code or tools do there once the attack has reached it, such as a program started, a file written, a registry value changed, a connection made or a module loaded. This is not necessarily where the exploit request arrives: an exploit received by a network service often shows on the host as the service's own process starting programs or writing files. Each step has:
+  - `log_source`: The SigmaHQ log source that records this step, written as for `primary_telemetry` (from the same two tables).
+  - `actor`: The program that acts, as the text names it; for an exploited service, the service's own program.
+  - `action`: One of `starts` (the actor starts a program that runs as its own process), `loads` (the actor loads a DLL, driver or other module, into itself or into the kernel: log source `image_load` or `driver_load`), `writes` (a file), `changes` (a registry value or a setting), `connects` (a network connection), `other`.
+  - `target`: What the actor starts, writes, changes, connects to or loads.
+  - `derived_from`: Short quote (<=120 chars) from the input text or PoC that shows this step, or `"inferred_from_class"` when the text does not show it but the kind of attack implies it (code execution in a service implies the service's process starting a program) — never a quote the text does not contain.
+Write a step only when the text shows it or the kind of attack implies it: an attack that starts no new program (it runs inside an existing process or in a driver) has no `starts` step. An empty list is right when the text describes nothing that happens on a host.
+
 ### 5. Kill-chain coverage (REQUIRED)
 - `kill_chain_stages`: List of MITRE ATT&CK tactics evidenced in the text. Choose from: `reconnaissance`, `resource_development`, `initial_access`, `execution`, `persistence`, `privilege_escalation`, `defense_evasion`, `credential_access`, `discovery`, `lateral_movement`, `collection`, `command_and_control`, `exfiltration`, `impact`. The list MUST contain `initial_access` if the write-up describes an exploit.
 
@@ -381,6 +394,7 @@ Output (abbreviated):
   ],
   "primary_telemetry": "process_creation",
   "secondary_telemetry": ["registry_event", "file_event"],
+  "host_footprint": [{{"log_source": "process_creation", "actor": "explorer.exe", "action": "starts", "target": "rundll32.exe", "derived_from": "the ISO holds a LNK that runs rundll32.exe"}}, {{"log_source": "image_load", "actor": "rundll32.exe", "action": "loads", "target": "<loader>.dll", "derived_from": "runs rundll32.exe to load <loader>.dll"}}, {{"log_source": "registry_set", "actor": "rundll32.exe", "action": "changes", "target": "Run-key value <run-key value>", "derived_from": "the DLL adds a Run-key value"}}],
   "kill_chain_stages": ["initial_access", "execution", "persistence"],
   "incidental_artifacts": [
     {{"value": "sandbox detonation", "reason": "the analysts' own analysis environment, not attacker activity"}}
@@ -409,6 +423,7 @@ Output (abbreviated):
   ],
   "primary_telemetry": "webserver",
   "secondary_telemetry": ["process_creation", "zeek/http"],
+  "host_footprint": [{{"log_source": "process_creation", "actor": "the web server's process", "action": "starts", "target": "bash running the injected command", "derived_from": "<parameter> query param passed to bash arithmetic"}}],
   "kill_chain_stages": ["initial_access", "execution"],
   "incidental_artifacts": [
     {{"value": "<patch file>.nss", "reason": "vendor patch filename used during patch-diffing, not part of attack"}},
@@ -439,6 +454,7 @@ Output (abbreviated):
   ],
   "primary_telemetry": "process_creation",
   "secondary_telemetry": ["file_event", "linux/auditd"],
+  "host_footprint": [{{"log_source": "process_creation", "actor": "the user's shell", "action": "starts", "target": "/usr/bin/<setuid binary> with a crafted PATH", "derived_from": "runs setuid binary /usr/bin/<setuid binary> with crafted env var PATH"}}],
   "kill_chain_stages": ["privilege_escalation", "execution"],
   "incidental_artifacts": [],
   "confidence": 0.9,

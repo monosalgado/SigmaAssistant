@@ -41,8 +41,9 @@ def test_the_rest_of_the_prompt_is_unchanged():
     assert _h(P.split("### 4. Telemetry surfaces")[0]) == \
         "7107348cb6d55d2b8b793c19f742d1fa4138dca37599cc835d6a08973b829eea"
     after = "### 5. Kill-chain coverage" + P.split("### 5. Kill-chain coverage")[1]
+    # Change 54 adds one `host_footprint` line to each example; it is left out the same way.
     after = "\n".join(l for l in after.splitlines()
-                      if not l.lstrip().startswith(('"primary_telemetry"', '"secondary_telemetry"')))
+                      if not l.lstrip().startswith(('"primary_telemetry"', '"secondary_telemetry"', '"host_footprint"')))
     assert _h(after) == "604d688cd136b319c971f8a37f1e93ce4881c02224fa76603f5649ec453d986f"
 
 
