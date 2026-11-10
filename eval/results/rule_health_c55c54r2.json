@@ -1,0 +1,326 @@
+{
+ "scope": "windows-linux",
+ "runs": {
+  "c55c54r2_A-main.jsonl": {
+   "cases": 42,
+   "all_rules": {
+    "rules": 193,
+    "unreadable": 3,
+    "run": 154,
+    "logsource_unknown": 1,
+    "judged_for_fields": 189,
+    "with_unused_fields": 12,
+    "values": 677,
+    "values_with_report": 677,
+    "values_in_report": 456,
+    "with_exclusion": 2,
+    "with_parent_field": 6,
+    "levels": {
+     "high": 167,
+     "medium": 20,
+     "critical": 3
+    }
+   },
+   "first_rules": {
+    "rules": 42,
+    "unreadable": 1,
+    "run": 30,
+    "logsource_unknown": 0,
+    "judged_for_fields": 41,
+    "with_unused_fields": 7,
+    "values": 135,
+    "values_with_report": 135,
+    "values_in_report": 81,
+    "with_exclusion": 0,
+    "with_parent_field": 3,
+    "levels": {
+     "high": 40,
+     "medium": 1
+    }
+   },
+   "rules_per_case": {
+    "median": 3.5,
+    "max": 10
+   },
+   "tactics_per_case": {
+    "median": 4.0,
+    "max": 10
+   },
+   "cases_with_rules_at_least_tactics": 35,
+   "regenerated": 28,
+   "regenerated_still_warned": 25,
+   "cases_with_coverage_warnings": 35,
+   "patterns": 142,
+   "unlogged_patterns": 52,
+   "unlogged_patterns_used": 38,
+   "unlogged_landing": {
+    "network_payload -> CommandLine": 3,
+    "file_content -> CommandLine": 16,
+    "file_content -> DestinationHostname": 1,
+    "file_content -> Image": 2,
+    "request_body -> cs-uri-query": 4,
+    "response_body -> response_body": 1,
+    "file_content -> TargetFilename": 3,
+    "network_payload -> DestinationHostname": 4,
+    "request_body -> request_body": 3,
+    "network_payload -> url": 3
+   },
+   "do_not_use_hits": {
+    "in_detection": 1,
+    "elsewhere": 12,
+    "not_found": 0
+   },
+   "unused_fields": {
+    "webserver:request_body": 3,
+    "webserver:request_header": 2,
+    "webserver:response_body": 1,
+    "registry_set:NewValue": 1,
+    "registry_set:SubjectUserName": 1,
+    "dns_query:Query": 1,
+    "webserver:request_method": 1,
+    "webserver:request_uri": 1,
+    "webserver:url": 1,
+    "network_connection:RequestMethod": 1,
+    "network_connection:RequestPath": 1,
+    "network_connection:UserAgent": 1
+   },
+   "no_report_candidates": [
+    "UNC4841 - Potential SEASPY Execution",
+    "Potential Maze Ransomware Activity",
+    "Shai-Hulud NPM Package Malicious Exfiltration via Curl",
+    "Potential MuddyWater APT Activity"
+   ],
+   "partly_generic": 1,
+   "expert_rules": {
+    "rules": 42,
+    "unreadable": 0,
+    "run": 42,
+    "logsource_unknown": 0,
+    "judged_for_fields": 42,
+    "with_unused_fields": 0,
+    "values": 185,
+    "values_with_report": 185,
+    "values_in_report": 70,
+    "with_exclusion": 5,
+    "with_parent_field": 8,
+    "levels": {
+     "medium": 3,
+     "high": 29,
+     "critical": 10
+    }
+   }
+  },
+  "c55c54r2_B-change55.jsonl": {
+   "cases": 42,
+   "all_rules": {
+    "rules": 201,
+    "unreadable": 0,
+    "run": 200,
+    "logsource_unknown": 0,
+    "judged_for_fields": 201,
+    "with_unused_fields": 8,
+    "values": 608,
+    "values_with_report": 608,
+    "values_in_report": 387,
+    "with_exclusion": 2,
+    "with_parent_field": 13,
+    "levels": {
+     "high": 168,
+     "medium": 26,
+     "critical": 7
+    }
+   },
+   "first_rules": {
+    "rules": 42,
+    "unreadable": 0,
+    "run": 42,
+    "logsource_unknown": 0,
+    "judged_for_fields": 42,
+    "with_unused_fields": 5,
+    "values": 169,
+    "values_with_report": 169,
+    "values_in_report": 99,
+    "with_exclusion": 0,
+    "with_parent_field": 4,
+    "levels": {
+     "high": 41,
+     "medium": 1
+    }
+   },
+   "rules_per_case": {
+    "median": 4.0,
+    "max": 10
+   },
+   "tactics_per_case": {
+    "median": 4.0,
+    "max": 10
+   },
+   "cases_with_rules_at_least_tactics": 39,
+   "regenerated": 23,
+   "regenerated_still_warned": 21,
+   "cases_with_coverage_warnings": 36,
+   "patterns": 139,
+   "unlogged_patterns": 58,
+   "unlogged_patterns_used": 37,
+   "unlogged_landing": {
+    "network_payload -> CommandLine": 5,
+    "file_content -> CommandLine": 17,
+    "file_content -> Image": 2,
+    "request_body -> request_body": 6,
+    "file_content -> TargetFilename": 1,
+    "network_payload -> DestinationHostname": 3,
+    "file_content -> SourceImage": 1,
+    "file_content -> request_uri": 1,
+    "network_payload -> request_uri": 3
+   },
+   "do_not_use_hits": {
+    "in_detection": 3,
+    "elsewhere": 14,
+    "not_found": 0
+   },
+   "unused_fields": {
+    "webserver:request_body": 3,
+    "webserver:request_uri": 3,
+    "webserver:request_method": 2,
+    "webserver:url": 2,
+    "webserver:useragent": 2,
+    "webserver:query_string": 1,
+    "network_connection:Path": 1,
+    "network_connection:UserAgent": 1
+   },
+   "no_report_candidates": [
+    "UNC4841 - Potential SEASPY Execution",
+    "Potential Maze Ransomware Activity",
+    "Shai-Hulud NPM Package Malicious Exfiltration via Curl",
+    "Potential MuddyWater APT Activity"
+   ],
+   "partly_generic": 1,
+   "expert_rules": {
+    "rules": 42,
+    "unreadable": 0,
+    "run": 42,
+    "logsource_unknown": 0,
+    "judged_for_fields": 42,
+    "with_unused_fields": 0,
+    "values": 185,
+    "values_with_report": 185,
+    "values_in_report": 70,
+    "with_exclusion": 5,
+    "with_parent_field": 8,
+    "levels": {
+     "medium": 3,
+     "high": 29,
+     "critical": 10
+    }
+   }
+  },
+  "c55c54r2_C-change55-54.jsonl": {
+   "cases": 42,
+   "all_rules": {
+    "rules": 199,
+    "unreadable": 0,
+    "run": 199,
+    "logsource_unknown": 1,
+    "judged_for_fields": 198,
+    "with_unused_fields": 8,
+    "values": 631,
+    "values_with_report": 631,
+    "values_in_report": 379,
+    "with_exclusion": 1,
+    "with_parent_field": 38,
+    "levels": {
+     "high": 184,
+     "critical": 3,
+     "medium": 12
+    }
+   },
+   "first_rules": {
+    "rules": 42,
+    "unreadable": 0,
+    "run": 42,
+    "logsource_unknown": 0,
+    "judged_for_fields": 42,
+    "with_unused_fields": 5,
+    "values": 147,
+    "values_with_report": 147,
+    "values_in_report": 77,
+    "with_exclusion": 0,
+    "with_parent_field": 11,
+    "levels": {
+     "high": 42
+    }
+   },
+   "rules_per_case": {
+    "median": 4.0,
+    "max": 10
+   },
+   "tactics_per_case": {
+    "median": 4.0,
+    "max": 11
+   },
+   "cases_with_rules_at_least_tactics": 34,
+   "regenerated": 28,
+   "regenerated_still_warned": 27,
+   "cases_with_coverage_warnings": 36,
+   "patterns": 125,
+   "unlogged_patterns": 48,
+   "unlogged_patterns_used": 27,
+   "unlogged_landing": {
+    "network_payload -> Image": 1,
+    "request_body -> cs-user-agent": 3,
+    "response_body -> CommandLine": 1,
+    "response_body -> TargetFilename": 1,
+    "response_body -> response_body": 1,
+    "network_payload -> DestinationPort": 1,
+    "network_payload -> CommandLine": 1,
+    "network_payload -> DestinationHostname": 3,
+    "file_content -> CommandLine": 8,
+    "file_content -> Image": 1,
+    "file_content -> TargetFilename": 6,
+    "network_payload -> url": 3,
+    "request_body -> request_body": 2,
+    "file_content -> ImageLoaded": 1,
+    "request_body -> CommandLine": 2
+   },
+   "do_not_use_hits": {
+    "in_detection": 0,
+    "elsewhere": 17,
+    "not_found": 0
+   },
+   "unused_fields": {
+    "webserver:url": 2,
+    "webserver:request_body": 2,
+    "process_access:Image": 1,
+    "webserver:response_body": 1,
+    "webserver:request_method": 1,
+    "webserver:request_uri": 1,
+    "registry_event:TargetFilename": 1
+   },
+   "no_report_candidates": [
+    "UNC4841 - Potential SEASPY Execution",
+    "Potential Maze Ransomware Activity",
+    "Shai-Hulud NPM Package Malicious Exfiltration via Curl",
+    "Potential MuddyWater APT Activity"
+   ],
+   "partly_generic": 1,
+   "expert_rules": {
+    "rules": 42,
+    "unreadable": 0,
+    "run": 42,
+    "logsource_unknown": 0,
+    "judged_for_fields": 42,
+    "with_unused_fields": 0,
+    "values": 185,
+    "values_with_report": 185,
+    "values_in_report": 70,
+    "with_exclusion": 5,
+    "with_parent_field": 8,
+    "levels": {
+     "medium": 3,
+     "high": 29,
+     "critical": 10
+    }
+   }
+  }
+ }
+}

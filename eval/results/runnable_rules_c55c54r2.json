@@ -1,0 +1,50 @@
+{
+ "scope": "windows-linux",
+ "runs": {
+  "c55c54r2_A-main.jsonl": {
+   "cases": 42,
+   "rules": 193,
+   "rules_cannot_run": 39,
+   "s1": 0.9761904761904762,
+   "s1_corrected": 0.7142857142857143,
+   "first_valid_but_cannot_run": 11,
+   "first_cannot_run_but_s3_right": 5,
+   "cases_with_before_review": 42,
+   "before_rules": 193,
+   "before_cannot_run": 2,
+   "broken_by_review": 37,
+   "fixed_by_review": 0,
+   "review_changed_count": 0
+  },
+  "c55c54r2_B-change55.jsonl": {
+   "cases": 42,
+   "rules": 201,
+   "rules_cannot_run": 1,
+   "s1": 1.0,
+   "s1_corrected": 1.0,
+   "first_valid_but_cannot_run": 0,
+   "first_cannot_run_but_s3_right": 0,
+   "cases_with_before_review": 42,
+   "before_rules": 201,
+   "before_cannot_run": 1,
+   "broken_by_review": 0,
+   "fixed_by_review": 0,
+   "review_changed_count": 0
+  },
+  "c55c54r2_C-change55-54.jsonl": {
+   "cases": 42,
+   "rules": 199,
+   "rules_cannot_run": 0,
+   "s1": 1.0,
+   "s1_corrected": 1.0,
+   "first_valid_but_cannot_run": 0,
+   "first_cannot_run_but_s3_right": 0,
+   "cases_with_before_review": 42,
+   "before_rules": 199,
+   "before_cannot_run": 0,
+   "broken_by_review": 0,
+   "fixed_by_review": 0,
+   "review_changed_count": 0
+  }
+ }
+}

@@ -7898,3 +7898,81 @@ detection-field F1 is 0.00, 0.80, 0.67 and 1.00 (SEASPY, Maze, MuddyWater, Shai-
 **Next (the user decides):** the audit's proposals, in its note: fix the check and the smaller bugs on their own
 branch; then one change to what the rule writer is asked for (rules for what the report shows, where a log can see
 it); the confirmation by eye of the 19 candidates and a rule for them.
+
+## 2026-11-10 — The three-arm rerun: Change 55 and Change 54 both meet their keep rules; all three arms CITABLE
+
+**The session:** 2026-11-09 22:57:42 to 2026-11-10 06:26:33 EST (7 h 29 min), 126 runs, one case and one request at a
+time, no relaunch. Preflight passed before the start. The log holds no "No tokenizer file" note; **no request was
+refused at the ceiling in any arm** (the first session: A 15, B 11, C 17). Arms: A `main` `bf73798`, B Change 55
+`1fe2f55`, C Change 55 + 54 `185e02f`. `summarise --scope windows-linux`: **CITABLE for all three** (every gate
+passes, 42 rows each). Rows: `eval/results/c55c54r2_{A-main,B-change55,C-change55-54}.jsonl`.
+
+| | A | B | C |
+|---|---|---|---|
+| S1 | 0.976 | 1.000 | 1.000 |
+| S1r (first rule runs) | 0.714 | 1.000 | 1.000 |
+| S3 (of rules that parse) | 16/41 = 0.390 | 15/42 = 0.357 | 16/42 = 0.381 |
+| S5 | 0.287 | 0.266 | 0.225 |
+| rules per case | 4.60 | 4.79 | 4.74 |
+| seconds per case | 192.9 | 163.8 | 192.3 |
+
+Chance on the scope: S3 0.278, S5 0.234. No arm's S3 is above chance at p < 0.05 (p = 0.079, 0.165, 0.096), as
+before (CH7 59); **C's S5 (0.225) is at chance.**
+
+**Change 55, B against A** (`compare_arms`, `runnable_rules`; summary `runnable_rules_c55c54r2.json`):
+- Final rules that cannot run: **A 39 of 193, B 1 of 201.** Review broke 37 of A's and none of B's; in B the check
+  reverted 31 rules in 13 cases to the rule before review. B's one rule could not run before review either.
+- S1r: **A 30 of 42, B 42 of 42** (the same 42 cases, so 12 cases only B, none only A).
+- No harm: S3u −0.024, 95% CI [−0.095, +0.048]; S5u −0.014 [−0.094, +0.068]; S1 +0.024 [0.000, +0.071]. Also S5vu
+  −0.016 [−0.046, +0.012].
+- Cost: 29 seconds less per case (CI [−67, −2]) and 3,615 tokens less ([−7,133, −242]).
+- **Keep rule (fixed 2026-11-09): met.** Fewer rules that cannot run, S1r higher, no gated score lower with its CI
+  entirely below 0.
+
+**Change 54, C against B** (`eval/footprint_measures.py`, `1ca4411`, built before the rules were read; summary
+`footprint_measures_c55c54r2_C_vs_B.json`):
+- M1: a footprint step on SigmaHQ's table in **41 of 42** cases; 108 steps, all on the table (`starts` 46, `writes`
+  27, `changes` 14, `loads` 12, `connects` 8, `other` 1).
+- **M2: cases with a rule using `ParentImage` or `ParentCommandLine`: B 10, C 23** (14 only C, 1 only B; exact
+  McNemar p = 0.001). The measure that had to rise rose.
+- M3: a rule in the log source of a step: 41 of 41. Of the 40 cases with a `starts` step, **23 have a rule with a
+  parent-process field** (the same 23 when the rule must be in that step's own log source). 17 do not follow it.
+- No harm: S3u +0.024 [0.000, +0.071]; S5u −0.041 [−0.124, +0.037]; S1 unchanged. Also S5vu −0.012 [−0.041,
+  +0.013]; S4 −0.017 [−0.100, +0.038].
+- Cost: 4,640 tokens more per case ([+614, +8,787]); 29 seconds more ([−1, +66]).
+- Descriptive: rules that treat a module as a program: B 4 in 3 cases, C 2 in 2.
+- **Keep rule (fixed 2026-11-08): met.** M2 rises and no gated score is lower with its CI entirely below 0.
+- **To disclose with it:** agreement did not rise. S5 falls to chance level (not significantly), and a parent field
+  in a rule does not say that the parent is the right one: the two live checks of 2026-11-09 saw wrong parents. What
+  M2 shows is that the rule writer now follows the footprint in most cases; whether the rules detect more is for
+  the real-attack check and later recordings.
+
+**Rule health on the three arms** (`eval/rule_health.py --expert`; the reading defined on 2026-11-09 before these
+results; summary `rule_health_c55c54r2.json`):
+
+| | A | B | C | experts |
+|---|---|---|---|---|
+| rules | 193 | 201 | 199 | 42 |
+| run | 154 | 200 | 199 | 42 |
+| not readable as YAML | 3 | 0 | 0 | 0 |
+| a field SigmaHQ never uses with that log source | 12 | 8 | 8 | 0 |
+| have an exclusion | 2 | 2 | 1 | 5 |
+| use a parent-process field (any `Parent…`) | 6 | 13 | **38** | 8 |
+| the same, first rules | 3 | 4 | 11 | 8 |
+| values (6+ characters) in the report | 0.67 | 0.64 | 0.60 | 0.38 |
+| level `high` | 167 | 168 | 184 | 29 |
+| rules ≥ tactics listed (cases) | 35 | 39 | 34 | — |
+| regenerated (still with warnings) | 28 (25) | 23 (21) | 28 (27) | — |
+| cases ending with coverage warnings | 35 | 36 | 36 | — |
+| patterns from places no log records (used by a rule) | 52 (38) | 58 (37) | 48 (27) | — |
+| "do not use" hits (in a detection) | 13 (1) | 17 (3) | 17 (0) | — |
+
+- What Changes 55 and 54 were meant to change, changed: rules run; parent-process fields are six times as frequent
+  in C as in A.
+- **What the audit pointed at is unchanged by both**, in a run made after the measure was defined: about two cases
+  in three are regenerated and almost all still carry the warnings; of the 47 "do not use" hits in the three arms, 4
+  are in a detection; most patterns from places no log records are used anyway; the rules have almost no exclusions;
+  more than four rules in five are `high`. The four candidate "no report" cases are the same in every arm.
+
+**Decision (the user's):** merge Change 55 and Change 54 into `main`. The real-attack check (React2Shell and Grixba
+through A, B and C) follows in its own entry.

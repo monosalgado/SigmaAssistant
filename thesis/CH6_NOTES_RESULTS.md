@@ -827,6 +827,29 @@ descriptive, one run, before Changes 54 and 55.
   site. They still got 2, 12, 2 and 3 rules; two have the log source "right" and three a detection-field F1 of 0.67
   to 1.00. Agreement with the expert rule cannot tell a rule written from a report from one written without it.
 
+## 6.5m Every rule must run, and the host footprint first (Changes 55 and 54) `[MEASURED]` 2026-11-10, tuning set
+One session, three arms interleaved one case at a time on the 42 Windows/Linux tuning cases, all CITABLE (log
+2026-11-10; a first session on 2026-11-09 is not cited: its checkouts counted tokens wrongly). A = `main`, B = A +
+Change 55, C = B + Change 54.
+
+- **Change 55 (a rule that review breaks is replaced by the rule before review):** final rules that cannot run
+  **39 of 193 → 1 of 201**; the first rule runs in **30 of 42 → 42 of 42** cases (S1r 0.714 → 1.000). No gated score
+  is lower with its interval below 0 (S3u −0.024 [−0.095, +0.048], S5u −0.014 [−0.094, +0.068]). The check reverted
+  31 rules in 13 cases. 29 seconds and 3,615 tokens less per case. Keep rule met.
+- **Change 54 (the attack's steps on the host, each with its log source, given to the rule writer):** cases with a
+  rule on the parent process **10 → 23 of 42** (exact McNemar p = 0.001); a footprint step on SigmaHQ's table in 41
+  of 42 cases; a rule in a step's log source in 41 of 41; **of the 40 cases with a "starts" step, 23 have a
+  parent-process rule**. No gated score lower with its interval below 0 (S3u +0.024 [0.000, +0.071], S5u −0.041
+  [−0.124, +0.037]). 4,640 tokens more per case. Keep rule met.
+- `[DISCLOSE]` **Agreement did not rise with either.** No arm's log-source score is above chance on the scope; C's
+  detection-field score (0.225) is at chance (0.234). The claim for Change 54 is the mechanism: the rule writer
+  follows the footprint. A parent field in a rule does not say the parent is the right one.
+- **Rule health, defined before these results** (same entry): what the two changes aimed at moved (rules that run
+  154 → 200 → 199; rules with a parent-process field 6 → 13 → 38); what the audit pointed at did not: 23 to 28 of 42
+  cases regenerated and almost all still warned, 4 of 47 "do not use" hits in a detection, 27 to 38 patterns from
+  places no log records used by a rule, 1 or 2 rules with an exclusion per arm (experts 5 of 42), 167 to 184 rules
+  `high`.
+
 ## 6.6 Smaller observations worth a sentence each
 - `[MEASURED]` **One report keeps defeating the analysis step** (`9a2d8b3e`, Check Point on CVE-2025-33053 / Stealth
   Falcon; ~40,000 characters): its analysis answer is cut on every attempt in **9 of the 27 runs** that include it, with

@@ -1,0 +1,49 @@
+{
+ "a": "c55c54r2_B-change55.jsonl",
+ "b": "c55c54r2_C-change55-54.jsonl",
+ "scope": "windows-linux",
+ "cases": 42,
+ "steps": {
+  "total": 108,
+  "on_table": 108,
+  "by_action": {
+   "starts": 46,
+   "loads": 12,
+   "connects": 8,
+   "changes": 14,
+   "writes": 27,
+   "other": 1
+  }
+ },
+ "m1": 41,
+ "m2": {
+  "n": 42,
+  "a_true": 10,
+  "b_true": 23,
+  "only_a": 1,
+  "only_b": 14,
+  "p": 0.0009765625
+ },
+ "m3_source": {
+  "followed": 41,
+  "of": 41
+ },
+ "m3_parent": {
+  "followed": 23,
+  "of": 40
+ },
+ "m3_parent_in_source": {
+  "followed": 23,
+  "of": 40
+ },
+ "module_as_program": {
+  "a": {
+   "rules": 4,
+   "cases": 3
+  },
+  "b": {
+   "rules": 2,
+   "cases": 2
+  }
+ }
+}
