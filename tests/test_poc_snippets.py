@@ -41,3 +41,4 @@ def test_the_summary_counts_the_cases_with_linked_code_and_those_where_it_is_rea
 def test_the_harness_keeps_change_57s_records_in_the_row():
     from eval.run_eval import DIAGNOSIS_FIELDS
     assert "first_pass_rules" in DIAGNOSIS_FIELDS and "regeneration_reason" in DIAGNOSIS_FIELDS
+    assert "review_returned" in DIAGNOSIS_FIELDS          # Change 60

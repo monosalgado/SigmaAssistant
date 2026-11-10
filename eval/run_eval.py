@@ -85,6 +85,8 @@ DIAGNOSIS_FIELDS = (
     "review_reverted",
     # Change 57: the first answer's final rules when a case is regenerated, and why it was.
     "first_pass_rules", "regeneration_reason",
+    # Change 60: which rules review returned.
+    "review_returned",
 )
 
 
