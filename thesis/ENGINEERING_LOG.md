@@ -8212,3 +8212,32 @@ says, Change 59 C against B):
 **Not in this change:** the attack-vector prompt's list of places (web-shaped; the unlogged set above is read from
 it as it is); what the rule writer is given (it still does not read the report); what makes a detection good
 (names against behaviour, exclusions, levels); review.
+
+## 2026-11-10 — Change 59 built offline, on branch `change59-evidence-rules` (`e6619d8`, on top of Change 57)
+
+**Built** (tests first, 16 new; the branch's suite 1,200 pass). The branch starts from `change57-checks` brought up
+to today's `main` (`3597203`), so the three arms are A = `main` (`bf64679` or later), B = `change57-checks`,
+C = `change59-evidence-rules`.
+- **Rule-writing prompt:** instruction 7 is "No minimum number of rules … not for a tactic because it is listed";
+  instruction 2 asks for a rule on the entry point "only when a log source on SigmaHQ's tables records it", else
+  none and a line in the notes; instruction 2b asks for a rule for each footprint step whose evidence is a quote,
+  with "the actor and the target of a rule from the same step"; instruction 3 says a pattern "not recorded by a
+  log" is context and is not matched in a field of another kind; a rule's heading says which step it detects and
+  what in the report shows it; the vector's heading no longer says "anchor at least ONE rule on this". Orders in
+  capitals in the prompt: 15 → 10; the template is 783 characters longer (8,098 → 8,881).
+- **The tactics block** lists the tactics as "context: not a number of rules to reach" (it said MANDATORY).
+- **Candidate patterns** from `file_content`, `network_payload`, `request_body`, `response_body` and
+  `response_header` are shown as "not recorded by a log: context only".
+- **Coverage check:** those patterns are left out of the covered and unused lists (kept apart in
+  `payload_signatures_unlogged`); "fewer rules than stages" is gone (`kill_chain_gap` is always None); the
+  entry-point note stays in the warnings.
+- **Regeneration:** triggers are now "half of the patterns from logged places unused" and a "do not use" string in
+  a detection; an uncovered entry point no longer regenerates, and the retry's instructions no longer demand that
+  rule or a rule per stage.
+- **Three older tests** pinned the old wording (the MANDATORY tactics block, instruction 2's "PRIMARY ATTACK
+  VECTOR", the `initial_access` trigger) and now pin the new one.
+- **Harness side (`main`, `454c187`):** `rule_health` reports the log sources of the first rules (arm C of the
+  rerun: `process_creation` 29, `webserver` 9, `file_event` 2, `process_access` 1, `registry_set` 1).
+
+**Nothing is measured yet:** a prompt change shows only in a run. Next, when the Spark is free: Change 57's 2-case
+live check, a 2-case live check of this branch, then the three-arm session of the plan.
