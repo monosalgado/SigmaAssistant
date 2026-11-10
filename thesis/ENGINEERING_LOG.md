@@ -7778,3 +7778,61 @@ checkout's own counter finds it and counts as `main` does.
 **The rerun:** the same session (arms and commits, the 42 cases, one case and one request at a time, the measures and
 keep rules of the 2026-11-09 entries above); outputs `eval/results/c55c54r2_*.jsonl`, log
 `SigmaAssistant-arms/session2.log`.
+
+## 2026-11-09 (evening, EST) — Audit of the pipeline (user asked), and a measure planned from it: rule health; definitions fixed before it reads the three-arm rerun
+
+**The audit:** the user asked for an analysis of the whole project, its flaws and its prompts. All prompts and stages
+were read and each suspected flaw was checked on the 42 Windows/Linux cases of `c53_tuning60.jsonl` with one-off
+scripts. Its note and scripts are local (`thesis/AUDIT_2026-11-09.md`, `thesis/audit-2026-11-09/`); **its figures are
+ad hoc and not cited**. What it points at, to be measured properly before anything is claimed: the number of rules
+follows the number of tactics the attack-vector step lists; many candidate patterns sit in places no host log
+records, and the coverage check asks for them; the coverage check reads the whole rule for "do not use" strings, not
+its detection; most cases are regenerated and still carry the warnings afterwards; some saved pages hold no report
+(a generic page of the site), and the agreement scores do not show it.
+
+**Why a new measure:** every score so far compares the first rule with one expert rule (S3, S4, S5, S5v), or checks
+that a rule loads (S1) and runs (S1r). The flaws above were found by looking at properties of **all** delivered rules
+that need no expert rule. A committed tool makes them a second reading of every run, next to agreement and the
+recorded attacks.
+
+**The measure, fixed now** (`eval/rule_health.py`, tests first, offline, no model; reads saved rows, the saved pages
+and `data/sigma`):
+
+*Per rule* (each delivered rule; one that is not a YAML mapping is counted unreadable):
+1. **runs**: it loads and its condition parses (`eval/runnable_rules.can_run`).
+2. **log source known**: SigmaHQ's rules (the six rule folders of `data/sigma`: `rules`, `rules-emerging-threats`,
+   `rules-threat-hunting`, `rules-dfir`, `rules-compliance`, `rules-placeholder`) hold a rule with the same category,
+   or, for a rule without a category, the same product and service.
+3. **fields SigmaHQ never uses with it**: the detection's field names (modifiers removed, exclusions included; the
+   extraction of Change 28's table, `sigma_logsource.detection_fields`; case-sensitive) that no SigmaHQ rule with that
+   log source uses (for a category: under any product). Judged only when 2 holds.
+4. **values in the report**: of its detection values of at least 6 characters (S5v's extraction: exclusions left out,
+   normalised), the share found in the text the stages read (`diagnose_detection.grounded`, GitHub bodies included).
+5. **shape**: it has an exclusion (a selection named `filter…`, or a `not` in the condition); it uses a
+   parent-process field (a field whose name starts with `Parent`); its level.
+
+*Per case:*
+6. rules delivered; tactics listed by the attack-vector step; regenerated (`generation_retried`); coverage warnings
+   left after the last check.
+7. **unlogged patterns used**: the attack-vector step's candidate patterns whose place (`where`) is `file_content`,
+   `network_payload`, `request_body`, `response_body` or `response_header`, and that a detection value of some rule
+   contains (the coverage check's own matching: lower-cased, `^$.*+?` stripped from the ends, backslashes removed;
+   at least 3 characters); with the field each lands in.
+8. **"do not use" hits**: each string the coverage check reported as used (`coverage_check.blacklist_violations`),
+   counted as in a detection or only elsewhere in the rule (title, description, references…).
+9. **generic page**: a saved page whose extracted text (not empty) is also saved for another URL with a different
+   host or path (scheme, `www.`, query, fragment and a trailing slash ignored), over the cases of
+   `eval/manifest.jsonl`. A case's generic share is the share of its input characters from such pages; a case at 1.0
+   is a **candidate "no report" case**. Candidates are listed for the user to confirm by eye; no exclusion rule is
+   set here.
+
+*Per run:* counts and rates of 1–5 over all rules and over first rules, medians of 6, totals of 7 and 8, the list of
+9; `--scope windows-linux` as the other tools.
+
+**How it is read:** descriptive counts, side by side per run. On the three arms of the rerun it is an added reading,
+defined after their plan and before their results; the keep rules of Changes 55 and 54 stay as fixed and do not
+depend on it.
+
+**What it does not say:** "SigmaHQ never uses this field with this log source" is not "invalid" (a valid field can be
+unused); "not in the report" is not "wrong" (expert rules also use values the report lacks); a rule that passes
+every item can still miss the attack. It measures whether a rule can work, not whether it does.
