@@ -8112,3 +8112,29 @@ Follow-up to the Grixba stall above. Read from the code and from four citable ru
 finished answer approaches (12,288 tokens is reached at 20.5 tokens per second and is 1.8 times the longest finished
 answer; 16,384 needs 27.3); (2) stop the client's silent retries of a timeout, so a stalled call costs 10 minutes,
 not 30; (3) raise the time limit instead, which lengthens every stall on a shared server. Recommended: 1 and 2.
+
+## 2026-11-10 — Change 58 planned (the user: "do both"): an answer that does not stop is cut within the time limit, and an identical request is not sent again
+
+**Why:** the entry above. Options 1 and 2, chosen by the user.
+
+**The change:**
+1. **Output limit 32,768 → 12,288 tokens** for every step that does not think (`OUTPUT_TOKEN_LIMIT`; the thinking
+   limit is unused and stays). 12,288 is 1.8 times the longest finished answer of the four runs read (6,965) and is
+   reached in 600 s at 20.5 tokens per second.
+2. **The client no longer retries a request that timed out** (`max_retries=0` on the local OpenAI client). The
+   pipeline sees the first timeout as the failed call it is.
+3. **The same rule for a cut answer, at temperature 0** (stated here because it goes beyond the two options, and it
+   follows from them): Change 24 retries a cut answer "as often as the client retries a timeout". An identical
+   request at temperature 0 gets the identical answer, so the attack-vector, PoC and analysis steps (temperature 0)
+   are not asked again after a cut; the analysis keeps what the cut answer finished (Change 52). Generation (0.3)
+   and review (0.2) sample, so a cut answer there is still retried twice. Without this a looping analysis would be
+   generated three times before it is salvaged.
+
+**Measures, fixed now:**
+- **Offline, exact:** no finished answer in the four runs read is longer than the new limit (0 of 1,068 calls over
+  12,288 tokens; none over 8,000), so the change alters no call of those runs.
+- **Live:** the Grixba report (`af688c76`) through the changed code: the case finishes; its analysis call is cut at
+  the limit once, not retried, and its finished part is kept (`analysis_salvaged`), or it finishes by itself; no
+  call lasts longer than the client's time limit.
+- **Merge when** the live check holds. No two-arm run: by the offline measure the change acts only on answers that
+  do not finish, and none of the 42 tuning cases has one today.
