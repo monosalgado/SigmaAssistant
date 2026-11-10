@@ -8166,3 +8166,49 @@ starts `EarthTime.exe`). Either condition alone makes it miss. On 2026-11-09 a r
 caught this event. The expert's rule names no file at all: it matches the tool's command-line options.
 **With this the real-attack check of Changes 55 and 54 reads: React2Shell caught by A and C, missed by B; Grixba
 missed by today's `main`** (A and B could not be run on it).
+
+## 2026-11-10 — Change 59 planned (the user: "let's go with 1"): a rule for each step the report shows, in the log that records it; nothing else is required
+
+**Why:** rule health on the rerun's three arms (entry above): the rule writer is required to write a rule per
+tactic, a rule on the entry point whatever the logs record, and to use the candidate patterns; a third of those
+patterns come from places no log records and most of them end up in a rule (27 to 38 per arm), often in a field
+that cannot hold them. Changes 55 and 54 did not touch these requirements. Today's Grixba miss adds one: a rule that
+took its parent process from one footprint step and its program from another.
+
+**The change** (the rule writer's instructions and the coverage check; the attack-vector and analysis prompts, the
+inputs of the rule writer, retrieval and review are unchanged):
+1. **No rule per tactic.** Instruction 7 ("AT LEAST N rules — one per stage") and the block "Kill-chain coverage
+   (MANDATORY)" become: no minimum number of rules; write a rule only for behaviour the evidence shows (a footprint
+   step, a candidate pattern from a logged place, an indicator with its context), not for a tactic because it is
+   listed. The sentence against ANDing indicators of different steps stays. The coverage check's "fewer rules than
+   stages" warning goes.
+2. **A rule on the entry point only when a log records it.** Instruction 2 ("MUST target the PRIMARY ATTACK VECTOR …
+   MANDATORY") becomes: write that rule when a log source on SigmaHQ's tables records the entry point and the
+   taxonomy has a field that holds it; otherwise write none and say so in the notes. "Initial access not covered"
+   stays a note for the analyst and no longer regenerates the rules.
+3. **Patterns from places no log records are context.** A pattern whose place is `file_content`, `network_payload`,
+   `request_body`, `response_body` or `response_header` is shown to the rule writer as "not recorded by a log" with
+   the instruction not to match it in a field of another kind. The coverage check leaves these patterns out of its
+   "unused patterns" count, which still regenerates when half of the remaining patterns are unused.
+4. **One step, one rule.** Instruction 2b: a rule for each footprint step whose evidence is a quote and whose log
+   source is on the tables (today: at least one rule on some step); the actor and the target of a rule come from the
+   same step. Each rule's heading says which step it detects and what in the report shows it.
+
+**Measures, fixed now** (arms: A = `main`, B = A + Change 57, C = B + Change 59; the 42 Windows/Linux tuning cases,
+interleaved one case at a time, one session; `summarise` CITABLE for each; Change 57 is read B against A as its plan
+says, Change 59 C against B):
+- **Mechanism (must move), `rule_health`:** candidate patterns from places no log records that a rule uses: fewer in
+  C than in B; rules per case: lower in C (paired, bootstrap 95% CI entirely below 0, `compare_arms`).
+- **No harm (gate):** S1r, S3u and S5u as the user gets them, paired, bootstrap 95% CI; and Change 54's M2 (cases
+  with a parent-process rule, `footprint_measures`) not lower in C than in B at exact McNemar p < 0.05.
+- **Keep the change if** both mechanisms move and no gate fails.
+- **Also reported:** cases regenerated and for which reason (Change 57's record); the first rule's log source
+  (cases on `webserver`); rules with a field SigmaHQ never uses with their log source; M3 of Change 54; tokens and
+  time.
+- **Real-attack check after the run `[DEMO]`:** React2Shell and Grixba through B and C, their rules on the
+  recordings, caught as defined on 2026-11-09. Grixba's miss of today is one of this change's reasons, so for
+  Grixba it is a check of function, not evidence.
+
+**Not in this change:** the attack-vector prompt's list of places (web-shaped; the unlogged set above is read from
+it as it is); what the rule writer is given (it still does not read the report); what makes a detection good
+(names against behaviour, exclusions, levels); review.
