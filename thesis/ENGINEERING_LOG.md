@@ -8064,3 +8064,30 @@ the regeneration, and to the rules, needs a run: the first answers are not in th
 
 **Next:** the 2-case live check and the two-arm run, when the Spark is free and the user says; the real-attack check
 of Changes 55 and 54 is still open and goes first.
+
+## 2026-11-10 — Real-attack check of the three arms `[DEMO]`: React2Shell caught by A and C, not by B; Grixba could not be run
+
+One run per arm on one report: a demonstration, not a rate. Rows `eval/results/c55c54r2_check_{A-main,B-change55,C-change55-54}.jsonl`;
+the rules on the recording: `eval/rules_on_recording.py`, `eval/results/c55c54r2_check_recordings.jsonl`. The expert
+rule matches 1 event of the recording (record 67583; Zircolite and Hayabusa agree).
+
+**React2Shell (`271de298`), caught as defined on 2026-11-09:**
+- **A (`main` before the merge): caught.** Rule 3 (`ParentImage` ending in `\node.exe`, `Image` ending in
+  `\powershell.exe` or `\cmd.exe`) matches the expert's event and nothing else. This time review did not break it.
+  Its rule 2 is not readable YAML.
+- **B (+ Change 55): not caught.** The check put back all 3 rules that review had broken, so all run. Its two
+  process rules look for JavaScript source (`child_process.execSync`, `spawn`) in the command line of `node.exe`:
+  strings from inside the code, in a field that does not hold them (the audit's D2).
+- **C (+ Change 54, today's `main`): caught.** Rule 2 is the same parent-and-child rule as A's. **Not through the
+  footprint:** C's attack-vector answer was not valid JSON (`Expecting value: line 17 column 18`), so the stage fell
+  back to the empty vector: no footprint, no patterns, "No primary attack vector identified". The rules were written
+  from the analysis alone. Change 57's part c is about this failure.
+- **Reading:** the catching rule appears with and without the footprint, and is missing in the arm between them.
+  For this report the difference between arms is what the rule writer happened to write, as on 2026-11-09.
+
+**Grixba (`af688c76`): not run in any arm.** The analysis call did not end: A was tried five times (three while
+another user's model was on the Spark, two on a free Spark) and C once; each ran past 10 minutes and was stopped.
+On 2026-11-08 the same call returned 5,047 tokens in 113 s. Found while looking: since Change 52 the output limit is
+32,768 tokens; at today's 25 to 40 tokens per second an answer that does not stop needs 14 to 22 minutes to reach
+it, more than the client's time limit, so the cut (and its salvage) is never reached and the run stops on a failed
+call. To decide: a limit that the time limit can reach, or a time limit above it. B was not tried on Grixba.
