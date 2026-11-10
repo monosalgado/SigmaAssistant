@@ -56,7 +56,7 @@ def _client(monkeypatch, responses):
 def test_every_call_asks_for_the_output_limit(monkeypatch):
     client, _, sent = _client(monkeypatch, [_response('{"a": 1}')])
     client.generate("p")
-    assert sent[0]["max_tokens"] == OUTPUT_TOKEN_LIMIT == 32768      # Change 52 (was 16,384)
+    assert sent[0]["max_tokens"] == OUTPUT_TOKEN_LIMIT == 12288      # Change 58 (Change 52: 32,768; Change 24: 16,384)
 
 
 def test_a_finished_answer_is_returned_after_one_call(monkeypatch):
@@ -80,7 +80,7 @@ def test_a_cut_answer_is_retried_and_a_finished_retry_is_used(monkeypatch):
         _response('{"loop": [1, 2, 3', "length", OUTPUT_TOKEN_LIMIT),
         _response('{"a": 1}'),
     ])
-    assert client.generate("p") == '{"a": 1}'
+    assert client.generate("p", temperature=0.3) == '{"a": 1}'       # a request that samples (Change 58)
     assert len(sent) == 2
     first, second = tel.calls()
     assert (first.output_limited, first.ok) == (True, True)
@@ -92,9 +92,30 @@ def test_an_answer_cut_on_every_attempt_raises(monkeypatch):
     client, tel, sent = _client(monkeypatch, [
         _response('{"loop": [', "length", OUTPUT_TOKEN_LIMIT) for _ in range(attempts)])
     with pytest.raises(OutputLimitReached):
-        client.generate("p")
+        client.generate("p", temperature=0.3)
     assert len(sent) == attempts == 3
     assert all(c.output_limited and c.ok for c in tel.calls())
+
+
+def test_an_answer_cut_at_temperature_0_is_not_asked_for_again(monkeypatch):
+    """Change 58: an identical request at temperature 0 gets the identical answer, so one attempt, and the cut
+    answer's text goes to the stage (the analysis keeps what it finished, Change 52)."""
+    client, tel, sent = _client(monkeypatch, [
+        _response('{"indicators": [{"value": "a"}, {"val', "length", OUTPUT_TOKEN_LIMIT),
+        _response('{"a": 1}'),
+    ])
+    with pytest.raises(OutputLimitReached) as error:
+        client.generate("p", temperature=0.0)
+    assert len(sent) == 1 and "1 attempt" in str(error.value)
+    assert error.value.partial.startswith('{"indicators"')
+    assert [c.output_limited for c in tel.calls()] == [True]
+
+
+def test_the_local_client_does_not_resend_a_request_that_timed_out():
+    """Change 58: the OpenAI client's default is 2 silent retries of a timeout - the same prompt, the same answer,
+    up to 30 minutes on the shared server before the pipeline hears of it."""
+    from backend.llm_client import OllamaLLMClient
+    assert OllamaLLMClient("http://localhost:11434", "qwen3-coder:30b")._openai.max_retries == 0
 
 
 def test_the_error_is_an_ordinary_exception_so_stages_fall_back_as_today():
@@ -130,9 +151,12 @@ def test_the_summariser_reports_cut_calls_without_failing_the_gates():
 
 
 def test_the_limit_is_above_every_answer_that_finished_in_the_reference_run():
-    """Justifies the value: it binds only on answers that would not have finished."""
-    longest = max(c.get("completion_tokens") or 0
-                  for line in (REPO / "eval/results/baseline60_v2.jsonl").read_text().splitlines()
-                  for c in json.loads(line).get("llm_calls") or [])
-    assert longest == 12374
-    assert longest < OUTPUT_TOKEN_LIMIT
+    """Justifies the value: it binds only on answers that would not have finished. The reference is the tuning run
+    of the pipeline since Change 53 (Change 58); September's baseline v2 held one longer answer (12,374 tokens, an
+    analysis from before Changes 32 and 53 shortened its lists), which today's limit would cut."""
+    def longest(run):
+        return max(c.get("completion_tokens") or 0
+                   for line in (REPO / "eval/results" / run).read_text().splitlines()
+                   for c in json.loads(line).get("llm_calls") or [])
+    assert longest("c53_tuning60.jsonl") == 6965
+    assert longest("c53_tuning60.jsonl") < OUTPUT_TOKEN_LIMIT < longest("baseline60_v2.jsonl") == 12374
