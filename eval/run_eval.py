@@ -83,6 +83,8 @@ DIAGNOSIS_FIELDS = (
     "analyst_review", "analyst_check",
     # Change 55: the rules review broke, kept as they were before review.
     "review_reverted",
+    # Change 57: the first answer's final rules when a case is regenerated, and why it was.
+    "first_pass_rules", "regeneration_reason",
 )
 
 
