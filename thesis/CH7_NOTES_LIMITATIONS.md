@@ -321,7 +321,9 @@ limitation in the log belongs here too.
     speed, and the client silently retries a timed-out request twice. Such a call holds the shared server for up to
     30 minutes and ends as a failed call; Changes 24 and 52 do not act. Seen on the Grixba report in the real-attack
     check of 2026-11-10 (its analysis call returned in 113 s two days earlier): that report could not be run. The
-    longest finished answer in four runs is 6,965 tokens. A fix is proposed in the log, not yet made.
+    longest finished answer in four runs is 6,965 tokens. **Fixed 2026-11-10 (Change 58):** limit 12,288 tokens, no
+    resend of a timed-out request, no second request for an answer cut at temperature 0. The cut was seen in tests
+    only: in the live check the same call ended by itself. One September answer (12,374 tokens) would be cut today.
 
 ## Future work (collected, not prioritised)
 

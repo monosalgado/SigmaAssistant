@@ -59,7 +59,9 @@ probe 2026-10-06); the assistant needs one per report and goes on without web re
 | — | Retry | **at most one regeneration per request**: on validation errors, else on coverage gaps (≥ 50% of signatures unused, initial access not covered, an incidental string used) | — | skipped when the attack-vector stage's confidence < 0.4 |
 | — | Record | which analysis indicators the final rules use | none | measurement only (kept from Change 40) |
 
-`[MEASURED]` Every model answer is bounded at **16,384 tokens**; a cut answer is retried twice, then recorded as the
+`[MEASURED]` *(Since Change 58, 2026-11-10: the bound is **12,288 tokens**, a limit the client's 600 s can reach; a
+cut answer is asked for again only when the request samples; a timed-out request is not resent.)* Before that:
+Every model answer is bounded at **16,384 tokens**; a cut answer is retried twice, then recorded as the
 model's failure (**Change 24**, defect 19 — an answer once looped through 336 invented sub-techniques).
 
 ## 4.3 What the rule writer sees — and does not see `[DESIGN]` `[DISCLOSE]`

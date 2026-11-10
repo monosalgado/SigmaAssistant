@@ -855,7 +855,10 @@ Change 55, C = B + Change 54.
   expert's one event, nothing else) and missed by B, whose process rules look for JavaScript source text in the
   command line. **C's catch is not through the footprint:** its attack-vector answer was not valid JSON and the stage
   fell back to an empty vector. As on 2026-11-09, what decides the catch is what the rule writer happened to write.
-  Grixba could not be run: its analysis call did not end (CH7 64).
+  Grixba could not be run in the three arms: its analysis call did not end (CH7 64). On today's `main`, later the
+  same day, it ran and was **not caught**: the rule for the tool names one of its two file names (the recording
+  uses the other) and adds a parent process taken from another step of the footprint. The expert's rule names no
+  file; it matches the tool's command-line options. A parent field in a rule is not the right parent.
 
 ## 6.6 Smaller observations worth a sentence each
 - `[MEASURED]` **One report keeps defeating the analysis step** (`9a2d8b3e`, Check Point on CVE-2025-33053 / Stealth

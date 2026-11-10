@@ -8138,3 +8138,31 @@ not 30; (3) raise the time limit instead, which lengthens every stall on a share
   call lasts longer than the client's time limit.
 - **Merge when** the live check holds. No two-arm run: by the offline measure the change acts only on answers that
   do not finish, and none of the 42 tuning cases has one today.
+
+## 2026-11-10 — Change 58 built, checked live and merged (`bf64679`); Grixba on today's `main`: not caught `[DEMO]`
+
+**Built** on branch `change58-output-limit` (`bb07311`), tests first (the suite 1,169 pass after the merge):
+`OUTPUT_TOKEN_LIMIT` 12,288; the local OpenAI client with `max_retries=0`; an answer cut at temperature 0 is asked
+for once, one that samples up to three times.
+
+**A correction to the plan's offline measure:** "no finished answer over the new limit" holds for the four runs read
+(longest 6,965), not for every saved run: September's baseline v2 holds one finished answer of 12,374 tokens (the
+analysis of the Turla report, from before Changes 32 and 53 shortened the analysis's lists), which today's limit
+would cut by 86 tokens. The test that justified the limit by baseline v2 now takes `c53_tuning60` as its reference
+and says so.
+
+**Live check** (Grixba, `af688c76`, the merged code; row `eval/results/c58_live_grixba.jsonl`, CITABLE): the case
+finishes in 370 s; 7 calls, none cut, none failed, the longest 89 s. **The analysis ended by itself this time**
+(3,903 tokens), five hours and a rebuilt tunnel after the calls that did not end: the same prompt, a different
+answer, as CH7 51 describes. So the check holds in its second form (the case finishes, no call near the time
+limit); **the cut itself was not seen live**, only in the tests. Merged as planned.
+
+**Grixba on today's `main` `[DEMO]`** (`eval/rules_on_recording.py`, `eval/results/c58_live_grixba_recording.jsonl`;
+one run): **not caught**, 9 rules, all of them put back by Change 55's check after review broke them. The expert's
+event is `GRB_NET.exe -m:scan -i:f -d:list.txt` started by `cmd.exe`. Our rule 3 asks for `Image` ending in
+`\GT_NET.exe` **and** `ParentImage` ending in `\explorer.exe`: it has one of the tool's two file names (the report
+gives both; the recording uses the other) and a parent taken from another step of the footprint (`explorer.exe`
+starts `EarthTime.exe`). Either condition alone makes it miss. On 2026-11-09 a rule naming both files and no parent
+caught this event. The expert's rule names no file at all: it matches the tool's command-line options.
+**With this the real-attack check of Changes 55 and 54 reads: React2Shell caught by A and C, missed by B; Grixba
+missed by today's `main`** (A and B could not be run on it).
