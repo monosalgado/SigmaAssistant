@@ -307,6 +307,8 @@ def run_summary(cases: list) -> dict:
         "cases": len(cases),
         "all_rules": _rates(all_rules),
         "first_rules": _rates([case["rules"][0] for case in cases if case["rules"]]),
+        "first_rule_logsources": dict(Counter(case["rules"][0]["logsource"] for case in cases
+                                              if case["rules"] and case["rules"][0]["logsource"])),
         "rules_per_case": _spread([case["n_rules"] for case in cases]),
         "tactics_per_case": _spread([case["tactics"] for case in cases]),
         "cases_with_rules_at_least_tactics": sum(1 for case in cases if case["n_rules"] >= case["tactics"]),
@@ -379,6 +381,7 @@ def print_summary(name: str, s: dict) -> None:
         print(f"  {'values (6+ chars) in the report':34}{_ratio(a['values_in_report'], a['values_with_report']):>18}"
               f"{_ratio(f['values_in_report'], f['values_with_report']):>18}")
     print(f"  levels: all {a['levels']}; first {f['levels']}")
+    print(f"  first rule's log source: {dict(sorted(s['first_rule_logsources'].items(), key=lambda kv: -kv[1]))}")
     print(f"  regenerated {s['regenerated']}/{s['cases']} cases, {s['regenerated_still_warned']} of them still with "
           f"coverage warnings; cases ending with coverage warnings {s['cases_with_coverage_warnings']}")
     print(f"  candidate patterns {s['patterns']}; from places no log records {s['unlogged_patterns']}; used anyway "

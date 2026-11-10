@@ -306,3 +306,10 @@ def test_the_expert_rule_of_each_case_is_read_like_ours_and_a_missing_file_is_sk
     assert len(experts) == 1
     assert experts[0]["runs"] is True and experts[0]["has_exclusion"] is True and experts[0]["uses_parent"] is True
     assert experts[0]["values"] == 3 and experts[0]["values_in_report"] == 3
+
+
+def test_a_run_counts_the_log_sources_of_its_first_rules():
+    web = RULE.replace("    category: process_creation\n    product: windows", "    category: webserver")
+    s = run_summary([case_health(_row([RULE, web]), REFERENCE), case_health(_row([web]), REFERENCE),
+                     case_health(_row([]), REFERENCE)])
+    assert s["first_rule_logsources"] == {"process_creation": 1, "webserver": 1}
