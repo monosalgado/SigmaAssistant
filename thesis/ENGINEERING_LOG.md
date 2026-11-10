@@ -7976,3 +7976,19 @@ results; summary `rule_health_c55c54r2.json`):
 
 **Decision (the user's):** merge Change 55 and Change 54 into `main`. The real-attack check (React2Shell and Grixba
 through A, B and C) follows in its own entry.
+
+## 2026-11-10 — Changes 55 and 54 merged into `main` (user); the real-attack check waits for a free Spark
+
+**Merged (the user's decision, after the rerun's result above):** `ae879b0`, a merge of `change54-on-55` (`185e02f`:
+Change 55 `bd54e8a`, its simulation tool `1fe2f55`, Change 54 `cf9c995` with the clarified wording). No conflict.
+`main`'s `backend/` is now byte-identical to arm C of the rerun, so C's rows are `main`'s pipeline. The suite: 1,163
+tests pass. The branches `change55-rules-must-run`, `change54-host-footprint` and `change54-on-55` stay; the three
+checkouts in `SigmaAssistant-arms/` stay until the real-attack check is done.
+
+**The real-attack check is not done.** It started at 09:48 EST (React2Shell and Grixba through A, B and C, one after
+the other). A's React2Shell case finished (109 s, 3 rules; `eval/results/c55c54r2_check_A-main.jsonl`). Its Grixba
+case then stalled: three relaunches after timed-out calls, and one attack-vector call of about 10 minutes. The cause
+is on the server: **another user's model (`glm-4.7-flash`) was running on the Spark**, which keeps one model loaded,
+so the two models evicted each other and every request of ours waited for a reload. Our run was stopped at 10:38, to
+leave the shared server alone; nothing was written for the unfinished case. To resume when the Spark is free: the
+same command, which skips the finished case. No reading of any rule was made.
