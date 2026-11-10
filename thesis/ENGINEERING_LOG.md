@@ -7836,3 +7836,65 @@ depend on it.
 **What it does not say:** "SigmaHQ never uses this field with this log source" is not "invalid" (a valid field can be
 unused); "not in the report" is not "wrong" (expert rules also use values the report lacks); a rule that passes
 every item can still miss the attack. It measures whether a rule can work, not whether it does.
+
+## 2026-11-09 (evening, EST) — Rule health built and read on `c53_tuning60` (post-hoc: the run is older than the measure)
+
+**Built:** `eval/rule_health.py` (`4d74082`; `--list-generic` `886ae6c`; `--expert` `93a62a3`), tests first (34;
+the suite 1,123 pass), offline. Its numbers reproduce the audit's one-off scripts except where the fixed definition
+differs from them (the unlogged places leave `request_header` out; a pattern is compared with backslashes removed on
+both sides).
+
+**Read on `c53_tuning60`, the 42 Windows/Linux cases** (`--scope windows-linux --list-generic --expert`; summary
+`eval/results/rule_health_c53_windows_linux.json`). Post-hoc and descriptive: the latest citable run of `main`'s
+pipeline, made on 2026-10-17, before Changes 54 and 55.
+
+| | all rules | first rules | the expert rules of the same cases |
+|---|---|---|---|
+| rules | 209 | 42 | 42 |
+| run | 179 (0.86) | 33 (0.79) | 42 |
+| log source SigmaHQ does not use | 0 | 0 | — |
+| a field SigmaHQ never uses with that log source | 13 | 5 | 0 (by construction: they are in the reference) |
+| have an exclusion | **0** | 0 | 5 |
+| use a parent-process field | 11 (0.05) | 3 (0.07) | 8 (0.19) |
+| values of 6+ characters in the report | 385/668 = 0.58 | 74/142 = 0.52 | 70/185 = 0.38 |
+| level | high 176, medium 25, critical 8 | high 40, critical 2 | high 29, critical 10, medium 3 |
+
+- **Rules per case:** median 4, max 12; tactics listed by the attack-vector step: median 4.5, max 12; rules ≥
+  tactics in 39 of 42 cases.
+- **Regeneration:** 26 of 42 cases; 25 of the 26 still carry coverage warnings afterwards; 36 of 42 cases end with
+  coverage warnings.
+- **Candidate patterns:** 143; **56 from places no log records** (file content, network payload, request or
+  response body, response header); **32 of those used by a rule anyway**, landing in: `CommandLine` 12, `Image` 5,
+  `TargetFilename` 2, `ImageLoaded` 1, `cs-uri-query` 1 (from file content); `DestinationHostname` 5, `url` 3 (from
+  a network payload); `cs-uri-query` 3, `request_body` 4 (from a request body).
+- **"Do not use" hits reported by the coverage check:** 13; **2 in a detection, 11 only elsewhere** in the rule
+  (title, description, references).
+- **The 13 rules with a field SigmaHQ never uses:** 11 are on `webserver` or `network_connection`
+  (`request_body` 5, `url` 4, `request_uri` 3, `request_method` 2, `RequestUri`, `UserAgent`…); one each on
+  `process_creation` (`TokenElevationType`) and `dns_query` (`Query`).
+
+**Generic pages** (over the 303 cases of `eval/manifest.jsonl`): **31 cases have input from a page whose text is
+also saved for a different page; for 19 it is their whole input.** The pages' own titles: "Mandiant Cybersecurity
+Consulting | Google Cloud" (the old Mandiant and FireEye blog addresses), "Cyber Security Research | NCC Group",
+"Safety - The AI Development Security Platform", "Assetnote is now part of Searchlight Cyber". In the 42: four whole
+(UNC4841 SEASPY, Maze, MuddyWater, Shai-Hulud curl) and one at 73% (Zoho ManageEngine CVE-2020-10189). **Candidates:
+the user confirms them by eye; no case is excluded and no score is changed here.** As recorded in the run's rows,
+the four got 2, 12, 2 and 3 rules; the first rule's log source is right in two (Maze, MuddyWater) and its
+detection-field F1 is 0.00, 0.80, 0.67 and 1.00 (SEASPY, Maze, MuddyWater, Shai-Hulud).
+
+**What this says, and what it does not:**
+- Our rules take more of their values from the report than the experts' do (0.58 against 0.38); they have no
+  exclusions and seldom name the parent process. This is form, not detection.
+- The coverage check's "do not use" hits are mostly outside the detection (11 of 13), yet any hit regenerates all the
+  rules with the instruction to remove the string from the detection. A check that reads only the detection would be
+  a bug fix; not made here.
+- Patterns from places no log records are asked for by the same check (half of all patterns unused → regenerate),
+  and more than half of them end up in a rule. Whether a rule holding one can match is not measured; file content
+  matched against `CommandLine` is the plain case where it cannot.
+- A page with no report still gets rules, and agreement with the expert rule does not show it.
+- One run, read after the fact. The same reading on the three arms of the rerun is the first one planned before
+  the results.
+
+**Next (the user decides):** the audit's proposals, in its note: fix the check and the smaller bugs on their own
+branch; then one change to what the rule writer is asked for (rules for what the report shows, where a log can see
+it); the confirmation by eye of the 19 candidates and a rule for them.

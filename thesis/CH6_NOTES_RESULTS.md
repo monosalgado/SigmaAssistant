@@ -794,6 +794,39 @@ from the reports, and **none of the 15 uses `ParentImage`**. Retrieval had the e
 (the attack summary, about the network exploit) did not bring it. Candidate changes are in the log; ActiveMQ is a
 design case from here, so any change is shown on other cases.
 
+## 6.5l What all the delivered rules look like, without an expert rule (rule health) `[MEASURED, post-hoc]` 2026-11-09, tuning set
+`eval/rule_health.py` on `c53_tuning60`, the 42 Windows/Linux cases (log 2026-11-09 evening; summary
+`eval/results/rule_health_c53_windows_linux.json`). The run is from 2026-10-17 and older than the measure:
+descriptive, one run, before Changes 54 and 55.
+
+| | all rules | first rules | expert rules, same cases |
+|---|---|---|---|
+| rules | 209 | 42 | 42 |
+| run | 179 (0.86) | 33 (0.79) | 42 |
+| a field SigmaHQ never uses with that log source | 13 | 5 | 0 (they are the reference) |
+| have an exclusion | **0** | 0 | 5 |
+| use a parent-process field | 11 (0.05) | 3 (0.07) | 8 (0.19) |
+| values (6+ characters) found in the report | 0.58 (385/668) | 0.52 (74/142) | 0.38 (70/185) |
+| level | high 176, medium 25, critical 8 | high 40, critical 2 | high 29, critical 10, medium 3 |
+
+- **The number of rules follows the number of tactics.** Median 4 rules per case, max 12; tactics listed by the
+  attack-vector step median 4.5, max 12; rules ≥ tactics in 39 of 42 cases. The rule-writing prompt asks for at
+  least one rule per tactic.
+- **Most cases are regenerated, and the warnings stay.** 26 of 42 regenerated; 25 of those still carry coverage
+  warnings; 36 of 42 end with warnings.
+- **The check behind the regeneration reads the wrong place.** Of its 13 "do not use" hits, 2 are in a detection and
+  11 only in a title, description or reference. `[DISCLOSE]` a bug of the pipeline as run; not fixed in any cited run.
+- **Patterns no log records end up in rules.** 56 of the 143 candidate patterns come from file content, a network
+  payload, a request or response body or a response header; 32 of them are used by a rule, 12 of those in
+  `CommandLine` and 5 in `Image` (from file content). The coverage check asks for unused patterns to be used.
+- **Made-up fields sit on web and network rules.** 11 of the 13 rules with a field SigmaHQ never uses are on
+  `webserver` or `network_connection`; host rules almost never have one.
+- **Form against the experts:** our rules copy more from the report (0.58 against 0.38 of values), never exclude
+  anything (0 of 209 against 5 of 42) and seldom name the parent process (0.05 against 0.19). Form, not detection.
+- **Four of the 42 cases have no report** (candidates; CH5 §5.9, CH7 62): the saved page is a generic page of the
+  site. They still got 2, 12, 2 and 3 rules; two have the log source "right" and three a detection-field F1 of 0.67
+  to 1.00. Agreement with the expert rule cannot tell a rule written from a report from one written without it.
+
 ## 6.6 Smaller observations worth a sentence each
 - `[MEASURED]` **One report keeps defeating the analysis step** (`9a2d8b3e`, Check Point on CVE-2025-33053 / Stealth
   Falcon; ~40,000 characters): its analysis answer is cut on every attempt in **9 of the 27 runs** that include it, with

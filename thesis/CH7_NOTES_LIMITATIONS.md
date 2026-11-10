@@ -302,6 +302,20 @@ limitation in the log belongs here too.
     by 0.017 to 0.250 (`c53_tuning60` 0.983 → 0.783); 1,627 of 10,401 final rules cannot run; review broke 382 and fixed
     0 in the 12 runs that saved the rules before it. Cited S1 values must be read as "loads", not "runs".
 
+62. **Some cases have no report: the saved page is a generic page of the site** `[DISCLOSE]` `[MEASURED]` (found
+    2026-11-09; CH5 §5.9, CH6 §6.5l). Stronger than item 11: for these cases the input is not a changed report but no
+    report (the old Mandiant and FireEye blog addresses, NCC Group, Assetnote and one more site now serve one page
+    for every address). **19 of 303 cases have nothing else as input, 31 have some of it; 4 of the 42 tuning cases.**
+    They are candidates until confirmed by eye; no case is excluded and no reported score is changed. In such a case
+    the model has the address's words and its memory only, and the agreement scores do not show it (one case: 12
+    rules, log source "right", detection-field F1 0.80). The flag uses no expert rule: the page's text is saved for
+    two different pages. The assistant itself has the same gap: given such a page it writes rules and does not say
+    that the page holds no report.
+63. **Rule health reads form, not detection, and its first reading is post-hoc** `[DISCLOSE]` (CH5, CH6 §6.5l).
+    "SigmaHQ never uses this field with this log source" is not "invalid"; "not in the report" is not "wrong"
+    (0.38 of the experts' values are in the report); a rule that passes every item can miss the attack. Its
+    comparison with the expert rules compares form. The reading on `c53_tuning60` was made after the run, on one run.
+
 ## Future work (collected, not prioritised)
 
 - Detonation-validated evaluation (R1/R2) with the lab's Metasploit Pro → Sysmon → EVTX →

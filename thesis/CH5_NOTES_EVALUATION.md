@@ -725,6 +725,24 @@ rule over 341 rules), ATT&CK F1 0.048 (0.119), detection-field F1 0.234 (0.154).
 half the Windows rules share `process_creation`. Development uses the tuning set's 42; the final confirmation uses
 never-run in-scope cases. Linux (19) is reported descriptively.
 
+### Rule health — a reading of all the rules that needs no expert rule `[DESIGN]` `[MEASURED, post-hoc]` (added 2026-11-09)
+- **Why:** every other score reads the first rule against one expert rule (S3, S4, S5, S5v) or checks that it loads
+  (S1) and runs (S1r). An audit of the pipeline (the user asked; log 2026-11-09 evening; its own figures are ad hoc
+  and not cited) pointed at flaws that show only in the delivered rules themselves.
+- **What** (`eval/rule_health.py`; definitions fixed in the log before the tool existed; 34 tests; offline):
+  per rule: runs; its log source is one SigmaHQ uses; fields SigmaHQ never uses with that log source; the share of
+  its values (6+ characters) found in the report; an exclusion; a parent-process field; the level. Per case: rules
+  delivered against tactics listed; regenerated and what warnings stayed; candidate patterns from places no log
+  records that a rule uses anyway, and the field each lands in; where the coverage check's "do not use" hits sit;
+  generic pages.
+- **`--expert`** reads the expert rule of each case the same way, so the form of our rules can be set against
+  theirs. **`--list-generic`** lists the cases with input from generic pages, for a person to confirm.
+- **What it is not:** a field SigmaHQ never uses with a log source is not thereby invalid; a value the report lacks
+  is not thereby wrong; passing every item does not mean the rule detects the attack. Descriptive counts, side by
+  side per run.
+- **First reading:** CH6 §6.5l (post-hoc, on `c53_tuning60`). On the three arms of the rerun it is the first reading
+  defined before the results; the keep rules of Changes 55 and 54 do not depend on it.
+
 ## 5.7 Status — what exists vs. what is claimed (2026-09-24)
 
 | Component | State |
@@ -794,6 +812,7 @@ numbers against each other. Each now has a guard and a test.
 | 17 | The agent's catch-all turned crashes into normal zero-rule rows | the case-error gate could never fire | baseline v1's 2 zero-rule cases fit a hidden crash (86-char reply; not proven) | harness calls `run_sync` directly | Change 14 |
 | 16 | The PoC stage fetched GitHub live | outside the snapshot gate | 43 / 303 cases; 10 of 45 files already gone | PoC snapshots + counted misses | Change 17 |
 | 18 | A detection rule already in the input | a normal, scoring case | 23 / 303 (5 / 60) | flag + separate reporting | Change 18 |
+| — | A saved page that is not the report: the site now serves one generic page at the old address | a normal, scoring case; agreement with the expert rule does not show it (one such case: 12 rules, log source "right", detection-field F1 0.80) | 19 / 303 cases have no other input, 31 have some; 4 of the 42 tuning cases (candidates until confirmed by eye) | flagged by `rule_health.py --list-generic`; no exclusion rule yet | log 2026-11-09 evening |
 
 **The lesson for the chapter:** an LLM pipeline degrades gracefully by design — every
 stage catches its own failure and continues on a default — and that same property makes
