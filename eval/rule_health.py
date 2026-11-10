@@ -224,6 +224,18 @@ def generic_share(case_pages: dict, generic: set) -> Optional[float]:
     return sum(len(text or "") for url, text in case_pages.items() if url in generic) / total
 
 
+def generic_cases(cases: dict, case_pages: dict, generic: set) -> list:
+    """The cases with input from generic pages, most generic first, each with the pages concerned - the list a
+    person confirms by eye."""
+    out = []
+    for rule_id, pages in case_pages.items():
+        share = generic_share(pages, generic)
+        if share:
+            out.append({"rule_id": rule_id, "title": (cases.get(rule_id) or {}).get("title"), "share": share,
+                        "urls": sorted(url for url in pages if url in generic)})
+    return sorted(out, key=lambda c: (-c["share"], str(c["title"])))
+
+
 def case_health(row: dict, reference: dict, report_text: Optional[str] = None,
                 generic: Optional[float] = None) -> dict:
     pipeline = row.get("pipeline") or {}
@@ -305,11 +317,12 @@ def run_summary(cases: list) -> dict:
 # --- reading the saved pages ---------------------------------------------------------------------------------------
 
 def load_inputs(manifests: list) -> tuple:
-    """({rule_id: case}, {rule_id: {url: page text}}, generic URLs) for the cases of the manifests."""
+    """({rule_id: case}, {rule_id: {url: page text}}, generic URLs, {url: the page's own title}) for the cases of
+    the manifests."""
     from backend.pipeline.stage_preprocess import PreprocessStage
     from eval.run_eval import load_cases, snapshot_key
 
-    extractor, cases, case_pages, by_path = PreprocessStage(client=None, model_name=""), {}, {}, {}
+    extractor, cases, case_pages, by_path, titles = PreprocessStage(client=None, model_name=""), {}, {}, {}, {}
     with contextlib.redirect_stdout(io.StringIO()):
         for manifest in manifests:
             for case in load_cases(Path(manifest), REPO, 2000):
@@ -321,11 +334,11 @@ def load_inputs(manifests: list) -> tuple:
                 if path is None:
                     continue
                 if path not in by_path:
-                    by_path[path] = extractor._extract_page_content(Path(path).read_bytes(), url)[0]
-                pages[url] = by_path[path]
+                    by_path[path] = extractor._extract_page_content(Path(path).read_bytes(), url)
+                pages[url], titles[url] = by_path[path]
             case_pages[rule_id] = pages
     generic = generic_pages({url: text for pages in case_pages.values() for url, text in pages.items()})
-    return cases, case_pages, generic
+    return cases, case_pages, generic, titles
 
 
 def _report_text(case: dict, url_map: dict) -> str:
@@ -375,6 +388,8 @@ def main(argv: list = None) -> int:
                         help="manifest(s) of the cases, for the report texts and the generic pages "
                              "(default eval/manifest.jsonl)")
     parser.add_argument("--no-pages", action="store_true", help="skip the saved pages (items 4 and 9)")
+    parser.add_argument("--list-generic", action="store_true",
+                        help="list every case of the manifest(s) with input from generic pages, to confirm by eye")
     parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args(argv)
 
@@ -382,8 +397,15 @@ def main(argv: list = None) -> int:
     cases, case_pages, generic, url_map, texts = {}, {}, set(), {}, {}
     if not args.no_pages:
         from eval.run_eval import load_github_manifest
-        cases, case_pages, generic = load_inputs(args.manifest or [REPO / "eval" / "manifest.jsonl"])
+        cases, case_pages, generic, titles = load_inputs(args.manifest or [REPO / "eval" / "manifest.jsonl"])
         url_map = load_github_manifest(REPO / "eval" / "github_manifest.jsonl")
+    listed = generic_cases(cases, case_pages, generic) if args.list_generic else []
+    if args.list_generic:
+        whole = [c for c in listed if c["share"] == 1.0]
+        print(f"cases with input from generic pages: {len(listed)} of {len(cases)}; whole input {len(whole)}")
+        for c in listed:
+            pages = "; ".join(f"{url} [{str(titles.get(url) or '').strip()[:50]}]" for url in c["urls"])
+            print(f"  {c['share']:.0%}  {str(c['title'])[:60]}  <-  {pages}")
     report = {}
     for path in args.results:
         rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -399,7 +421,10 @@ def main(argv: list = None) -> int:
         print_summary(path.stem, report[path.name])
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
-        args.out.write_text(json.dumps({"scope": args.scope, "runs": report}, indent=1) + "\n", encoding="utf-8")
+        summary = {"scope": args.scope, "runs": report}
+        if args.list_generic:
+            summary["generic_cases"] = listed
+        args.out.write_text(json.dumps(summary, indent=1) + "\n", encoding="utf-8")
         print(f"\nsummary: {args.out}")
     return 0
 

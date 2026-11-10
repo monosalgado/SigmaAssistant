@@ -9,6 +9,7 @@ from __future__ import annotations
 from eval.rule_health import (
     case_health,
     do_not_use_hits,
+    generic_cases,
     generic_pages,
     generic_share,
     page_key,
@@ -205,6 +206,17 @@ def test_a_cases_generic_share_is_the_share_of_its_input_characters_from_generic
     assert generic_share({"https://vendor.com/blog/one": "x" * 30}, generic) == 1.0
     assert generic_share({"https://vendor.com/blog/one": "x" * 30, "https://other.org/r": "y" * 10}, generic) == 0.75
     assert generic_share({}, generic) is None and generic_share({"https://a.com": ""}, generic) is None
+
+
+def test_the_cases_with_generic_input_are_listed_most_generic_first_with_the_pages_concerned():
+    generic = {"https://vendor.com/blog/one", "https://vendor.com/blog/two"}
+    cases = {"a": {"title": "Partly"}, "b": {"title": "Wholly"}, "c": {"title": "Real"}}
+    pages = {"a": {"https://vendor.com/blog/one": "x" * 10, "https://other.org/r": "y" * 30},
+             "b": {"https://vendor.com/blog/two": "x" * 10},
+             "c": {"https://other.org/r": "y" * 30}}
+    assert generic_cases(cases, pages, generic) == [
+        {"rule_id": "b", "title": "Wholly", "share": 1.0, "urls": ["https://vendor.com/blog/two"]},
+        {"rule_id": "a", "title": "Partly", "share": 0.25, "urls": ["https://vendor.com/blog/one"]}]
 
 
 # --- per case and per run -------------------------------------------------------------------------------------------
