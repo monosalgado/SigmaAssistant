@@ -850,6 +850,13 @@ Change 55, C = B + Change 54.
   places no log records used by a rule, 1 or 2 rules with an exclusion per arm (experts 5 of 42), 167 to 184 rules
   `high`.
 
+- `[DEMO]` **Real-attack check after the run** (log 2026-11-10; one run per arm on one report, not a rate):
+  React2Shell is caught by A and by C with the same rule (`node.exe` as the parent of `cmd.exe` or PowerShell; the
+  expert's one event, nothing else) and missed by B, whose process rules look for JavaScript source text in the
+  command line. **C's catch is not through the footprint:** its attack-vector answer was not valid JSON and the stage
+  fell back to an empty vector. As on 2026-11-09, what decides the catch is what the rule writer happened to write.
+  Grixba could not be run: its analysis call did not end (CH7 64).
+
 ## 6.6 Smaller observations worth a sentence each
 - `[MEASURED]` **One report keeps defeating the analysis step** (`9a2d8b3e`, Check Point on CVE-2025-33053 / Stealth
   Falcon; ~40,000 characters): its analysis answer is cut on every attempt in **9 of the 27 runs** that include it, with

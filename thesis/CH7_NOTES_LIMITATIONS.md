@@ -316,6 +316,13 @@ limitation in the log belongs here too.
     (0.38 of the experts' values are in the report); a rule that passes every item can miss the attack. Its
     comparison with the expert rules compares form. The reading on `c53_tuning60` was made after the run, on one run.
 
+64. **An answer that does not stop is neither cut nor salvaged** `[DISCLOSE]` (found 2026-11-10). The output limit
+    (32,768 tokens since Change 52) cannot be reached within the client's 600 s per request at the server's usual
+    speed, and the client silently retries a timed-out request twice. Such a call holds the shared server for up to
+    30 minutes and ends as a failed call; Changes 24 and 52 do not act. Seen on the Grixba report in the real-attack
+    check of 2026-11-10 (its analysis call returned in 113 s two days earlier): that report could not be run. The
+    longest finished answer in four runs is 6,965 tokens. A fix is proposed in the log, not yet made.
+
 ## Future work (collected, not prioritised)
 
 - Detonation-validated evaluation (R1/R2) with the lab's Metasploit Pro → Sysmon → EVTX →

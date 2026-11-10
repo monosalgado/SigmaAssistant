@@ -8091,3 +8091,24 @@ On 2026-11-08 the same call returned 5,047 tokens in 113 s. Found while looking:
 32,768 tokens; at today's 25 to 40 tokens per second an answer that does not stop needs 14 to 22 minutes to reach
 it, more than the client's time limit, so the cut (and its salvage) is never reached and the run stops on a failed
 call. To decide: a limit that the time limit can reach, or a time limit above it. B was not tried on Grixba.
+
+## 2026-11-10 — Why an answer that does not stop is never cut: the numbers (a reading of saved rows and of the client's settings)
+
+Follow-up to the Grixba stall above. Read from the code and from four citable runs (the rerun's three arms and
+`c53_tuning60`; 1,068 calls); a one-off reading, to choose a fix, not a result.
+
+- The local client is the OpenAI client with its defaults: **600 s to read an answer, and 2 silent retries of a
+  request that timed out.** The pipeline never sees the first two timeouts, so a call that does not end holds the
+  Spark for up to 30 minutes with the same prompt (two calls in those runs took 737 s and 1,234 s: one had been
+  retried). An identical prompt gets the identical answer (CH7 51), so the retries cannot help.
+- The output limit is **32,768 tokens** (Change 52). In 600 s it is reached only above 55 tokens per second. The
+  runs' median is 54, the slowest twentieth is at 33 or less, today's cases ran at 25 to 40.
+- **No finished answer comes near it:** the longest in the four runs is 6,965 tokens (an analysis); none is over
+  8,000. Change 52 raised the limit for the analysis's long indicator lists; Change 53 has since shortened them.
+- So today a looping answer is neither cut nor salvaged (Changes 24 and 52 never act): the call times out three
+  times and the run stops on a failed call, as with Grixba.
+
+**Options, for the user:** (1) lower the limit to a value the time limit reaches at the slow speeds and that no
+finished answer approaches (12,288 tokens is reached at 20.5 tokens per second and is 1.8 times the longest finished
+answer; 16,384 needs 27.3); (2) stop the client's silent retries of a timeout, so a stalled call costs 10 minutes,
+not 30; (3) raise the time limit instead, which lengthens every stall on a shared server. Recommended: 1 and 2.
