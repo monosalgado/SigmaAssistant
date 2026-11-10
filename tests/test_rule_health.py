@@ -9,6 +9,7 @@ from __future__ import annotations
 from eval.rule_health import (
     case_health,
     do_not_use_hits,
+    expert_health,
     generic_cases,
     generic_pages,
     generic_share,
@@ -291,3 +292,17 @@ def test_a_run_totals_unlogged_patterns_do_not_use_hits_and_lists_no_report_cand
 def test_a_run_without_report_texts_or_pages_leaves_those_readings_empty():
     s = run_summary([case_health(_row([RULE]), REFERENCE)])
     assert s["all_rules"]["values_in_report"] is None and s["no_report_candidates"] == [] and s["partly_generic"] == 0
+
+
+# --- the expert rules of the same cases, read the same way ---------------------------------------------------------
+
+def test_the_expert_rule_of_each_case_is_read_like_ours_and_a_missing_file_is_skipped(tmp_path):
+    (tmp_path / "gold").mkdir()
+    (tmp_path / "gold" / "a.yml").write_text(RULE.replace(
+        "    condition: all of selection_*",
+        "    filter_main:\n        User: 'SYSTEM'\n    condition: all of selection_* and not filter_main"))
+    rows = [{"rule_id": "a", "rule_path": "gold/a.yml"}, {"rule_id": "b", "rule_path": "gold/missing.yml"}]
+    experts = expert_health(rows, REFERENCE, {"a": REPORT}, root=tmp_path)
+    assert len(experts) == 1
+    assert experts[0]["runs"] is True and experts[0]["has_exclusion"] is True and experts[0]["uses_parent"] is True
+    assert experts[0]["values"] == 3 and experts[0]["values_in_report"] == 3

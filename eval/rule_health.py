@@ -258,6 +258,18 @@ def case_health(row: dict, reference: dict, report_text: Optional[str] = None,
     }
 
 
+def expert_health(rows: list, reference: dict, texts: Optional[dict] = None, root: Path = REPO) -> list:
+    """The same per-rule reading of each case's expert rule (the file the row names), for comparison; a row whose
+    file is missing is skipped."""
+    out = []
+    for row in rows:
+        path = Path(root) / str(row.get("rule_path") or "")
+        if path.is_file():
+            out.append(rule_health(path.read_text(encoding="utf-8"), reference,
+                                   (texts or {}).get(row.get("rule_id"))))
+    return out
+
+
 # --- per run -------------------------------------------------------------------------------------------------------
 
 def _rates(rules: list) -> dict:
@@ -390,6 +402,8 @@ def main(argv: list = None) -> int:
     parser.add_argument("--no-pages", action="store_true", help="skip the saved pages (items 4 and 9)")
     parser.add_argument("--list-generic", action="store_true",
                         help="list every case of the manifest(s) with input from generic pages, to confirm by eye")
+    parser.add_argument("--expert", action="store_true",
+                        help="also read the expert rule of each case the same way, for comparison")
     parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args(argv)
 
@@ -419,6 +433,14 @@ def main(argv: list = None) -> int:
             results.append(case_health(row, reference, texts.get(rule_id), share))
         report[path.name] = run_summary(results)
         print_summary(path.stem, report[path.name])
+        if args.expert:
+            e = report[path.name]["expert_rules"] = _rates(expert_health(rows, reference, texts))
+            in_report = (_ratio(e["values_in_report"], e["values_with_report"]) if e["values_in_report"] is not None
+                         else "-")
+            print(f"  the expert rules of these cases ({e['rules']}): run {e['run']}; a field SigmaHQ never uses "
+                  f"with it {e['with_unused_fields']}/{e['judged_for_fields']}; an exclusion {e['with_exclusion']}; "
+                  f"a parent-process field {e['with_parent_field']}; values in the report {in_report}; levels "
+                  f"{e['levels']}")
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         summary = {"scope": args.scope, "runs": report}
