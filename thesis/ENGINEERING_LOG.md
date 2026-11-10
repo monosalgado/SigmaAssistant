@@ -7992,3 +7992,46 @@ is on the server: **another user's model (`glm-4.7-flash`) was running on the Sp
 so the two models evicted each other and every request of ours waited for a reload. Our run was stopped at 10:38, to
 leave the shared server alone; nothing was written for the unfinished case. To resume when the Spark is free: the
 same command, which skips the finished case. No reading of any rule was made.
+
+## 2026-11-10 — Change 57 planned (the user: "fix them"): the pipeline's own checks and plumbing do what they say
+
+**Why:** four bugs the audit found, confirmed on the rerun's rows by `rule_health` (entry above) and by reading the
+code. None is a new idea about rules; each is code that does not do what its own comment says.
+
+**The change (four parts, one branch, tests first):**
+- **a. The "do not use" check reads the detection.** `coverage_gap_check` searches each listed string in the whole
+  rule text, so a string in a title, description or reference counts as "used as a detection criterion" and forces
+  the regeneration (47 hits in the rerun's three arms, 4 in a detection). It will search the rules' detections only
+  (the names and values of their selections); a rule that is not readable YAML is searched whole, as now.
+- **b. Candidate patterns are compared with backslashes alike.** The same check removes the backslashes from the
+  pattern and not from the rule, so a pattern holding a Windows path is found only when the rule writes it without
+  them (arm C: 30 patterns hold a backslash, the check finds 8). Both sides will be compared without backslashes.
+  **Not changed here:** where a pattern may be found (still the whole rule) and the initial-access test; they
+  belong to the next change, which redefines what the check asks for.
+- **c. An attack-vector answer that is not valid JSON keeps what it finished.** Today the stage falls back to an
+  empty vector and the pipeline goes on without its anchor (1 of 42 cases in each arm). A second request is no
+  remedy: an identical prompt gets the identical answer (CH7 51). The stage will keep the complete fields before
+  the error (Change 52's `salvage_json`, on the text up to the error) and record which; with nothing complete, the
+  empty vector as now.
+- **d. The PoC step reads the linked GitHub code first.** It takes the first 5 pieces of code, page blocks first, so
+  a page with 5 or more blocks pushes out the linked files, which no other step reads. Order becomes: linked
+  GitHub files and gists, then the page's blocks; the limits (5 pieces, 2,000 characters each) stay.
+- **Recorded, measurement only:** the rules of the first answer when a case is regenerated (`first_pass_rules`) and
+  why it was regenerated (`regeneration_reason`: validation errors, or which coverage trigger).
+
+**Not in this change:** a page with no report (the audit's B4). It is not a bug in code: the attack-vector step's
+confidence does not single those cases out (0.3, 0.3, 0.6 and 0.65 on the four candidates), so the model must be
+asked the question, and that is a change of its prompt with its own measure. Proposed separately.
+
+**Measures, fixed now:**
+- **Offline, exact (no model):** d: of the tuning cases with linked GitHub code in the saved pages, those where the
+  PoC step's snippet list holds it, before and after (the audit's one-off count: 3 of 7 before).
+- **In a run** (`rule_health`, and the new records): a: "do not use" hits outside a detection must be 0 by
+  construction; cases regenerated, and of those, for which reason; b: patterns with a backslash that the check finds;
+  c: attack-vector answers that failed to parse, and of those salvaged, with the fields kept.
+- **No harm (gate):** S1r, S3u and S5u as the user gets them, paired, bootstrap 95% CI (`compare_arms`).
+- **Keep the change if** the mechanisms hold (a: 0 hits outside a detection; fewer cases regenerated for a "do not
+  use" hit) and no gated score is lower with its CI entirely below 0.
+- **The run:** a 2-case live check first. The two-arm comparison (A = `main`, B = `main` + Change 57, the 42
+  Windows/Linux tuning cases, interleaved one case at a time) can share a session with the next change as a third
+  arm, as Changes 55 and 54 did; when, is the user's call. Until then the change stays on its branch.
