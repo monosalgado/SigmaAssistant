@@ -8241,3 +8241,38 @@ C = `change59-evidence-rules`.
 
 **Nothing is measured yet:** a prompt change shows only in a run. Next, when the Spark is free: Change 57's 2-case
 live check, a 2-case live check of this branch, then the three-arm session of the plan.
+
+## 2026-11-10 — Change 60 planned (the user: "let's do the big changes"): review returns its findings and only the rules it changes
+
+**Why:** review is asked to return every rule again, typed inside a JSON string. In arm C of the rerun (today's
+`main`) it writes **131,397 answer tokens, more than any other step, in 27% of the model time; of 199 rules, 144
+come back identical**, 18 with only their tags, description, level or false positives changed and 37 with their
+detection or log source changed; Change 55's check put 19 back because review had broken them (a one-off reading
+of the saved rows). Retyping 199 rules to change 55 is where the breakage comes from, and JSON is the format
+Change 36 already left for the rule writer because of its backslashes.
+
+**The change** (review's answer and how code uses it; what review is asked to look for stays, with two exceptions
+named below):
+1. The rules go to review numbered, each in a `yaml` block.
+2. Review answers in text, not JSON: a list of issues (`- [error|warning|info] rule N: …`), then **only the rules it
+   changes**, each complete, under `### Rule N: <what changed>` in a `yaml` block, as the rule writer answers since
+   Change 36; then a short summary. A rule it does not return stays exactly as written.
+3. Code puts each returned rule in its place and applies Change 55's check to it (a returned rule that does not run,
+   where the written one did, is dropped). A rule number that does not exist is ignored and recorded.
+4. **Two things review can no longer do**, because the answer has no place for them: change the number of rules
+   ("merge or split selections" stays, inside a rule; "keep the most comprehensive of duplicate rules" goes; in the
+   rerun review kept the number of rules in 42 of 42 cases) and return prose in place of a rule.
+5. Issues keep their meaning: an issue marked `error` still triggers the one regeneration, as today.
+
+**Measures, fixed now** (arm D = C + Change 60, in the same session as the plan of Change 59: A `main`, B + 57,
+C + 59, D + 60; read D against C):
+- **Mechanism (must move):** review's answer tokens per case: lower in D (paired, bootstrap 95% CI entirely below
+  0); rules put back by Change 55's check: fewer in D.
+- **No harm (gate):** S1r, S3u and S5u as the user gets them, paired, bootstrap 95% CI.
+- **Keep the change if** both mechanisms move and no gated score is lower with its CI entirely below 0.
+- **Also reported:** rules review returned against rules reviewed; rules whose detection changed; seconds per case;
+  issues by severity; cases regenerated for validation errors; rule health.
+
+**Not in this change:** what review looks for (its checklist, the field hint that is wrong for Sigma's
+`process_creation`, "IoC enrichment"); whether review should see the report or the log source's fields; fixing
+tags in code.
