@@ -8035,3 +8035,32 @@ asked the question, and that is a change of its prompt with its own measure. Pro
 - **The run:** a 2-case live check first. The two-arm comparison (A = `main`, B = `main` + Change 57, the 42
   Windows/Linux tuning cases, interleaved one case at a time) can share a session with the next change as a third
   arm, as Changes 55 and 54 did; when, is the user's call. Until then the change stays on its branch.
+
+## 2026-11-10 — Change 57 built offline, on branch `change57-checks` (`15421cf`); its offline measure
+
+**Built** (tests first, 18 new; the branch's suite 1,178 pass; `main` is untouched and stays the rerun's arm C):
+- **a.** `coverage_gap_check` searches the "do not use" strings in the rules' detections: the names of the
+  selections, their field names and their values; not the condition, title, description or references. A rule that
+  is not readable YAML, or has no detection block, is searched whole.
+- **b.** Candidate patterns are compared with the backslashes removed on both sides. Where a pattern may be found
+  (the whole rule) is unchanged.
+- **c.** An attack-vector answer that is not valid JSON keeps the complete fields before the error
+  (`salvage_json` on the text up to it); `attack_vector.salvaged` lists them, the reasoning says so; the fields
+  after the error take their defaults (so the confidence is 0 and the coverage retry is skipped, as for a failed
+  answer today). With nothing complete, the empty vector as before.
+- **d.** The PoC step takes the linked GitHub files and gists first, then the page's blocks; limits unchanged.
+- **Records:** `first_pass_rules` (the first answer's final rules) and `regeneration_reason` (`validation`, or
+  `coverage` with its triggers: `initial_access`, `patterns`, `do_not_use`), on both paths (`run_sync`, the web
+  app's). The harness keeps them in the row (`bd3e669`, on `main`).
+
+**Offline measure d** (`eval/poc_snippets.py`, `bd3e669`; the 42 Windows/Linux tuning cases, saved pages and saved
+GitHub files, no model): 22 cases have code for the PoC step and **7 link to GitHub code that is saved. The PoC
+step's prompt holds it in 3 of the 7 with `main`'s code and in 7 of the 7 with the branch's.** (The 4 it missed:
+UNC2452 PowerShell Pattern, CVE-2021-44077, CVE-2024-3094, Confluence CVE-2021-26084.)
+
+**A check of function, not a result:** the branch's check applied to arm C's saved final rules reports 0 "do not
+use" hits where `main`'s reported 17 (in 14 cases), and finds 83 patterns where `main`'s found 78. What that does to
+the regeneration, and to the rules, needs a run: the first answers are not in those rows.
+
+**Next:** the 2-case live check and the two-arm run, when the Spark is free and the user says; the real-attack check
+of Changes 55 and 54 is still open and goes first.
