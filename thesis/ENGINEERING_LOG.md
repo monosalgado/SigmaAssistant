@@ -8460,3 +8460,26 @@ arm C (today's `main`'s pipeline).
 **Decision:** the user's. The session as planned measures both mechanisms on 42 cases; or a change to the wording
 first (review not editing tags that code already checks; the patterns kept out of the rule writer's list instead of
 labelled), which would need its own short check.
+
+## 2026-11-11 (just after midnight, EST) — Changes 60 and 59 adjusted after the live check, before the session (the user: "adjust the wording first")
+
+Written before any code changes, as the clarification of Change 54 was. Both adjustments target what the live check
+showed on 2 of the 42 tuning cases, so they are tuned on those two (disclosed with the result). Made on the
+combined branch (`change61-code-in-place`), which is arm B; the separate branches are no longer run.
+
+**Change 60 (review):** review returned every rule, mostly to rewrite tags or swap a modifier. Its "Optimization"
+part asked it to apply improvements "where beneficial". Now: **return a rule only to fix a problem listed under
+Issues**: a field the log source does not have, detection logic that cannot catch the attack, a condition that does
+not resolve, a string that cannot appear in the log, a rule that would fire on ordinary activity, or a tactic
+mismatch the code-computed check above lists. A rule returned for such a problem may also get, in it, merged or split
+selections, false-positive entries and better modifiers. **No rule is returned only to rewrite its tags, title,
+description, references, false positives, level or modifiers.** "IoC enrichment" (adding IPs and hashes as optional
+filters) goes: it contradicts the analysis prompt, which says such values rarely make a rule. The severities keep
+their meaning (an `error` still triggers the one regeneration).
+
+**Change 59 (rule writer):** a pattern labelled "not recorded by a log" was still matched in `CommandLine`. Now such
+patterns are **left out of the rule writer's list of candidate patterns** (a line says how many were left out and
+why); instruction 3 keeps a general sentence: a string from inside a script, a file or a request body is not in the
+command line or the URL. The coverage check already leaves them out.
+
+**Measures and decision rule: unchanged.** A 2-case live check on the same two cases first; then the session.
