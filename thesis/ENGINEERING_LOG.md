@@ -8483,3 +8483,20 @@ why); instruction 3 keeps a general sentence: a string from inside a script, a f
 command line or the URL. The coverage check already leaves them out.
 
 **Measures and decision rule: unchanged.** A 2-case live check on the same two cases first; then the session.
+
+## 2026-11-11 — Second live check, after the adjustment (`ad81dad`): review returns only rules with a listed problem; patterns from unlogged places used less, not never
+
+The same 2 cases, 00:01 to 00:05 EST, the Spark free; `eval/results/c61_livecheck2.jsonl`, CITABLE. Arm B of the
+session now points at `ad81dad`.
+- **Review:** CVE-2024-35250, **2 of 3 rules returned** (first check 4 of 4), its answer 1,118 tokens (first
+  check 1,708; `main` 1,586 and 1,690 in two calls): one log-source correction, one detection change. Defrag
+  Deactivation: 3 of 3 returned, **each for a tactic mismatch the code-computed check listed** (the reason the
+  adjustment keeps), 1,462 tokens. No rule returned only for tags, wording or modifiers.
+- **Patterns from places no log records:** left out of the list, they were still used in 2 of 8 (first check 4 of
+  8): the CVE case's third rule matches two IOCTL names in `CommandLine`, taken from the indicators or the summary,
+  which still hold them. The first rule is now an `image_load` rule on the driver.
+- No regeneration, nothing reverted, all 6 rules run.
+- **Seen in passing:** Defrag's third rule names a `.sys` file as the writing `Image` (the module-as-program
+  pattern Change 54's clarification counts).
+
+Two cases, both used to make the adjustment: a check of function. The session measures it.
