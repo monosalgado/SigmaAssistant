@@ -8297,3 +8297,46 @@ tags in code.
 
 **Nothing is measured yet.** Whether the model keeps to the new form, how many rules it returns, and what that does
 to the rules needs the live check and the session.
+
+## 2026-11-10 — Change 61 planned (the user: "code in place"): the page reader reads the page in its order, each text once
+
+**Why** (the audit's D8): `_extract_page_content` moves every code block to the top of the page's text ("Code/Config
+Snippets") and the prose after it, so a command is no longer next to the sentence that says who runs it. That order
+was set when the stages read only the first 8,000 or 4,000 characters, so that code survived the window; they read
+100,000 since Change 12. Also, prose is taken from every `p`, `li`, `td`, `blockquote`… in turn, so a paragraph
+inside a list item is read twice. The page reader has no test.
+
+**A probe of a prototype on the saved pages** (one-off, not cited; the tool built with the change redoes it):
+reading each text once makes the uncut text **20% shorter over the corpus's 378 pages** (10.55 M → 8.40 M
+characters; one discussion page 627 k → 165 k) and **10.5% shorter on the 44 pages of the 42 tuning cases**; pages
+over the 40,000-character cut: 34 → 21 (tuning 3 → 1). Cutting the in-order text at 40,000 would lose code that the
+code-first order keeps (one tuning page, 23 blocks); with the rule in 2 below, **every block the old reader keeps is
+kept on the tuning pages (181 of 181)**, and on 4 of the 378 pages fewer (18 blocks). 1,370 of 1,557 blocks have a
+piece of prose right before them. **One corpus case would fall under the 2,000-character threshold** (`6d5b8176`,
+a SigmaHQ pull-request page, never run), which would change the seed-0 sample: see 4.
+
+**The change** (`stage_preprocess` only):
+1. **In order, each text once.** Code blocks (`<pre>` of 20+ characters; a multi-line `<code>` of 50+, as now) stay
+   where they are in the page, fenced as now. Prose comes from the same elements as now, in page order, but an
+   element inside one already read is not read again; a code block inside a text element splits it, in place.
+2. **Code past the cut is kept.** When the page is longer than the 40,000 characters a page may give, the code
+   blocks that would fall after the cut are kept at the end under a heading saying so ("Code further down the
+   page…"), and the in-order part is shortened to make room for them (to no less than half the budget).
+3. Unchanged: the elements removed (navigation, footer…), the 40,000-character budget per page, the 3 pages, the
+   title, the language guess, the fences the PoC stage reads.
+4. **The case sets do not move on merge.** The harness selects the corpus with `main`'s reader (the 2,000-character
+   threshold), and the seed-0 sample draws from it; one case crossing the threshold would change the sample. Before
+   this change is merged, `load_cases` takes the corpus as selected today (a committed list of its case ids), so no
+   set changes. During the session nothing moves: the harness keeps today's reader until the merge.
+
+**Measures, fixed now:**
+- **Offline, exact (no model), a committed tool on the saved pages, old reader against new:** characters per page;
+  pages at the cut; code blocks kept (must be: no page of the 42 tuning cases keeps fewer); blocks with prose right
+  before them; the case sets of every manifest under the frozen selection (must be unchanged).
+- **In the session (arm E = D + Change 61, read E against D):** no harm on S1r, S3u and S5u, paired, bootstrap 95%
+  CI; prompt tokens of the attack-vector and analysis calls per case (reported; expected lower where pages repeat
+  text); PoC snippets per case; rule health.
+- **Keep the change if** the offline conditions hold and no gated score is lower with its CI entirely below 0. Its
+  purpose (code read next to its explanation) has no direct measure; that is said with the result.
+- **Not in this change:** table rows as one line, prose in plain `div`s, image text (Change 56's draft plan places
+  it in the code pile; with this change it would go in place, and that draft says so).
