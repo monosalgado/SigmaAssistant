@@ -73,7 +73,13 @@ REPO = Path(__file__).resolve().parent.parent
 
 
 @pytest.mark.skipif(not (REPO / "eval" / "snapshots").is_dir(), reason="the saved pages are local only")
-def test_the_committed_freeze_reproduces_todays_selection_for_every_manifest():
+def test_the_committed_freeze_holds_every_case_of_the_manifests_and_their_verdicts():
+    """One pass over the manifests: the freeze judged every case they have, and its verdicts are today's reader's."""
     frozen = json.loads(FROZEN_CORPUS.read_text())
+    judged, passing = set(), set()
     for manifest in sorted((REPO / "eval").glob("manifest*.jsonl")):
-        assert _ids(load_cases(manifest, REPO, 2000, frozen=frozen)) == _ids(load_cases(manifest, REPO, 2000, frozen=None))
+        for case in load_cases(manifest, REPO, 0, frozen=None):
+            judged.add(case["rule_id"])
+            if case["text_chars"] >= frozen["min_chars"]:
+                passing.add(case["rule_id"])
+    assert judged == set(frozen["considered"]) and passing == set(frozen["selected"])
