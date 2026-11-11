@@ -8355,3 +8355,36 @@ model glued to its neighbours.
 whitespace become one space. Where the page has no space between two parts (`<b>Ex</b>ample`) none is added.
 **Added to the offline measures:** elements whose text gains a space. The rest of the plan is unchanged. This makes
 the change two fixes of one function: what the attribution can separate is only what the offline measures show.
+
+## 2026-11-10 — Change 61 built offline, on branch `change61-code-in-place` (`baa4c8d`, on top of Change 60); its offline measure
+
+**Built** (tests first, 16 new: the page reader had none; the branch's suite 1,230 pass). `_extract_page_content`:
+code blocks are replaced by markers where they are, the page is walked in order (iteratively, since broken pages
+nest deeper than Python's recursion), each element prose is read from gives its text once with the page's own
+spaces (runs of whitespace as one), a block inside such an element splits it in place, and `_assemble` joins the
+pieces; past the 40,000-character budget the blocks that would be cut follow `CODE_FURTHER_DOWN` at the end, the
+in-order part shortened to make room (to no less than half the budget, never inside a block).
+
+**Offline measure** (`eval/page_reader_effect.py`, `main`'s reader against the branch's, on the saved pages; exact,
+no model):
+
+| | the corpus (341 cases, 378 pages) | the 42 tuning cases (57 pages) |
+|---|---|---|
+| characters given to the stages, old → new | 4,957,329 → 4,410,735 | 902,847 → 825,294 |
+| the same without the budget | 10,554,038 → 8,445,202 | 952,076 → 858,704 |
+| pages over the 40,000-character budget | 34 → 21 | 4 → 2 |
+| the old reader's code blocks kept by the new | 1,351 of 1,369 (4 pages keep fewer) | **253 of 253** |
+| the new reader's blocks after a line of prose | 1,039 of 1,351 | 195 of 253 |
+| `p`/`li` elements that lose a space with the old reader | 13,525 of 65,348 | 2,146 of 12,230 |
+| cases crossing the 2,000-character threshold | **1** (`6d5b8176`) | 0 |
+
+(The addition's 4,000 of 12,230 came from a looser one-off count; the tool's definition is stricter: the stripped
+text equals the spaced one but for spaces, and has fewer of them.)
+
+**Against the plan's conditions:** no page of the 42 tuning cases keeps fewer code blocks (holds). The case sets:
+one corpus case crosses the threshold, so the freeze of the corpus (plan, point 4) is needed before any merge;
+until then the harness keeps `main`'s reader and nothing moves. The 4 corpus pages that keep fewer blocks (18 blocks)
+are long pages whose code alone is more than half the budget.
+
+**Next:** Change 61 is arm E of the session (A `main`, B + 57, C + 59, D + 60, E + 61), about 12 to 13 hours on a
+free Spark, which the user may split into two nights; and the live checks first.
