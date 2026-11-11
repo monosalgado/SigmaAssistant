@@ -8573,3 +8573,17 @@ a program (`\mskssrv.exe`). That is the model's choice; nothing in code prevents
 **The session** (plan of 2026-11-10, measures revised above): A `21f8cad` (`main`; its pipeline unchanged since),
 B `08df833`; started in the Terminal panel at about 00:55 EST, one case and one request at a time; outputs
 `eval/results/c61pkg_{A-main,B-combined}.jsonl`, log `SigmaAssistant-arms2/session.log`.
+
+## 2026-11-11 (morning) — The session stopped at case 19 when the desktop app relaunched; resumed detached
+
+**What happened:** at 02:46:27 EST the desktop app relaunched itself ("Preparing to relaunch" in the power log, an
+update); the same second the session's `caffeinate` died, and with it the Terminal panel tab and the script. No
+"stopped" line was written because the script itself was killed. 18 of the 42 cases are written in each arm
+(`c61pkg_*.jsonl`, both CITABLE so far); arm A's case 19 was in its first regeneration and is lost unwritten, to be
+run again from its start. Nothing in the rows is affected: the harness writes a case only when it has finished.
+The memory notes had said since 2026-10-15 to start long runs detached, because an app restart kills panel tabs;
+this session was not. **Disclosed:** while finding the cause, the two arms' `summarise` outputs over those 18 cases
+were displayed; the decision rule was fixed before the run, and no decision is taken on a partial session.
+
+**Resumed** at about 10:15 EST, the Spark free: the script now takes `START` (the case count to resume at; the same
+rotation of which arm goes first), started with `nohup` and in the background, so an app restart cannot stop it.
