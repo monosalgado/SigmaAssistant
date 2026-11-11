@@ -280,12 +280,30 @@ def web_search_from_file(agent, path):
 # Case loading
 # --------------------------------------------------------------------------
 
-def load_cases(manifest_path: Path, repo_root: Path, min_chars: int) -> list:
+# The corpus as selected on 2026-11-10 (log: Change 61, point 4): which cases pass the 2,000-character threshold with
+# the page reader of that day. Change 61 changes the reader; with the freeze no case moves in or out of a set, and the
+# seed-0 sample stays the same. Built by eval/freeze_corpus.py.
+FROZEN_CORPUS = Path(__file__).resolve().parent / "corpus_frozen.json"
+
+
+def _frozen_corpus() -> Optional[dict]:
+    return json.loads(FROZEN_CORPUS.read_text(encoding="utf-8")) if FROZEN_CORPUS.is_file() else None
+
+
+def load_cases(manifest_path: Path, repo_root: Path, min_chars: int, frozen="default") -> list:
     """Load manifest entries that have a snapshot with enough extracted text.
 
     Text is extracted with the pipeline's own `_extract_page_content`, so the
-    threshold is applied to exactly what the model would receive.
+    threshold is applied to exactly what the model would receive - except that,
+    at the threshold the corpus was frozen with, a case the freeze judged keeps
+    the freeze's verdict (`frozen`: the committed freeze by default; None: none).
     """
+    if frozen == "default":
+        frozen = _frozen_corpus()
+    if frozen is not None and frozen.get("min_chars") != min_chars:
+        frozen = None
+    considered = set(frozen["considered"]) if frozen else set()
+    selected = set(frozen["selected"]) if frozen else set()
     extractor = PreprocessStage(client=None, model_name="")
     cases = []
 
@@ -319,7 +337,10 @@ def load_cases(manifest_path: Path, repo_root: Path, min_chars: int) -> list:
             # is what a user would paste; only the lookup key is normalised.
             urls.append(snap["url"])
 
-        if total_chars < min_chars:
+        if entry["rule_id"] in considered:
+            if entry["rule_id"] not in selected:
+                continue
+        elif total_chars < min_chars:
             continue
 
         cases.append({
