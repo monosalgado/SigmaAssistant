@@ -8553,3 +8553,23 @@ B than in A. The old count (five places) is reported next to it. Also reported f
 unchanged.
 
 **Order:** tests first; a 2-case live check; then the session, today if the Spark is free.
+
+## 2026-11-11 — Third live check (`08df833`), and the two-version session started
+
+**Built** on the combined branch (`08df833`, tests first; 1,248 pass): `normalize_signatures` checks each pattern's
+`log_source` against SigmaHQ's table; the rule writer's list shows it, leaves out patterns marked `none` and notes a
+source SigmaHQ does not use; the coverage check asks only for patterns whose source is on the table. The fingerprint
+test of Change 51 ignores only the new `log_source` parts and still matches: nothing else in the attack-vector prompt
+changed. On `main` (`90421f8`): `rule_health` counts the revised measure (the four places) and the model's own
+answers.
+
+**Live check** (the same 2 cases, 00:45 to 00:49 EST; `eval/results/c61_livecheck3.jsonl`, CITABLE): the model
+named a log source for every pattern; 5 of 6 marked `none` (the IOCTL and function names, and `ipv4.dll`, which is
+arguably wrong: a loaded DLL is recorded by `image_load`), 1 `process_creation`; none off the table. Review returned
+2 of 2 and 2 of 3 rules, 1,014 and 924 answer tokens (first check 1,708 and 1,337). Still: the CVE case's first rule
+matches `IOCTL_KS_PROPERTY` in `CommandLine` (taken from the indicators, not the pattern list) and names the driver as
+a program (`\mskssrv.exe`). That is the model's choice; nothing in code prevents it, by the user's rule.
+
+**The session** (plan of 2026-11-10, measures revised above): A `21f8cad` (`main`; its pipeline unchanged since),
+B `08df833`; started in the Terminal panel at about 00:55 EST, one case and one request at a time; outputs
+`eval/results/c61pkg_{A-main,B-combined}.jsonl`, log `SigmaAssistant-arms2/session.log`.
