@@ -8340,3 +8340,18 @@ a SigmaHQ pull-request page, never run), which would change the seed-0 sample: s
   purpose (code read next to its explanation) has no direct measure; that is said with the result.
 - **Not in this change:** table rows as one line, prose in plain `div`s, image text (Change 56's draft plan places
   it in the code pile; with this change it would go in place, and that draft says so).
+
+## 2026-11-10 — Change 61, addition before it is built: the reader joins words at every inline tag
+
+Found while writing the reader's first tests, before any code changed. The reader takes an element's text with
+`get_text(strip=True)`, which strips every piece of text and joins the pieces with nothing. So the spaces around a
+link, a bold word or inline code disappear: `<p>The attacker ran <code>whoami /priv</code> and then <a>downloaded</a>
+<b>payload.exe</b> to <i>C:\Temp</i>.</p>` is read as **"The attacker ranwhoami /privand thendownloadedpayload.exe
+toC:\Temp."** On the pages of the 42 tuning cases, 4,000 of 12,230 `p` and `li` elements lose a space this way (a
+one-off count; menus included). Every stage reads this text, and a command written inline in a sentence reaches the
+model glued to its neighbours.
+
+**Added to the change (5):** a text keeps the spaces the page has: its pieces are joined as written, then runs of
+whitespace become one space. Where the page has no space between two parts (`<b>Ex</b>ample`) none is added.
+**Added to the offline measures:** elements whose text gains a space. The rest of the plan is unchanged. This makes
+the change two fixes of one function: what the attribution can separate is only what the offline measures show.
