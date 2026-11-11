@@ -8419,3 +8419,16 @@ Spark, two nights). The user wants to move towards one version.
   (as CH7 42 says of the shared run). The separate arms planned above are not run.
 
 **After the run `[DEMO]`:** React2Shell and Grixba through B, their rules on the recordings, as on 2026-11-10.
+
+## 2026-11-10 — The corpus frozen (Change 61, point 4), on `main`
+
+`load_cases` now keeps, at the 2,000-character threshold, the verdicts of `eval/corpus_frozen.json`: 341 cases
+judged, 303 selected, with the page reader of `main` today (`eval/freeze_corpus.py`). A case the freeze never saw
+is judged by its length, as before; another threshold ignores the freeze. Tests first (7; the one that reads the
+saved pages is skipped where they are absent).
+
+**Checked with Change 61's reader** (a one-off check, the reader loaded from its branch): every manifest gives the
+same cases in the same order (303, 60, 60, 60, 59), and the seed-0 sample's 42 Windows/Linux tuning cases are
+identical. **Without the freeze, 16 of the 42 would change:** the one case that falls under the threshold shifts the
+stratified sample. So no comparison with an earlier run would have been paired on the same cases after the merge;
+with the freeze, all of them still are. Nothing changes for any run so far: today's reader gives the frozen verdicts.
