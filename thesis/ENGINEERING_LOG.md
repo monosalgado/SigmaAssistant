@@ -8388,3 +8388,34 @@ are long pages whose code alone is more than half the budget.
 
 **Next:** Change 61 is arm E of the session (A `main`, B + 57, C + 59, D + 60, E + 61), about 12 to 13 hours on a
 free Spark, which the user may split into two nights; and the live checks first.
+
+## 2026-11-10 — The run plans of Changes 57, 59, 60 and 61 revised (the user: "let's start going towards one"): one two-arm session, `main` against the four together
+
+**Why:** measured one at a time, the four changes needed five arms in one session (about 12 to 13 hours on a free
+Spark, two nights). The user wants to move towards one version.
+
+**The session, replacing the arms planned in the four entries above:**
+- **A = `main`** (with Changes 55, 54 and 58), **B = `change61-code-in-place`**, which holds Changes 57, 59, 60 and
+  61 on top of `main`. The 42 Windows/Linux tuning cases, interleaved one case at a time, one request at a time;
+  about 5 hours. `summarise` CITABLE for both.
+- **A 2-case live check of B first** (the four together), instead of one per branch.
+
+**What is read, B against A:**
+- **Each change's mechanism, from B's own records**, as in the shared run of Changes 30 to 33:
+  - Change 57: "do not use" hits outside a detection 0 (`rule_health`); the regeneration's reasons; patterns
+    holding a backslash that the check finds; attack-vector answers salvaged. Its PoC part is shown offline (7 of 7).
+  - Change 59: patterns from places no log records used by a rule, fewer; rules per case, lower (paired CI).
+  - Change 60: review's answer tokens per case, lower (paired CI); rules put back by Change 55's check, fewer.
+  - Change 61: its offline conditions hold (entry above); attack-vector and analysis prompt tokens per case, reported.
+- **The gate, on the four together:** no gated score (S1r, S3u, S5u, as the user gets them) lower with its 95% CI
+  entirely below 0; cases with a parent-process rule (Change 54's M2) not lower at exact McNemar p < 0.05.
+
+**Decision rule:**
+- **If the gate holds,** the four are merged into `main` together (Change 61 after the corpus is frozen). A change
+  whose mechanism did not move is named in the result, and the user decides whether it stays.
+- **If the gate fails,** the session's records show where (rule health, the regeneration's reasons, review's
+  returns, the reverts), and the changes are separated by a run of their own before any merge.
+- **Disclosed with the result:** the four changes' effects on the scores cannot be separated, only their mechanisms
+  (as CH7 42 says of the shared run). The separate arms planned above are not run.
+
+**After the run `[DEMO]`:** React2Shell and Grixba through B, their rules on the recordings, as on 2026-11-10.
