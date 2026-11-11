@@ -313,3 +313,19 @@ def test_a_run_counts_the_log_sources_of_its_first_rules():
     s = run_summary([case_health(_row([RULE, web]), REFERENCE), case_health(_row([web]), REFERENCE),
                      case_health(_row([]), REFERENCE)])
     assert s["first_rule_logsources"] == {"process_creation": 1, "webserver": 1}
+
+
+def test_a_case_counts_the_patterns_from_the_four_places_sigmahqs_data_has_no_field_for():
+    """Revised before the session (log 2026-11-11): file_content holds file names, which are logged; the four other
+    places have no Windows/Linux field in SigmaHQ's rules. Also counted: patterns the model marked `none`, and those
+    whose log source is not on SigmaHQ's table."""
+    row = _row([RULE], patterns=(("whoami /priv", "file_content"), ("whoami /priv", "network_payload"),
+                                 ("zzzzzz", "request_body")))
+    row["pipeline"]["attack_vector"]["payload_signatures"][1]["log_source"] = "none"
+    row["pipeline"]["attack_vector"]["payload_signatures"][2].update(log_source="exploit_attempt", log_source_on_table=False)
+    case = case_health(row, REFERENCE)
+    assert [u["pattern"] for u in case["unlogged_patterns_used"]] == ["whoami /priv", "whoami /priv"]   # five places
+    assert [u["where"] for u in case["no_field_patterns_used"]] == ["network_payload"]                   # four places
+    assert case["marked_none"] == 1 and case["off_table"] == 1
+    s = run_summary([case])
+    assert s["no_field_patterns_used"] == 1 and s["marked_none"] == 1 and s["off_table"] == 1

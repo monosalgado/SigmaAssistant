@@ -57,6 +57,9 @@ SIGMA_RULE_DIRS = ("rules", "rules-emerging-threats", "rules-threat-hunting", "r
                    "rules-placeholder")
 # Places a candidate pattern can be seen (`where`) that no Sigma log source in the scope records.
 UNLOGGED_PLACES = frozenset({"file_content", "network_payload", "request_body", "response_body", "response_header"})
+# Revised before the session of 2026-11-11 (log): `file_content` holds file names, which are logged; the other four
+# places have no Windows/Linux field in SigmaHQ's rules. The five-place count is kept next to it.
+NO_FIELD_PLACES = UNLOGGED_PLACES - {"file_content"}
 MIN_VALUE_CHARS = 6
 MIN_PATTERN_CHARS = 3
 _NOT_A_SELECTION = ("condition", "timeframe")
@@ -160,14 +163,14 @@ def _simplified(pattern) -> str:
     return str(pattern or "").lower().strip().strip("^$.*+?").replace("\\", "")
 
 
-def unlogged_patterns_used(attack_vector: dict, rule_texts: list) -> list:
+def unlogged_patterns_used(attack_vector: dict, rule_texts: list, places=UNLOGGED_PLACES) -> list:
     """The candidate patterns from places no log records that some rule's detection value contains, each with the
     fields it lands in."""
     pairs = [(field, value.lower().replace("\\", "")) for text in rule_texts or []
              for rule in [read_rule(text)] if rule for field, value in _pairs(rule)]
     used = []
     for signature in (attack_vector or {}).get("payload_signatures") or []:
-        if not isinstance(signature, dict) or signature.get("where") not in UNLOGGED_PLACES:
+        if not isinstance(signature, dict) or signature.get("where") not in places:
             continue
         pattern = _simplified(signature.get("pattern"))
         if len(pattern) < MIN_PATTERN_CHARS:
@@ -253,6 +256,11 @@ def case_health(row: dict, reference: dict, report_text: Optional[str] = None,
         "patterns": len(signatures),
         "unlogged_patterns": sum(1 for s in signatures if s.get("where") in UNLOGGED_PLACES),
         "unlogged_patterns_used": unlogged_patterns_used(vector, rule_texts),
+        "no_field_patterns_used": unlogged_patterns_used(vector, rule_texts, NO_FIELD_PLACES),
+        # Change 59's second adjustment: the model's own answer per pattern, checked against SigmaHQ's table.
+        "marked_none": sum(1 for s in signatures if str(s.get("log_source") or "").strip().lower() == "none"),
+        "off_table": sum(1 for s in signatures if s.get("log_source_on_table") is False
+                         and str(s.get("log_source") or "").strip().lower() != "none"),
         "do_not_use_hits": do_not_use_hits(coverage.get("blacklist_violations") or [], rule_texts),
         "generic_share": generic,
     }
@@ -318,6 +326,9 @@ def run_summary(cases: list) -> dict:
         "patterns": sum(case["patterns"] for case in cases),
         "unlogged_patterns": sum(case["unlogged_patterns"] for case in cases),
         "unlogged_patterns_used": sum(len(case["unlogged_patterns_used"]) for case in cases),
+        "no_field_patterns_used": sum(len(case["no_field_patterns_used"]) for case in cases),
+        "marked_none": sum(case["marked_none"] for case in cases),
+        "off_table": sum(case["off_table"] for case in cases),
         "unlogged_landing": dict(Counter(f"{u['where']} -> {field}" for case in cases
                                          for u in case["unlogged_patterns_used"] for field in u["fields"])),
         "do_not_use_hits": {place: hits[place] for place in ("in_detection", "elsewhere", "not_found")},
@@ -386,6 +397,9 @@ def print_summary(name: str, s: dict) -> None:
           f"coverage warnings; cases ending with coverage warnings {s['cases_with_coverage_warnings']}")
     print(f"  candidate patterns {s['patterns']}; from places no log records {s['unlogged_patterns']}; used anyway "
           f"{s['unlogged_patterns_used']}: {s['unlogged_landing']}")
+    print(f"  of those, from the four places SigmaHQ's data has no field for: {s['no_field_patterns_used']}; patterns "
+          f"the model marked as recorded by no log source {s['marked_none']}; with a log source not on SigmaHQ's "
+          f"table {s['off_table']}")
     hits = s["do_not_use_hits"]
     print(f"  'do not use' hits {sum(hits.values())}: in a detection {hits['in_detection']}, only elsewhere "
           f"{hits['elsewhere']}, not found {hits['not_found']}")
