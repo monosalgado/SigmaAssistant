@@ -8527,3 +8527,29 @@ data of the actual rules, as a baseline against the model's errors.
 each pattern, the SigmaHQ log source that records it (from the same two tables as the footprint), or none; code
 checks the name against SigmaHQ's table and keeps no list of its own. A check against the rules' data, as the user
 describes, instead of a list of labels.
+
+## 2026-11-11 — Change 59, second adjustment (the user: "yes, do that, but let's work to do a run today"): each pattern's log source named by the model, checked against SigmaHQ's table; no list of places in code
+
+Written before the code changes.
+
+**The change (replacing the fixed list of places in the pipeline):**
+1. The attack-vector step gives each candidate pattern a `log_source`: the SigmaHQ log source that records the
+   pattern, written as for `primary_telemetry` and the footprint (from the same two tables), or `none` when no log
+   source records it. `where` stays as it is (a description of where the string sits).
+2. Code checks the name against SigmaHQ's table (Change 51's menu): each pattern records `log_source_on_table`.
+3. The rule writer's list shows a pattern with its log source; a pattern the model marked `none` is left out, with a
+   line saying how many; a pattern whose log source is not on SigmaHQ's table is shown with a note saying so (the
+   model's claim is not supported by the rules' data, and the rule writer decides). A pattern with no `log_source` at
+   all (an older answer) is shown as before.
+4. The coverage check asks only for the patterns whose log source is on the table; the others are recorded apart.
+5. `UNLOGGED_PLACES` leaves the pipeline. `rule_health` keeps its own measurement definition.
+
+**The session's measure for Change 59, revised before the run:** the definition fixed on 2026-11-09 counts
+`file_content` patterns as unlogged, and the check against SigmaHQ's data (entry above) found that label holds file
+names, which are logged. So the mechanism is read on **patterns from the four places SigmaHQ's data has no
+Windows/Linux field for** (request or response body, response header, network payload) that a rule uses: fewer in
+B than in A. The old count (five places) is reported next to it. Also reported for B: patterns the model marked
+`none`, and those whose log source is not on the table. The other measures, the gate and the decision rule are
+unchanged.
+
+**Order:** tests first; a 2-case live check; then the session, today if the Spark is free.
