@@ -8500,3 +8500,30 @@ session now points at `ad81dad`.
   pattern Change 54's clarification counts).
 
 Two cases, both used to make the adjustment: a check of function. The session measures it.
+
+## 2026-11-11 — The fixed list of "places no log records" (Change 59) checked against SigmaHQ's data: wrong for its largest member; arm B not run as it is
+
+**Asked by the user:** is anything hardcoded? Yes: Change 59 holds a fixed list of five of the attack-vector step's
+place labels (`file_content`, `network_payload`, `request_body`, `response_body`, `response_header`) that code
+treats as places no log records; since the adjustment above, code removes such patterns from the rule writer's
+list. The list was a measurement definition of the audit (2026-11-09), moved into the pipeline by Change 59; it was
+chosen by judgement, not derived from SigmaHQ's rules. The user's view: a code check is valid when it comes from the
+data of the actual rules, as a baseline against the model's errors.
+
+**Checked against SigmaHQ's data** (fields of the six rule folders, `eval/rule_health.load_reference`; one-off):
+- No Windows or Linux log source has a field for an HTTP request or response body, a response header or a network
+  payload (`zeek/http` has `request_body_len`, a length; `webserver` has `cs-content-type`). For those four the list
+  agrees with the data.
+- **`file_content` does not:** PowerShell script-block logging records a script's text (`ps_script`
+  `ScriptBlockText`, 175 SigmaHQ rules), Sysmon an alternate stream's contents (`create_stream_hash` `Contents`).
+- **And the model does not use the labels as the list assumes.** Its vocabulary has no "file path" place, so it
+  files file names under `file_content` (18 patterns in the rerun's arm C, e.g. `wermgr.exe`, `usersfiles.war`,
+  `MoriyaStreamWatchmen.sys`) and a DLL name under `network_payload` (`ipv4.dll`, live check). File names are what
+  `file_event` and `process_creation` record. In three of the 42 tuning cases (Moriya, CVE-2023-36874 fake
+  `wermgr.exe`, Lace Tempest) the value the expert rule matches is such a pattern, and the adjusted version
+  (`ad81dad`) would hide it from the rule writer. (Read from the expert rules to check the list, not to design it.)
+
+**So:** the session does not run arm B as `ad81dad`. The fix proposed to the user: the attack-vector step names, for
+each pattern, the SigmaHQ log source that records it (from the same two tables as the footprint), or none; code
+checks the name against SigmaHQ's table and keeps no list of its own. A check against the rules' data, as the user
+describes, instead of a list of labels.
