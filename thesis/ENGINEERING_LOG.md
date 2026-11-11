@@ -8587,3 +8587,34 @@ were displayed; the decision rule was fixed before the run, and no decision is t
 
 **Resumed** at about 10:15 EST, the Spark free: the script now takes `START` (the case count to resume at; the same
 rotation of which arm goes first), started with `nohup` and in the background, so an app restart cannot stop it.
+
+## 2026-11-11 (late morning) — The reading of the session's mechanisms built while it runs, before its rows are read (`eval/change_measures.py`)
+
+**Why:** the plan (2026-11-10, "towards one") reads each change's mechanism from arm B's records. Three of them
+(review's answer tokens, rules per case, prompt tokens per step) had no committed code, and numbers come only from
+committed code. Built at about 11:00 EST with the session at case 28 of 42; neither arm's `c61pkg_*` rows were
+opened.
+
+**The tool** (tests first, 11, on rows built in the test; no model). B minus A on the paired cases, with a
+bootstrap 95% CI (`compare_runs.continuous`). Counts are over the same cases.
+- **Change 57:**
+  - cases regenerated (the rule writer called more than once) and the recorded reason (A's code does not record
+    it);
+  - patterns holding a backslash that the coverage check checked, those it found, and those it reported missed
+    although a final rule's detection holds them (backslashes removed on both sides, as `rule_health` compares;
+    the row's check is the one run on the final reviewed rules);
+  - attack-vector answers: ok, salvaged, or failed.
+- **Change 59:** rules per case.
+- **Change 60:** review's answer tokens per case (every review call); rules put back by Change 55's check; rules
+  review returned out of those it was given.
+- **Change 61, reported:** attack-vector and analysis prompt tokens per case.
+- **Also:** seconds per case.
+
+The "do not use" hits and the patterns from the four places stay with `rule_health`; the gate stays with
+`compare_arms` and `footprint_measures`.
+
+**Checked on rows already read, not the session's.** On the rerun's arm C, the tool gives:
+- 30 backslash patterns checked and 8 found, and 19 rules put back: the counts Change 57's and Change 60's plans
+  cite from one-off readings.
+- A count added now (descriptive, before the session's rows are read): 4 of the patterns the check reported missed
+  are held by a final rule's detection. The rerun's arm B gives 4 as well.
